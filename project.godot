@@ -11,15 +11,15 @@ config_version=4
 [application]
 
 config/name="Winithm"
-run/main_scene="res://client/sences/Main.tscn"
+run/main_scene="res://Winithm.Client/Sences/Main.tscn"
 run/delta_sync_after_draw=true
 boot_splash/bg_color=Color( 0.141176, 0.141176, 0.141176, 0 )
 config/icon="res://icon.png"
 
 [autoload]
 
-ScreenManager="*res://client/scripts/managers/ScreenManager.cs"
-SceneManager="*res://client/scripts/managers/SceneManager.cs"
+ScreenManager="*res://Winithm.Client/Scripts/Managers/ScreenManager.cs"
+SceneManager="*res://Winithm.Client/Scripts/Managers/SceneManager.cs"
 
 [display]
 
