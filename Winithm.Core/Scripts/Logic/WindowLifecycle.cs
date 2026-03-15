@@ -47,7 +47,7 @@ namespace Winithm.Core.Logic
       // Only scan windows whose StartBeat <= currentBeat.
       for (int i = 0; i < upperBound; i++)
       {
-        if (currentBeat <= _sorted[i].EndBeat)
+        if (IsWindowActive(_sorted[i], currentBeat))
           _activeBuffer.Add(_sorted[i]);
       }
 
