@@ -18,6 +18,8 @@ namespace Winithm.Core.Data
     public string GroupID = "";
     public string ThemeChannelID = "";
 
+    public bool  IsUnFocus = false;
+
     // Transform init values
     public float InitX;
     public float InitY;

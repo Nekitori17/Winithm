@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 using Winithm.Core.Data;
@@ -95,7 +96,7 @@ namespace Winithm.Core.Common
         sb.AppendLine("[WINDOWS]");
         foreach (var w in data.Windows)
         {
-          sb.AppendLine($"+ {w.ID} {ParserUtils.FormatFloat(w.InitX)} {ParserUtils.FormatFloat(w.InitY)} {ParserUtils.FormatFloat(w.InitScaleX)} {ParserUtils.FormatFloat(w.InitScaleY)} {ParserUtils.FormatFloat(w.InitR)} {ParserUtils.FormatFloat(w.InitG)} {ParserUtils.FormatFloat(w.InitB)} {ParserUtils.FormatFloat(w.InitA)} {ParserUtils.FormatFloat(w.InitNoteA)}");
+          sb.AppendLine($"+ {w.ID} {Convert.ToInt32(w.IsUnFocus)} {ParserUtils.FormatFloat(w.InitX)} {ParserUtils.FormatFloat(w.InitY)} {ParserUtils.FormatFloat(w.InitScaleX)} {ParserUtils.FormatFloat(w.InitScaleY)} {ParserUtils.FormatFloat(w.InitR)} {ParserUtils.FormatFloat(w.InitG)} {ParserUtils.FormatFloat(w.InitB)} {ParserUtils.FormatFloat(w.InitA)} {ParserUtils.FormatFloat(w.InitNoteA)}");
           sb.AppendLine($"  Name: {w.Name}");
           if (!string.IsNullOrEmpty(w.Title))
             sb.AppendLine($"  Title: {w.Title}");

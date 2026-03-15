@@ -26,6 +26,12 @@ namespace Winithm.Core.Common
       return result;
     }
 
+    public static bool ParseBool(string text)
+    {
+      bool.TryParse(text.Trim(), out bool result);
+      return result;
+    }
+
     public static bool IsNumeric(string text)
     {
       return float.TryParse(text.Trim(), NumberStyles.Float, INV, out _);

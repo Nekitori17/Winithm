@@ -224,15 +224,16 @@ namespace Winithm.Core.Common
         currentNote = null;
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 1) current.ID = parts[0];
-        if (parts.Length >= 2) current.InitX = ParserUtils.ParseFloat(parts[1]);
-        if (parts.Length >= 3) current.InitY = ParserUtils.ParseFloat(parts[2]);
-        if (parts.Length >= 4) current.InitScaleX = Math.Abs(ParserUtils.ParseFloat(parts[3]));
-        if (parts.Length >= 5) current.InitScaleY = Math.Abs(ParserUtils.ParseFloat(parts[4]));
-        if (parts.Length >= 6) current.InitR = ParserUtils.ParseFloat(parts[5]);
-        if (parts.Length >= 7) current.InitG = ParserUtils.ParseFloat(parts[6]);
-        if (parts.Length >= 8) current.InitB = ParserUtils.ParseFloat(parts[7]);
-        if (parts.Length >= 9) current.InitA = ParserUtils.ParseFloat(parts[8]);
-        if (parts.Length >= 10) current.InitNoteA = ParserUtils.ParseFloat(parts[9]);
+        if (parts.Length >= 2) current.IsUnFocus = ParserUtils.ParseBool(parts[1]);
+        if (parts.Length >= 3) current.InitX = ParserUtils.ParseFloat(parts[2]);
+        if (parts.Length >= 4) current.InitY = ParserUtils.ParseFloat(parts[3]);
+        if (parts.Length >= 5) current.InitScaleX = Math.Abs(ParserUtils.ParseFloat(parts[4]));
+        if (parts.Length >= 6) current.InitScaleY = Math.Abs(ParserUtils.ParseFloat(parts[5]));
+        if (parts.Length >= 7) current.InitR = ParserUtils.ParseFloat(parts[6]);
+        if (parts.Length >= 8) current.InitG = ParserUtils.ParseFloat(parts[7]);
+        if (parts.Length >= 9) current.InitB = ParserUtils.ParseFloat(parts[8]);
+        if (parts.Length >= 10) current.InitA = ParserUtils.ParseFloat(parts[9]);
+        if (parts.Length >= 11) current.InitNoteA = ParserUtils.ParseFloat(parts[10]);
         windows.Add(current);
         return;
       }
