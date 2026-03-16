@@ -8,7 +8,6 @@ namespace Winithm.Core.Data
     Tap,
     Hold,
     Drag,
-    Flick,
     Focus,
     Close
   }
@@ -48,7 +47,6 @@ namespace Winithm.Core.Data
         case "Tap": return NoteType.Tap;
         case "Hold": return NoteType.Hold;
         case "Drag": return NoteType.Drag;
-        case "Flick": return NoteType.Flick;
         case "Focus": return NoteType.Focus;
         case "Close": return NoteType.Close;
         default:
