@@ -127,6 +127,8 @@ namespace Winithm.Core.Common
         current.Name = name;
       else if (ParserUtils.TryParseProperty(trimmed, "Shader:", out string shader))
         current.ShaderFile = shader;
+      else if (ParserUtils.TryParseProperty(trimmed, "Affects UI:", out string affectsUI))
+        current.AffectsUI = ParserUtils.ParseBool(affectsUI);
       else if (trimmed.StartsWith("/ "))
         current.Events.Add(ParserUtils.ParseStoryboardEvent(trimmed));
     }

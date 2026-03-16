@@ -11,7 +11,9 @@ namespace Winithm.Core.Data
   {
     public string ID = "";
     public string Name = "";
+
     public string ShaderFile = "";
+    public bool AffectsUI = false;
     public List<VectorValue> InitParams;
 
     public List<StoryboardEvent> Events;
