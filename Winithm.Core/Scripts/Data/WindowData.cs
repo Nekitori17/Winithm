@@ -18,7 +18,9 @@ namespace Winithm.Core.Data
     public string GroupID = "";
     public string ThemeChannelID = "";
 
-    public bool  IsUnFocus = false;
+    // Window Flags
+    public bool Borderless = false;
+    public bool UnFocus = false;
 
     // Transform init values
     public float InitX;

@@ -80,7 +80,7 @@ public class SceneManager : Node
         GD.Print($"\n[WINDOWS] ({data.Windows.Count} windows)");
         foreach (var w in data.Windows)
         {
-            GD.Print($"  ├ ID={w.ID} UnFocus={w.IsUnFocus} Layer={w.Layer} Group={w.GroupID} Theme={w.ThemeChannelID}");
+            GD.Print($"  ├ ID={w.ID} Borderless={w.Borderless} UnFocus={w.UnFocus} Layer={w.Layer} Group={w.GroupID} Theme={w.ThemeChannelID}");
             GD.Print($"  │ Anchor=({w.AnchorX},{w.AnchorY}) Lifecycle=[{w.StartBeat} → {w.EndBeat}]");
             GD.Print($"  │ Events={w.Events.Count} SpeedSteps={w.SpeedSteps.Count} Notes={w.Notes.Count}");
             foreach (var e in w.Events)

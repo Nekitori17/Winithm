@@ -39,7 +39,7 @@ namespace Winithm.Core.Common
           foreach (var p in overlay.InitParams)
             initParams += " " + p.ToString();
           sb.AppendLine($"+ {overlay.ID}{initParams}");
-          sb.AppendLine($"  Name: {overlay.Name}");
+          sb.AppendLine($"  Name: {overlay.Name ?? ""}");
           sb.AppendLine($"  Shader: {overlay.ShaderFile}");
           foreach (var evt in overlay.Events)
             sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt));
@@ -67,7 +67,7 @@ namespace Winithm.Core.Common
         foreach (var tc in data.ThemeChannels)
         {
           sb.AppendLine($"+ {tc.ID} {ParserUtils.FormatFloat(tc.InitR)} {ParserUtils.FormatFloat(tc.InitG)} {ParserUtils.FormatFloat(tc.InitB)} {ParserUtils.FormatFloat(tc.InitA)} {ParserUtils.FormatFloat(tc.InitNoteA)}");
-          sb.AppendLine($"  Name: {tc.Name}");
+          sb.AppendLine($"  Name: {tc.Name ?? ""}");
           foreach (var evt in tc.Events)
             sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt));
         }
@@ -81,9 +81,8 @@ namespace Winithm.Core.Common
         foreach (var g in data.Groups)
         {
           sb.AppendLine($"+ {g.ID} {ParserUtils.FormatFloat(g.InitX)} {ParserUtils.FormatFloat(g.InitY)} {ParserUtils.FormatFloat(g.InitScaleX)} {ParserUtils.FormatFloat(g.InitScaleY)} {ParserUtils.FormatFloat(g.InitRotation)}");
-          sb.AppendLine($"  Name: {g.Name}");
-          if (!string.IsNullOrEmpty(g.ParentGroupID))
-            sb.AppendLine($"  Group: {g.ParentGroupID}");
+          sb.AppendLine($"  Name: {g.Name ?? ""}");
+          sb.AppendLine($"  Group: {g.ParentGroupID ?? ""}");
           foreach (var evt in g.Events)
             sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt));
         }
@@ -96,16 +95,14 @@ namespace Winithm.Core.Common
         sb.AppendLine("[WINDOWS]");
         foreach (var w in data.Windows)
         {
-          sb.AppendLine($"+ {w.ID} {Convert.ToInt32(w.IsUnFocus)} {ParserUtils.FormatFloat(w.InitX)} {ParserUtils.FormatFloat(w.InitY)} {ParserUtils.FormatFloat(w.InitScaleX)} {ParserUtils.FormatFloat(w.InitScaleY)} {ParserUtils.FormatFloat(w.InitR)} {ParserUtils.FormatFloat(w.InitG)} {ParserUtils.FormatFloat(w.InitB)} {ParserUtils.FormatFloat(w.InitA)} {ParserUtils.FormatFloat(w.InitNoteA)}");
-          sb.AppendLine($"  Name: {w.Name}");
-          if (!string.IsNullOrEmpty(w.Title))
-            sb.AppendLine($"  Title: {w.Title}");
+          sb.AppendLine($"+ {w.ID} {ParserUtils.FormatFloat(w.InitX)} {ParserUtils.FormatFloat(w.InitY)} {ParserUtils.FormatFloat(w.InitScaleX)} {ParserUtils.FormatFloat(w.InitScaleY)} {ParserUtils.FormatFloat(w.InitR)} {ParserUtils.FormatFloat(w.InitG)} {ParserUtils.FormatFloat(w.InitB)} {ParserUtils.FormatFloat(w.InitA)} {ParserUtils.FormatFloat(w.InitNoteA)}");
+          sb.AppendLine($"  Name: {w.Name ?? ""}");
+          sb.AppendLine($"  Title: {w.Title ?? ""}");
+          sb.AppendLine($"  Flags: {Convert.ToInt32(w.Borderless)} {Convert.ToInt32(w.UnFocus)}");
           sb.AppendLine($"  Anchor: {ParserUtils.FormatFloat(w.AnchorX)} {ParserUtils.FormatFloat(w.AnchorY)}");
           sb.AppendLine($"  Layer: {w.Layer}");
-          if (!string.IsNullOrEmpty(w.GroupID))
-            sb.AppendLine($"  Group: {w.GroupID}");
-          if (!string.IsNullOrEmpty(w.ThemeChannelID))
-            sb.AppendLine($"  Theme Channel: {w.ThemeChannelID}");
+          sb.AppendLine($"  Group: {w.GroupID ?? ""}");
+          sb.AppendLine($"  Theme Channel: {w.ThemeChannelID ?? ""}");
 
           // Window-level storyboard events
           foreach (var evt in w.Events)
