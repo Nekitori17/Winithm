@@ -70,6 +70,9 @@ namespace Winithm.Core.Common
         }
       }
 
+      foreach (var window in data.Windows)
+        window.PreCompute();
+
       ParserUtils.ResolveInheritance(data);
     }
 

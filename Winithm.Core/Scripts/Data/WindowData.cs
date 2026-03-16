@@ -41,22 +41,34 @@ namespace Winithm.Core.Data
     public List<NoteData> Notes = new List<NoteData>();
 
     /// <summary>Window spawn beat (first SpeedStep's start)</summary>
-    public float StartBeat => SpeedSteps.Count > 0 ? SpeedSteps[0].Start.AbsoluteValue : 0f;
+    public float StartBeat;
 
     /// <summary>Window despawn beat (last Close note's start, or last SpeedStep's start)</summary>
-    public float EndBeat
-    {
-      get
-      {
-        for (int i = Notes.Count - 1; i >= 0; i--)
-        {
-          if (Notes[i].Type == NoteType.Close)
-            return Notes[i].Start.AbsoluteValue;
-        }
+    public float EndBeat;
 
-        return SpeedSteps.Count > 0
-            ? SpeedSteps[SpeedSteps.Count - 1].Start.AbsoluteValue
-            : 0f;
+    /// <summary>
+    /// Pre-computes window lifecycle boundaries (StartBeat, EndBeat).
+    /// Should be called after all Notes and SpeedSteps are populated.
+    /// </summary>
+    public void PreCompute()
+    {
+      StartBeat = SpeedSteps.Count > 0 ? SpeedSteps[0].Start.AbsoluteValue : 0f;
+      EndBeat = StartBeat;
+
+      // Find the last "Close" note to determine the end of the window's life
+      for (int i = Notes.Count - 1; i >= 0; i--)
+      {
+        if (Notes[i].Type == NoteType.Close)
+        {
+          EndBeat = Notes[i].Start.AbsoluteValue;
+          return;
+        }
+      }
+
+      // If no Close note, use the start of the last SpeedStep
+      if (SpeedSteps.Count > 0)
+      {
+        EndBeat = SpeedSteps[SpeedSteps.Count - 1].Start.AbsoluteValue;
       }
     }
   }
