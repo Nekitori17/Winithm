@@ -70,7 +70,6 @@ namespace Winithm.Core.Common
         }
       }
 
-      ParserUtils.CullNotesOutsideWindows(data);
       ParserUtils.ResolveInheritance(data);
     }
 

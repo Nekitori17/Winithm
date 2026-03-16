@@ -43,7 +43,21 @@ namespace Winithm.Core.Data
     /// <summary>Window spawn beat (first SpeedStep's start)</summary>
     public float StartBeat => SpeedSteps.Count > 0 ? SpeedSteps[0].Start.AbsoluteValue : 0f;
 
-    /// <summary>Window despawn beat (last SpeedStep's start)</summary>
-    public float EndBeat => SpeedSteps.Count > 0 ? SpeedSteps[SpeedSteps.Count - 1].Start.AbsoluteValue : 0f;
+    /// <summary>Window despawn beat (last Close note's start, or last SpeedStep's start)</summary>
+    public float EndBeat
+    {
+      get
+      {
+        for (int i = Notes.Count - 1; i >= 0; i--)
+        {
+          if (Notes[i].Type == NoteType.Close)
+            return Notes[i].Start.AbsoluteValue;
+        }
+
+        return SpeedSteps.Count > 0
+            ? SpeedSteps[SpeedSteps.Count - 1].Start.AbsoluteValue
+            : 0f;
+      }
+    }
   }
 }

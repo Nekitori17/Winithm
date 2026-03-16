@@ -239,20 +239,20 @@ namespace Winithm.Core.Common
       }
     }
 
-    /// <summary>
-    /// Removes notes that start before their window's StartBeat or after their window's EndBeat.
-    /// </summary>
-    public static void CullNotesOutsideWindows(ChartData data)
-    {
-      foreach (var window in data.Windows)
-      {
-        float startBeat = window.StartBeat;
-        float endBeat = window.EndBeat;
-        window.Notes.RemoveAll(n =>
-          n.Start.AbsoluteValue < startBeat || n.Start.AbsoluteValue > endBeat
-        );
-      }
-    }
+    // /// <summary>
+    // /// Removes notes that start before their window's StartBeat or after their window's EndBeat.
+    // /// </summary>
+    // public static void CullNotesOutsideWindows(ChartData data)
+    // {
+    //   foreach (var window in data.Windows)
+    //   {
+    //     float startBeat = window.StartBeat;
+    //     float endBeat = window.EndBeat;
+    //     window.Notes.RemoveAll(n =>
+    //       n.Start.AbsoluteValue < startBeat || n.Start.AbsoluteValue > endBeat
+    //     );
+    //   }
+    // }
 
     public static void ResolveInheritance(ChartData data)
     {

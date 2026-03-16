@@ -108,12 +108,9 @@ namespace Winithm.Core.Common
           foreach (var evt in w.Events)
             sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt));
 
-          // Notes (skip notes that start before window StartBeat or after window EndBeat)
-          float startBeat = w.StartBeat;
-          float endBeat = w.EndBeat;
+          // Notes
           foreach (var n in w.Notes)
           {
-            if (n.Start.AbsoluteValue < startBeat || n.Start.AbsoluteValue > endBeat) continue;
             sb.AppendLine($"  # {n.Type} {n.Start} {n.Length} {n.Side} {n.FakeType}");
             foreach (var evt in n.Events)
               sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, "    "));
