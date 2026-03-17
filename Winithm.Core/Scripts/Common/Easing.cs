@@ -154,7 +154,7 @@ namespace Winithm.Core.Common
         : (1f + BounceOut(2f * t - 1f)) / 2f;
     }
 
-    public static float EvaluateBezier(VectorValue bezier, float t)
+    public static float EvaluateBezier(AnyValue bezier, float t)
     {
       if (t <= 0f) return 0f;
       if (t >= 1f) return 1f;

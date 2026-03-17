@@ -2,6 +2,12 @@ using Winithm.Core.Common;
 
 namespace Winithm.Core.Data
 {
+  /// <summary>
+  /// Storyboard event for property interpolation.
+  /// Format: / <Property> <Start> <Length> <From> <To> <Easing>
+  /// </summary>
+  /// 
+
   public enum StoryboardProperty
   {
     Custom = 0,
@@ -20,27 +26,22 @@ namespace Winithm.Core.Data
     Speed
   }
 
-  /// <summary>
-  /// Storyboard event for property interpolation.
-  /// Format: / <Property> <Start> <Length> <From> <To> <Easing>
-  /// </summary>
+  public enum StoryboardValueType
+  {
+    Int,
+    Float,
+    Vector,
+    String,
+  }
+
   public struct StoryboardEvent
   {
-    public StoryboardProperty Type;
-    public string CustomProperty;
     public BeatTime Start;
     public BeatTime Length;
-    public string FromRaw;
-    public string ToRaw;
-    public float FromValue;
-    public float ToValue;
-    public VectorValue FromVector;
-    public VectorValue ToVector;
-    public bool IsVectorType;
-    public bool IsStringType;
-    public bool IsInherited;
+    public AnyValue From;
+    public AnyValue To;
     public EasingType Easing;
-    public VectorValue EasingBezier;
+    public AnyValue EasingBezier;
 
     /// <summary>End beat (Start + Length) pre-computed for runtime.</summary>
     public float EndBeat;

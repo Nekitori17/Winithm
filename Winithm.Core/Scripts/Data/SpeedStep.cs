@@ -8,12 +8,16 @@ namespace Winithm.Core.Data
   /// Format: | <BeatTime: Start> <Float: Multiplier>
   /// Also defines the Window's lifecycle boundaries.
   /// </summary>
-  public class SpeedStep
+  public class SpeedStep : IStoryboardTarget<StoryboardProperty>
   {
     public BeatTime Start;
     public float Multiplier;
 
-    /// <summary>Dynamic speed events (child storyboard events overriding this step)</summary>
-    public List<StoryboardEvent> Events = new List<StoryboardEvent>();
+    public Dictionary<StoryboardProperty, PropertyDef> PropertyRegistry { get; } = new Dictionary<StoryboardProperty, PropertyDef>()
+    {
+      { StoryboardProperty.Speed, new PropertyDef(AnyValueType.Float) }
+    };
+
+    public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
   }
 }

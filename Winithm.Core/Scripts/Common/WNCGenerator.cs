@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Winithm.Core.Data;
 
@@ -36,14 +38,16 @@ namespace Winithm.Core.Common
         foreach (var overlay in data.Overlays)
         {
           string initParams = "";
-          foreach (var p in overlay.InitParams)
-            initParams += " " + p.ToString();
+          foreach (var p in overlay.InitParams.OrderBy(kv => int.TryParse(kv.Key, out int i) ? i : int.MaxValue))
+            initParams += " " + p.Value.ToString();
           sb.AppendLine($"+ {overlay.ID}{initParams}");
           sb.AppendLine($"  Name: {overlay.Name ?? ""}");
           sb.AppendLine($"  Shader: {overlay.ShaderFile}");
           sb.AppendLine($"  Affects UI: {Convert.ToInt32(overlay.AffectsUI)}");
-          foreach (var evt in overlay.Events)
-            sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt));
+          if (overlay.StoryboardEvents != null)
+            foreach (var kvp in overlay.StoryboardEvents)
+              foreach (var evt in kvp.Value)
+                sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, StoryboardProperty.Custom, kvp.Key));
         }
         sb.AppendLine();
       }
@@ -55,8 +59,10 @@ namespace Winithm.Core.Common
         foreach (var comp in data.Components)
         {
           sb.AppendLine($"* {comp.Type} {ParserUtils.FormatFloat(comp.InitX)} {ParserUtils.FormatFloat(comp.InitY)} {ParserUtils.FormatFloat(comp.InitScale)} {ParserUtils.FormatFloat(comp.InitAlpha)} {ParserUtils.FormatFloat(comp.AnchorX)} {ParserUtils.FormatFloat(comp.AnchorY)}");
-          foreach (var evt in comp.Events)
-            sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt));
+          if (comp.StoryboardEvents != null)
+            foreach (var kvp in comp.StoryboardEvents)
+              foreach (var evt in kvp.Value)
+                sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, kvp.Key));
         }
         sb.AppendLine();
       }
@@ -69,8 +75,10 @@ namespace Winithm.Core.Common
         {
           sb.AppendLine($"+ {tc.ID} {ParserUtils.FormatFloat(tc.InitR)} {ParserUtils.FormatFloat(tc.InitG)} {ParserUtils.FormatFloat(tc.InitB)} {ParserUtils.FormatFloat(tc.InitA)} {ParserUtils.FormatFloat(tc.InitNoteA)}");
           sb.AppendLine($"  Name: {tc.Name ?? ""}");
-          foreach (var evt in tc.Events)
-            sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt));
+          if (tc.StoryboardEvents != null)
+            foreach (var kvp in tc.StoryboardEvents)
+              foreach (var evt in kvp.Value)
+                sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, kvp.Key));
         }
         sb.AppendLine();
       }
@@ -84,8 +92,10 @@ namespace Winithm.Core.Common
           sb.AppendLine($"+ {g.ID} {ParserUtils.FormatFloat(g.InitX)} {ParserUtils.FormatFloat(g.InitY)} {ParserUtils.FormatFloat(g.InitScaleX)} {ParserUtils.FormatFloat(g.InitScaleY)} {ParserUtils.FormatFloat(g.InitRotation)}");
           sb.AppendLine($"  Name: {g.Name ?? ""}");
           sb.AppendLine($"  Group: {g.ParentGroupID ?? ""}");
-          foreach (var evt in g.Events)
-            sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt));
+          if (g.StoryboardEvents != null)
+            foreach (var kvp in g.StoryboardEvents)
+              foreach (var evt in kvp.Value)
+                sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, kvp.Key));
         }
         sb.AppendLine();
       }
@@ -106,23 +116,23 @@ namespace Winithm.Core.Common
           sb.AppendLine($"  Theme Channel: {w.ThemeChannelID ?? ""}");
 
           // Window-level storyboard events
-          foreach (var evt in w.Events)
-            sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt));
+          if (w.StoryboardEvents != null)
+            foreach (var kvp in w.StoryboardEvents)
+              foreach (var evt in kvp.Value)
+                sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, kvp.Key));
 
           // Notes
           foreach (var n in w.Notes)
-          {
             sb.AppendLine($"  # {n.Type} {n.Start} {n.Length} {n.Side} {n.FakeType}");
-            foreach (var evt in n.Events)
-              sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, "    "));
-          }
 
           // SpeedSteps
           foreach (var ss in w.SpeedSteps)
           {
             sb.AppendLine($"  | {ss.Start} {ParserUtils.FormatFloat(ss.Multiplier)}");
-            foreach (var evt in ss.Events)
-              sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, "    "));
+            if (ss.StoryboardEvents != null)
+              foreach (var kvp in ss.StoryboardEvents)
+                foreach (var evt in kvp.Value)
+                  sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, kvp.Key, indent: "    "));
           }
         }
       }

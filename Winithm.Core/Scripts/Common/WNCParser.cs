@@ -103,19 +103,39 @@ namespace Winithm.Core.Common
         for (int j = 1; j < parts.Length; j++)
         {
           string p = parts[j];
+          string key = (j - 1).ToString();
+          AnyValue val = new AnyValue();
+          AnyValueType hintType = AnyValueType.Float;
+          bool hasHint = false;
+
+          if (p.StartsWith("["))
+          {
+            int endIdx = p.IndexOf(']');
+            if (endIdx > 0)
+            {
+              string hintStr = p.Substring(1, endIdx - 1);
+              if (Enum.TryParse<AnyValueType>(hintStr, true, out hintType))
+              {
+                hasHint = true;
+                p = p.Substring(endIdx + 1);
+              }
+            }
+          }
+
           if (p == "-")
           {
-            current.InitParams.Add(new VectorValue { IsDefault = true });
-          }
-          else if (VectorValue.IsVectorFormat(p))
-          {
-            current.InitParams.Add(VectorValue.Parse(p));
+            val = new AnyValue { Type = AnyValueType.Inherited };
           }
           else
           {
-            // size 1 vector
-            current.InitParams.Add(new VectorValue(ParserUtils.ParseFloat(p)));
+            val = AnyValue.Parse(p);
           }
+
+          if (hasHint) val.Type = hintType;
+          current.InitParams[key] = val;
+          
+          // Store metadata hint
+          current.PropertyRegistry[key] = new PropertyDef(val.Type, true);
         }
         overlays.Add(current);
         return;
@@ -130,7 +150,10 @@ namespace Winithm.Core.Common
       else if (ParserUtils.TryParseProperty(trimmed, "Affects UI:", out string affectsUI))
         current.AffectsUI = ParserUtils.ParseBool(affectsUI);
       else if (trimmed.StartsWith("/ "))
-        current.Events.Add(ParserUtils.ParseStoryboardEvent(trimmed));
+      {
+        var evt = ParserUtils.ParseStoryboardEvent(trimmed, out _, out var rawName);
+        ParserUtils.AddEventToTarget(current, rawName, evt);
+      }
     }
 
     // ── COMPONENTS ──
@@ -156,7 +179,11 @@ namespace Winithm.Core.Common
       if (current == null) return;
 
       if (trimmed.StartsWith("/ "))
-        current.Events.Add(ParserUtils.ParseStoryboardEvent(trimmed));
+      {
+        var evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
+        if (type != StoryboardProperty.Custom)
+          ParserUtils.AddEventToTarget(current, type, evt);
+      }
     }
 
     // ── THEME CHANNELS ──
@@ -183,7 +210,11 @@ namespace Winithm.Core.Common
       if (ParserUtils.TryParseProperty(trimmed, "Name:", out string name))
         current.Name = name;
       else if (trimmed.StartsWith("/ "))
-        current.Events.Add(ParserUtils.ParseStoryboardEvent(trimmed));
+      {
+        var evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
+        if (type != StoryboardProperty.Custom)
+          ParserUtils.AddEventToTarget(current, type, evt);
+      }
     }
 
     // ── GROUPS ──
@@ -212,7 +243,11 @@ namespace Winithm.Core.Common
       else if (ParserUtils.TryParseProperty(trimmed, "Group:", out string groupId))
         current.ParentGroupID = groupId;
       else if (trimmed.StartsWith("/ "))
-        current.Events.Add(ParserUtils.ParseStoryboardEvent(trimmed));
+      {
+        var evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
+        if (type != StoryboardProperty.Custom)
+          ParserUtils.AddEventToTarget(current, type, evt);
+      }
     }
 
     // ── WINDOWS ──
@@ -291,21 +326,20 @@ namespace Winithm.Core.Common
       }
       else if (trimmed.StartsWith("/ "))
       {
-        StoryboardEvent evt = ParserUtils.ParseStoryboardEvent(trimmed);
+        StoryboardEvent evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
 
         // Enforce absolute scales on Windows to avoid clipping / title bar flipping
-        if (evt.Type == StoryboardProperty.ScaleX || evt.Type == StoryboardProperty.ScaleY)
+        if (type == StoryboardProperty.ScaleX || type == StoryboardProperty.ScaleY)
         {
-          evt.FromValue = Math.Abs(evt.FromValue);
-          evt.ToValue = Math.Abs(evt.ToValue);
+          evt.From.X = Math.Abs(evt.From.X);
+          evt.To.X = Math.Abs(evt.To.X);
         }
 
-        if (currentNote != null)
-          currentNote.Events.Add(evt);
-        else if (currentSpeedStep != null)
-          currentSpeedStep.Events.Add(evt);
-        else
-          current.Events.Add(evt);
+        if (currentSpeedStep != null)
+          ParserUtils.AddEventToTarget(currentSpeedStep, type, evt);
+        else if (type != StoryboardProperty.Custom)
+          ParserUtils.AddEventToTarget(current, type, evt);
+        // Note-level events are no longer supported (NoteData has no StoryboardEvents)
       }
     }
   }

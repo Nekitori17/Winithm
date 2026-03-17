@@ -31,9 +31,6 @@ namespace Winithm.Core.Data
     public NoteSide Side;
     public int FakeType;
 
-    /// <summary>Child storyboard events (e.g., Speed overrides on notes)</summary>
-    public List<StoryboardEvent> Events = new List<StoryboardEvent>();
-
     public float EndBeat => Start.AbsoluteValue + Length.AbsoluteValue;
 
     public bool IsHittable => FakeType == 0;

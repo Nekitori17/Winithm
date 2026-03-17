@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Winithm.Core.Common;
 
 namespace Winithm.Core.Data
 {
@@ -14,7 +15,7 @@ namespace Winithm.Core.Data
   /// HUD component definition from [COMPONENTS].
   /// Format: * <Type> <initX> <initY> <initScale> <initAlpha> <anchorX> <anchorY>
   /// </summary>
-  public class ComponentData
+  public class ComponentData : IStoryboardTarget<StoryboardProperty>
   {
     public ComponentType Type;
     public float InitX;
@@ -24,7 +25,15 @@ namespace Winithm.Core.Data
     public float AnchorX;
     public float AnchorY;
 
-    public List<StoryboardEvent> Events = new List<StoryboardEvent>();
+    public Dictionary<StoryboardProperty, PropertyDef> PropertyRegistry { get; } = new Dictionary<StoryboardProperty, PropertyDef>()
+      {
+        { StoryboardProperty.X, new PropertyDef(AnyValueType.Float) },
+        { StoryboardProperty.Y, new PropertyDef(AnyValueType.Float) },
+        { StoryboardProperty.Scale, new PropertyDef(AnyValueType.Float) },
+        { StoryboardProperty.ColorA, new PropertyDef(AnyValueType.Float) },
+      };
+
+    public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
 
     public static ComponentType ParseType(string text)
     {

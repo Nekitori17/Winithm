@@ -124,8 +124,10 @@ namespace Winithm.Core.Logic
     /// </summary>
     private static float EvaluateSpeed(SpeedStep step, float currentBeat)
     {
-      return StoryboardEvaluator.EvaluateFloat(
-        step.Events, StoryboardProperty.Speed, currentBeat, step.Multiplier);
+      if (step.StoryboardEvents == null || !step.StoryboardEvents.TryGetValue(StoryboardProperty.Speed, out var speedEvents))
+        return step.Multiplier;
+        
+      return StoryboardEvaluator.Evaluate(speedEvents, currentBeat, new AnyValue(step.Multiplier)).X;
     }
 
     /// <summary>

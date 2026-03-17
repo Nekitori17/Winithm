@@ -5,167 +5,68 @@ using Winithm.Core.Data;
 namespace Winithm.Core.Logic
 {
   /// <summary>
-  /// Evaluates StoryboardEvent lists at any given beat time.
-  /// Returns the interpolated value (float, Color, or string) for a given property.
-  /// Fully deterministic: same beat always = same output.
+  /// Evaluates per-property StoryboardEvent lists at any given beat time.
+  /// Each list is assumed to be sorted by Start.AbsoluteValue (ascending).
+  /// Uses binary search for O(log n) event lookup.
   /// </summary>
   public static class StoryboardEvaluator
   {
     /// <summary>
-    /// Evaluate a float property from an event list at the given beat.
-    /// Returns the interpolated value, or defaultValue if no events are active.
+    /// Evaluate any property at the given beat.
+    /// The events list must be pre-sorted by Start.AbsoluteValue.
     /// </summary>
-    public static float EvaluateFloat(List<StoryboardEvent> events, StoryboardProperty property, float currentBeat, float defaultValue, string customProperty = null)
+    public static AnyValue Evaluate(List<StoryboardEvent> events, float currentBeat, AnyValue defaultValue)
     {
-      float result = defaultValue;
-      bool found = false;
+      if (events == null || events.Count == 0) return defaultValue;
 
-      for (int i = 0; i < events.Count; i++)
-      {
-        var evt = events[i];
-        if (evt.Type != property) continue;
-        if (property == StoryboardProperty.Custom && evt.CustomProperty != customProperty) continue;
-        if (evt.IsStringType || evt.IsVectorType) continue;
+      // Binary search: find the last event where Start.AbsoluteValue <= currentBeat
+      int idx = FindLastStarted(events, currentBeat);
+      if (idx < 0) return defaultValue;
 
-        float startBeat = evt.Start.AbsoluteValue;
-        float endBeat = evt.EndBeat;
+      var evt = events[idx];
+      float endBeat = evt.EndBeat;
 
-        if (currentBeat < startBeat)
-        {
-          // Event hasn't started yet — if we already found a completed event, keep its value
-          if (!found) continue;
-          break;
-        }
+      if (currentBeat >= endBeat)
+        return evt.To;
 
-        found = true;
+      // Interpolate
+      float startBeat = evt.Start.AbsoluteValue;
+      float length = endBeat - startBeat;
+      float t = length > 0f ? (currentBeat - startBeat) / length : 1f;
+      t = evt.Easing == EasingType.Bezier
+        ? EasingFunctions.EvaluateBezier(evt.EasingBezier, t)
+        : EasingFunctions.Evaluate(evt.Easing, t);
 
-        if (currentBeat >= endBeat)
-        {
-          // Event fully completed, snap to To value
-          result = evt.ToValue;
-        }
-        else
-        {
-          // Event is active, interpolate
-          float length = endBeat - startBeat;
-          float t = length > 0f ? (currentBeat - startBeat) / length : 1f;
-          t = evt.Easing == EasingType.Bezier ? EasingFunctions.EvaluateBezier(evt.EasingBezier, t) : EasingFunctions.Evaluate(evt.Easing, t);
-          result = evt.FromValue + (evt.ToValue - evt.FromValue) * t;
-        }
-      }
-
-      return result;
+      AnyValue from = evt.From;
+      if (from.Type == AnyValueType.Inherited) from = defaultValue;
+        
+      return AnyValue.Lerp(from, evt.To, t);
     }
 
     /// <summary>
-    /// Evaluate a Vector property from an event list at the given beat.
+    /// Binary search: find the index of the last event whose Start.AbsoluteValue &lt;= currentBeat.
+    /// Returns -1 if no event has started yet.
+    /// Events must be sorted by Start.AbsoluteValue ascending.
     /// </summary>
-    public static VectorValue EvaluateVector(List<StoryboardEvent> events, StoryboardProperty property, float currentBeat, VectorValue defaultValue, string customProperty = null)
+    private static int FindLastStarted(List<StoryboardEvent> events, float currentBeat)
     {
-      VectorValue result = defaultValue;
-      bool found = false;
+      int left = 0, right = events.Count - 1, best = -1;
 
-      for (int i = 0; i < events.Count; i++)
+      while (left <= right)
       {
-        var evt = events[i];
-        if (evt.Type != property) continue;
-        if (property == StoryboardProperty.Custom && evt.CustomProperty != customProperty) continue;
-        if (!evt.IsVectorType) continue;
-
-        float startBeat = evt.Start.AbsoluteValue;
-        float endBeat = evt.EndBeat;
-
-        if (currentBeat < startBeat)
+        int mid = left + (right - left) / 2;
+        if (events[mid].Start.AbsoluteValue <= currentBeat)
         {
-          if (!found) continue;
-          break;
-        }
-
-        found = true;
-
-        if (currentBeat >= endBeat)
-        {
-          result = evt.ToVector;
+          best = mid;
+          left = mid + 1;
         }
         else
         {
-          float length = endBeat - startBeat;
-          float t = length > 0f ? (currentBeat - startBeat) / length : 1f;
-          t = evt.Easing == EasingType.Bezier ? EasingFunctions.EvaluateBezier(evt.EasingBezier, t) : EasingFunctions.Evaluate(evt.Easing, t);
-          result = VectorValue.Lerp(evt.FromVector, evt.ToVector, t);
+          right = mid - 1;
         }
       }
 
-      return result;
-    }
-
-    /// <summary>
-    /// Evaluate a string property (e.g., Title).
-    /// Flips from From to To when t >= 1.0.
-    /// </summary>
-    public static string EvaluateString(List<StoryboardEvent> events, StoryboardProperty property, float currentBeat, string defaultValue, string customProperty = null)
-    {
-      string result = defaultValue;
-
-      for (int i = 0; i < events.Count; i++)
-      {
-        var evt = events[i];
-        if (evt.Type != property) continue;
-        if (property == StoryboardProperty.Custom && evt.CustomProperty != customProperty) continue;
-        if (!evt.IsStringType) continue;
-
-        float endBeat = evt.EndBeat;
-
-        if (currentBeat >= endBeat)
-          result = evt.ToRaw ?? defaultValue;
-        else if (currentBeat >= evt.Start.AbsoluteValue)
-          result = evt.FromRaw ?? defaultValue;
-      }
-
-      return result;
-    }
-
-    /// <summary>
-    /// Batch-evaluate all float properties from an event list at the given beat,
-    /// writing results into dictionaries. Avoids per-property iteration.
-    /// </summary>
-    public static void EvaluateAll(List<StoryboardEvent> events, float currentBeat,
-        Dictionary<StoryboardProperty, float> floatResults,
-        Dictionary<string, float> customResults = null)
-    {
-      for (int i = 0; i < events.Count; i++)
-      {
-        var evt = events[i];
-        if (evt.IsStringType || evt.IsVectorType) continue;
-
-        float startBeat = evt.Start.AbsoluteValue;
-        float endBeat = evt.EndBeat;
-
-        if (currentBeat < startBeat) continue;
-
-        float value;
-        if (currentBeat >= endBeat)
-        {
-          value = evt.ToValue;
-        }
-        else
-        {
-          float length = endBeat - startBeat;
-          float t = length > 0f ? (currentBeat - startBeat) / length : 1f;
-          t = evt.Easing == EasingType.Bezier ? EasingFunctions.EvaluateBezier(evt.EasingBezier, t) : EasingFunctions.Evaluate(evt.Easing, t);
-          value = evt.FromValue + (evt.ToValue - evt.FromValue) * t;
-        }
-
-        if (evt.Type == StoryboardProperty.Custom)
-        {
-          if (customResults != null && evt.CustomProperty != null)
-            customResults[evt.CustomProperty] = value;
-        }
-        else
-        {
-          floatResults[evt.Type] = value;
-        }
-      }
+      return best;
     }
   }
 }

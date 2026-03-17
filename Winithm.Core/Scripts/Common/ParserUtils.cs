@@ -88,9 +88,11 @@ namespace Winithm.Core.Common
     /// <summary>
     /// Parse: / Property Start Length From To Easing
     /// </summary>
-    public static StoryboardEvent ParseStoryboardEvent(string trimmed)
+    public static StoryboardEvent ParseStoryboardEvent(string trimmed, out StoryboardProperty type, out string rawPropertyName)
     {
       var evt = new StoryboardEvent();
+      type = StoryboardProperty.Custom;
+      rawPropertyName = "";
       List<string> parts = new List<string>();
       bool inQuotes = false;
       int tokenStart = 2; // skip "/ "
@@ -118,60 +120,25 @@ namespace Winithm.Core.Common
 
       if (parts.Count >= 1)
       {
-        evt.Type = ParseStoryboardProperty(parts[0]);
-        if (evt.Type == StoryboardProperty.Custom)
-          evt.CustomProperty = parts[0];
+        type = ParseStoryboardProperty(parts[0]);
+        rawPropertyName = parts[0];
       }
 
       if (parts.Count >= 2) evt.Start = BeatTime.Parse(parts[1]);
       if (parts.Count >= 3) evt.Length = BeatTime.Parse(parts[2]);
 
       if (parts.Count >= 4)
-      {
-        evt.FromRaw = parts[3];
-        if (parts[3] == "-")
-        {
-          evt.IsInherited = true;
-        }
-        else if (VectorValue.IsVectorFormat(parts[3]))
-        {
-          evt.IsVectorType = true;
-          evt.FromVector = VectorValue.Parse(parts[3]);
-        }
-        else if (IsNumeric(parts[3]))
-        {
-          evt.FromValue = ParseFloat(parts[3]);
-        }
-        else
-        {
-          evt.IsStringType = true;
-        }
-      }
+        evt.From = AnyValue.Parse(parts[3]);
 
       if (parts.Count >= 5)
-      {
-        evt.ToRaw = parts[4];
-        if (VectorValue.IsVectorFormat(parts[4]))
-        {
-          evt.IsVectorType = true;
-          evt.ToVector = VectorValue.Parse(parts[4]);
-        }
-        else if (IsNumeric(parts[4]))
-        {
-          evt.ToValue = ParseFloat(parts[4]);
-        }
-        else
-        {
-          evt.IsStringType = true;
-        }
-      }
+        evt.To = AnyValue.Parse(parts[4]);
 
       if (parts.Count >= 6)
       {
-        if (VectorValue.IsVectorFormat(parts[5]))
+        if (parts[5].Contains("|"))
         {
           evt.Easing = EasingType.Bezier;
-          evt.EasingBezier = VectorValue.Parse(parts[5]);
+          evt.EasingBezier = AnyValue.Parse(parts[5]);
         }
         else
         {
@@ -184,40 +151,13 @@ namespace Winithm.Core.Common
     }
 
     /// <summary>Generate a storyboard event line: / Property Start Length From To Easing</summary>
-    public static string GenerateStoryboardEventLine(StoryboardEvent evt, string indent = "  ")
+    public static string GenerateStoryboardEventLine(StoryboardEvent evt, StoryboardProperty type, string customProperty = null, string indent = "  ")
     {
-      string from, to;
-
-      if (evt.IsInherited)
-      {
-        from = "-";
-      }
-      else if (evt.IsVectorType)
-      {
-        from = evt.FromVector.ToString();
-      }
-      else
-      {
-        from = evt.FromRaw ?? FormatFloat(evt.FromValue);
-      }
-
-      if (evt.IsVectorType)
-      {
-        to = evt.ToVector.ToString();
-      }
-      else
-      {
-        to = evt.ToRaw ?? FormatFloat(evt.ToValue);
-      }
-
-      if (evt.IsStringType)
-      {
-        if (from != "-" && (from.Contains(" ") || string.IsNullOrEmpty(from))) from = $"\"{from}\"";
-        if (to.Contains(" ") || string.IsNullOrEmpty(to)) to = $"\"{to}\"";
-      }
+      string from = evt.From.ToString();
+      string to = evt.To.ToString();
 
       string easingStr = evt.Easing == EasingType.Bezier ? evt.EasingBezier.ToString() : evt.Easing.ToString();
-      string propStr = FormatStoryboardProperty(evt.Type, evt.CustomProperty);
+      string propStr = FormatStoryboardProperty(type, customProperty);
       return $"{indent}/ {propStr} {evt.Start} {evt.Length} {from} {to} {easingStr}";
     }
 
@@ -257,55 +197,106 @@ namespace Winithm.Core.Common
     public static void ResolveInheritance(ChartData data)
     {
       foreach (var component in data.Components)
-        ResolveEventList(component.Events);
+        ResolveEventDict(component.StoryboardEvents);
       foreach (var theme in data.ThemeChannels)
-        ResolveEventList(theme.Events);
+        ResolveEventDict(theme.StoryboardEvents);
       foreach (var group in data.Groups)
-        ResolveEventList(group.Events);
+        ResolveEventDict(group.StoryboardEvents);
       foreach (var overlay in data.Overlays)
-        ResolveEventList(overlay.Events);
+        ResolveEventDict(overlay.StoryboardEvents);
 
       foreach (var window in data.Windows)
       {
-        ResolveEventList(window.Events);
+        ResolveEventDict(window.StoryboardEvents);
         foreach (var step in window.SpeedSteps)
-          ResolveEventList(step.Events);
-        foreach (var note in window.Notes)
-          ResolveEventList(note.Events);
+          ResolveEventDict(step.StoryboardEvents);
       }
     }
 
+    /// <summary>Resolve inheritance and sort each list in a storyboard event dictionary.</summary>
+    public static void ResolveEventDict<TKey>(Dictionary<TKey, List<StoryboardEvent>> dict)
+    {
+      if (dict == null) return;
+      foreach (var kvp in dict)
+        ResolveEventList(kvp.Value);
+    }
+
+    /// <summary>
+    /// Resolves inherited ("-") From values within a single per-property event list,
+    /// then sorts by start beat for binary search at runtime.
+    /// </summary>
     public static void ResolveEventList(List<StoryboardEvent> events)
     {
-      var lastValues = new Dictionary<string, StoryboardEvent>();
+      if (events.Count == 0) return;
 
-      for (int i = 0; i < events.Count; i++)
+      // Stable sort by start beat to ensure chronological order for resolution
+      var sorted = System.Linq.Enumerable.ToList(System.Linq.Enumerable.OrderBy(events, e => e.Start.AbsoluteValue));
+      events.Clear();
+      events.AddRange(sorted);
+
+      for (int i = 1; i < events.Count; i++)
       {
         var evt = events[i];
-        string key = evt.Type == StoryboardProperty.Custom ? evt.CustomProperty : evt.Type.ToString();
 
-        if (evt.IsInherited && lastValues.ContainsKey(key))
+        if (evt.From.Type == AnyValueType.Inherited)
         {
-          var prev = lastValues[key];
-          evt.FromValue = prev.ToValue;
-          evt.FromVector = prev.ToVector;
-          evt.IsVectorType = prev.IsVectorType;
-          evt.IsStringType = prev.IsStringType;
+          var prev = events[i - 1];
+          float currentBeat = evt.Start.AbsoluteValue;
 
-          // Derive FromRaw from the correct typed value to avoid type mismatch
-          if (prev.IsVectorType)
-            evt.FromRaw = prev.ToVector.ToString();
-          else if (prev.IsStringType)
-            evt.FromRaw = prev.ToRaw;
+          if (currentBeat >= prev.EndBeat)
+          {
+            // The previous event finished before this one started. Inherit its final value.
+            evt.From = prev.To;
+          }
           else
-            evt.FromRaw = FormatFloat(prev.ToValue);
-
-          evt.IsInherited = false;
+          {
+            // This event starts WHILE the previous one is still interpolating. 
+            // Calculate the exact value at this moment.
+            float startBeat = prev.Start.AbsoluteValue;
+            float length = prev.EndBeat - startBeat;
+            float t = length > 0f ? (currentBeat - startBeat) / length : 1f;
+            
+            t = prev.Easing == EasingType.Bezier
+              ? EasingFunctions.EvaluateBezier(prev.EasingBezier, t)
+              : EasingFunctions.Evaluate(prev.Easing, t);
+              
+            evt.From = AnyValue.Lerp(prev.From, prev.To, t);
+          }
           events[i] = evt;
         }
-
-        lastValues[key] = evt;
       }
+    }
+
+    /// <summary>Validates and adds an event to the target's dictionary, instantiating it lazily if needed.</summary>
+    public static void AddEventToTarget<TKey>(IStoryboardTarget<TKey> target, TKey key, StoryboardEvent evt)
+    {
+      if (target.PropertyRegistry != null)
+      {
+        if (!target.PropertyRegistry.TryGetValue(key, out var def))
+        {
+          Godot.GD.PushWarning($"[WinithmParser] Property '{key}' not registered for target. Event skipped.");
+          return;
+        }
+
+        if (!def.CanStoryboard)
+        {
+          Godot.GD.PushWarning($"[WinithmParser] Property '{key}' is Init-only and cannot be storyboarded. Event skipped.");
+          return;
+        }
+      }
+
+      if (target.StoryboardEvents == null)
+      {
+        target.StoryboardEvents = new Dictionary<TKey, List<StoryboardEvent>>();
+      }
+
+      if (!target.StoryboardEvents.TryGetValue(key, out var list))
+      {
+        list = new List<StoryboardEvent>();
+        target.StoryboardEvents[key] = list;
+      }
+
+      list.Add(evt);
     }
   }
 }
