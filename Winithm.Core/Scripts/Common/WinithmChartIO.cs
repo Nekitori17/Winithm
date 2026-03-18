@@ -15,7 +15,7 @@ namespace Winithm.Core.Common
       string wnmPath = FindWnmFile(folderPath);
       if (wnmPath == null)
       {
-        Godot.GD.PushError($"[WinithmIO] No .wnm file found in: {folderPath}");
+        System.Diagnostics.Trace.TraceError($"[WinithmIO] No .wnm file found in: {folderPath}");
         return new ChartData();
       }
 
@@ -24,7 +24,7 @@ namespace Winithm.Core.Common
       string wncPath = Path.Combine(folderPath, chartFileName + ".wnc");
       if (!File.Exists(wncPath))
       {
-        Godot.GD.PushError($"[WinithmIO] Chart file not found: {wncPath}");
+        System.Diagnostics.Trace.TraceError($"[WinithmIO] Chart file not found: {wncPath}");
         return data;
       }
 

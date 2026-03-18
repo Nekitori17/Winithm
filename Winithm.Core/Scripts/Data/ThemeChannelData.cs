@@ -17,15 +17,6 @@ namespace Winithm.Core.Data
     public float InitA = 1f;
     public float InitNoteA = 1f;
 
-    public Dictionary<StoryboardProperty, PropertyDef> PropertyRegistry { get; } = new Dictionary<StoryboardProperty, PropertyDef>()
-    {
-      { StoryboardProperty.ColorR, new PropertyDef(AnyValueType.Float) },
-      { StoryboardProperty.ColorG, new PropertyDef(AnyValueType.Float) },
-      { StoryboardProperty.ColorB, new PropertyDef(AnyValueType.Float) },
-      { StoryboardProperty.ColorA, new PropertyDef(AnyValueType.Float) },
-      { StoryboardProperty.NoteA, new PropertyDef(AnyValueType.Float) },
-    };
-
     public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
   }
 }

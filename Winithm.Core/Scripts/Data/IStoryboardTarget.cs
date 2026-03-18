@@ -3,15 +3,15 @@ using Winithm.Core.Common;
 
 namespace Winithm.Core.Data
 {
-  public struct PropertyDef
+  public struct ShaderParamDef
   {
     public AnyValueType Type;
-    public bool CanStoryboard;
+    public AnyValue DefaultValue;
 
-    public PropertyDef(AnyValueType type, bool canStoryboard = true)
+    public ShaderParamDef(AnyValueType type, AnyValue defaultValue)
     {
       Type = type;
-      CanStoryboard = canStoryboard;
+      DefaultValue = defaultValue;
     }
   }
 
@@ -21,11 +21,6 @@ namespace Winithm.Core.Data
   /// </summary>
   public interface IStoryboardTarget<TKey>
   {
-    /// <summary>
-    /// The predefined properties that this object is allowed to be animated or initialized.
-    /// Used for validation during parsing and UI generation in Editor.
-    /// </summary>
-    Dictionary<TKey, PropertyDef> PropertyRegistry { get; }
 
     /// <summary>
     /// The mapped event sequences per property. Null by default to save memory.

@@ -135,7 +135,7 @@ namespace Winithm.Core.Common
           current.InitParams[key] = val;
           
           // Store metadata hint
-          current.PropertyRegistry[key] = new PropertyDef(val.Type, true);
+          current.ShaderParams[key] = new ShaderParamDef(val.Type, val);
         }
         overlays.Add(current);
         return;
@@ -148,7 +148,7 @@ namespace Winithm.Core.Common
       else if (ParserUtils.TryParseProperty(trimmed, "Shader:", out string shader))
         current.ShaderFile = shader;
       else if (ParserUtils.TryParseProperty(trimmed, "Affects UI:", out string affectsUI))
-        current.AffectsUI = ParserUtils.ParseBool(affectsUI);
+        current.AffectsUI = ParserUtils.ParseIntBool(affectsUI);
       else if (trimmed.StartsWith("/ "))
       {
         var evt = ParserUtils.ParseStoryboardEvent(trimmed, out _, out var rawName);
@@ -285,8 +285,8 @@ namespace Winithm.Core.Common
       else if (ParserUtils.TryParseProperty(trimmed, "Flags:", out string flags))
       {
         string[] parts = flags.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 1) current.Borderless = ParserUtils.ParseBool(parts[0]);
-        if (parts.Length >= 2) current.UnFocus = ParserUtils.ParseBool(parts[1]);
+        if (parts.Length >= 1) current.Borderless = ParserUtils.ParseIntBool(parts[0]);
+        if (parts.Length >= 2) current.UnFocus = ParserUtils.ParseIntBool(parts[1]);
       }
       else if (ParserUtils.TryParseProperty(trimmed, "Layer:", out string layer))
       { int.TryParse(layer, out int lyr); current.Layer = lyr; }

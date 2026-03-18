@@ -15,18 +15,9 @@ namespace Winithm.Core.Data
 
     public float InitX;
     public float InitY;
-    public float InitScaleX = 1f;
-    public float InitScaleY = 1f;
+    public float InitScaleX;
+    public float InitScaleY;
     public float InitRotation;
-
-    public Dictionary<StoryboardProperty, PropertyDef> PropertyRegistry { get; } = new Dictionary<StoryboardProperty, PropertyDef>()
-      {
-        { StoryboardProperty.X, new PropertyDef(AnyValueType.Float) },
-        { StoryboardProperty.Y, new PropertyDef(AnyValueType.Float) },
-        { StoryboardProperty.ScaleX, new PropertyDef(AnyValueType.Float) },
-        { StoryboardProperty.ScaleY, new PropertyDef(AnyValueType.Float) },
-        { StoryboardProperty.Rotation, new PropertyDef(AnyValueType.Float) },
-      };
 
     public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
   }

@@ -8,32 +8,6 @@ namespace Winithm.Core.Data
   /// </summary>
   /// 
 
-  public enum StoryboardProperty
-  {
-    Custom = 0,
-    X,
-    Y,
-    Scale,
-    ScaleX,
-    ScaleY,
-    Rotation,
-    ColorR,
-    ColorG,
-    ColorB,
-    ColorA,
-    NoteA,
-    Title,
-    Speed
-  }
-
-  public enum StoryboardValueType
-  {
-    Int,
-    Float,
-    Vector,
-    String,
-  }
-
   public struct StoryboardEvent
   {
     public BeatTime Start;

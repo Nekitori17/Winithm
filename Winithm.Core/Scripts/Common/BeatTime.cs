@@ -22,7 +22,7 @@ namespace Winithm.Core.Common
 
       if (numerator != 0 && denominator == 0)
       {
-        Godot.GD.PushWarning($"[BeatTime] Numerator={numerator} but Denominator=0, fractional beat component discarded.");
+        System.Diagnostics.Trace.TraceWarning($"[BeatTime] Numerator={numerator} but Denominator=0, fractional beat component discarded.");
         AbsoluteValue = beat;
       }
       else

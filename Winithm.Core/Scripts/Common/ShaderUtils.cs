@@ -22,6 +22,24 @@ namespace Winithm.Core.Common
   public static class ShaderUtils
   {
     /// <summary>
+    /// Maps a GLSL type name to its corresponding AnyValueType.
+    /// </summary>
+    public static AnyValueType GlslTypeToAnyValueType(string glslType)
+    {
+      switch (glslType)
+      {
+        case "float": return AnyValueType.Float;
+        case "vec2":  return AnyValueType.Vec2;
+        case "vec3":  return AnyValueType.Vec3;
+        case "vec4":  return AnyValueType.Vec4;
+        case "int":   return AnyValueType.Int;
+        case "bool":  return AnyValueType.Bool;
+        case "sampler2D": return AnyValueType.String;
+        default: return AnyValueType.Float;
+      }
+    }
+
+    /// <summary>
     /// Built-in variables that should be ignored during parameter mapping.
     /// These are provided by the engine/viewport.
     /// </summary>

@@ -1,10 +1,12 @@
 using Godot;
 
-public class ScreenManager : Node
+namespace Winithm.Client.Managers
 {
-  public override void _Ready()
+  public class ScreenManager : Node
   {
-    // OS.WindowSize = OS.GetScreenSize();
-    OS.WindowPosition = Vector2.Zero;
+    public override void _Ready()
+    {
+      OS.WindowPosition = Vector2.Zero;
+    }
   }
 }

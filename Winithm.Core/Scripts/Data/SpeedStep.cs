@@ -1,5 +1,5 @@
-using Winithm.Core.Common;
 using System.Collections.Generic;
+using Winithm.Core.Common;
 
 namespace Winithm.Core.Data
 {
@@ -12,11 +12,6 @@ namespace Winithm.Core.Data
   {
     public BeatTime Start;
     public float Multiplier;
-
-    public Dictionary<StoryboardProperty, PropertyDef> PropertyRegistry { get; } = new Dictionary<StoryboardProperty, PropertyDef>()
-    {
-      { StoryboardProperty.Speed, new PropertyDef(AnyValueType.Float) }
-    };
 
     public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
   }

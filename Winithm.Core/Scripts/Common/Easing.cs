@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace Winithm.Core.Common
 {
@@ -223,7 +224,7 @@ namespace Winithm.Core.Common
         case "EaseOut": return EasingType.CubicOut;
         case "EaseInOut": return EasingType.CubicInOut;
         default:
-          Godot.GD.PushWarning($"[WinithmParser] Unknown easing type: '{text}', falling back to Linear.");
+          Trace.TraceWarning($"[WinithmParser] Unknown easing type: '{text}', falling back to Linear.");
           return EasingType.Linear;
       }
     }

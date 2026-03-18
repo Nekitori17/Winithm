@@ -3,21 +3,24 @@ using System.Globalization;
 
 namespace Winithm.Core.Common
 {
+  /// <summary>
+  /// Supported value types, aligned with GLSL data types.
+  /// </summary>
   public enum AnyValueType
   {
     Float,
-    Vector2,
-    Vector3,
-    Vector4,
+    Vec2,
+    Vec3,
+    Vec4,
+    Int,
+    Bool,
     String,
-    Inherited,
-    ColorRGB,
-    ColorRGBA
+    Inherited
   }
 
   /// <summary>
-  /// Represents a universal value that can be a float, a vector up to 4D, a string, or an inherited placeholder.
-  /// Formats: "0.5|0.3|1" (Vector3), "0.5" (Float), "-" (Inherited), "Hello" (String).
+  /// Represents a universal value that can be a float, a vector up to 4D, an int, a string, or an inherited placeholder.
+  /// Formats: "0.5|0.3|1" (Vec3), "0.5" (Float), "-" (Inherited), "Hello" (String).
   /// </summary>
   public struct AnyValue
   {
@@ -39,21 +42,28 @@ namespace Winithm.Core.Common
     {
       X = x; Y = y; Z = 0; W = 0;
       StringValue = null;
-      Type = AnyValueType.Vector2;
+      Type = AnyValueType.Vec2;
     }
 
     public AnyValue(float x, float y, float z)
     {
       X = x; Y = y; Z = z; W = 0;
       StringValue = null;
-      Type = AnyValueType.Vector3;
+      Type = AnyValueType.Vec3;
     }
 
     public AnyValue(float x, float y, float z, float w)
     {
       X = x; Y = y; Z = z; W = w;
       StringValue = null;
-      Type = AnyValueType.Vector4;
+      Type = AnyValueType.Vec4;
+    }
+
+    public AnyValue(int value)
+    {
+      X = value; Y = 0; Z = 0; W = 0;
+      StringValue = null;
+      Type = AnyValueType.Int;
     }
 
     public AnyValue(string value)
@@ -61,6 +71,30 @@ namespace Winithm.Core.Common
       X = 0; Y = 0; Z = 0; W = 0;
       StringValue = value;
       Type = AnyValueType.String;
+    }
+
+    public AnyValue(bool value)
+    {
+      X = value ? 1 : 0; Y = 0; Z = 0; W = 0;
+      StringValue = null;
+      Type = AnyValueType.Bool;
+    }
+
+    /// <summary>
+    /// Returns the number of float components for a given type.
+    /// </summary>
+    public static int ComponentCount(AnyValueType type)
+    {
+      switch (type)
+      {
+        case AnyValueType.Float:
+        case AnyValueType.Int:
+        case AnyValueType.Bool: return 1;
+        case AnyValueType.Vec2: return 2;
+        case AnyValueType.Vec3: return 3;
+        case AnyValueType.Vec4: return 4;
+        default: return 0;
+      }
     }
 
     /// <summary>
@@ -72,7 +106,7 @@ namespace Winithm.Core.Common
       if (string.IsNullOrWhiteSpace(text)) return new AnyValue("");
 
       text = text.Trim();
-      
+
       // Inheritance marker
       if (text == "-") return new AnyValue { Type = AnyValueType.Inherited };
 
@@ -81,7 +115,9 @@ namespace Winithm.Core.Common
       {
         string[] parts = text.Split('|');
         int count = Math.Min(parts.Length, 4);
-        AnyValue result = new AnyValue { Type = (AnyValueType)(count - 1) }; // Float=0, Vector2=1, Vector3=2, Vector4=3
+
+        AnyValueType[] vecTypes = { AnyValueType.Float, AnyValueType.Vec2, AnyValueType.Vec3, AnyValueType.Vec4 };
+        AnyValue result = new AnyValue { Type = vecTypes[Math.Min(count - 1, 3)] };
 
         if (count > 0) float.TryParse(parts[0].Trim(), NumberStyles.Float, ParserUtils.INV, out result.X);
         if (count > 1) float.TryParse(parts[1].Trim(), NumberStyles.Float, ParserUtils.INV, out result.Y);
@@ -90,7 +126,7 @@ namespace Winithm.Core.Common
         return result;
       }
 
-      // Plain number
+      // Plain number (float or int)
       if (float.TryParse(text, NumberStyles.Float, ParserUtils.INV, out float fValue))
       {
         return new AnyValue(fValue);
@@ -101,27 +137,37 @@ namespace Winithm.Core.Common
     }
 
     /// <summary>
-    /// Linearly interpolate between two identical-typed numeric/vector AnyValues.
-    /// If types are strings or inherited, or don't match exactly in numeric mode, returns 'from'. (Or implements snap).
+    /// Linearly interpolate between two numeric/vector AnyValues.
+    /// Non-interpolatable types (String, Inherited, Bool) snap at t >= 1.
     /// </summary>
     public static AnyValue Lerp(AnyValue from, AnyValue to, float t)
     {
-      if (from.Type == AnyValueType.String || to.Type == AnyValueType.String || 
-          from.Type == AnyValueType.Inherited || to.Type == AnyValueType.Inherited)
+      if (
+        from.Type == AnyValueType.String ||
+        to.Type == AnyValueType.String ||
+        from.Type == AnyValueType.Inherited ||
+        to.Type == AnyValueType.Inherited ||
+        from.Type == AnyValueType.Bool ||
+        to.Type == AnyValueType.Bool)
       {
-        return t >= 1f ? to : from; // Snap for strings and inherited
+        return t >= 1f ? to : from;
       }
 
-      int sizeFrom = (int)from.Type + 1;
-      int sizeTo = (int)to.Type + 1;
+      int sizeFrom = ComponentCount(from.Type);
+      int sizeTo = ComponentCount(to.Type);
       int maxSize = Math.Max(sizeFrom, sizeTo);
 
       AnyValue result = new AnyValue();
-      
-      // Determine resulting type hint
-      if (from.Type == AnyValueType.ColorRGBA || to.Type == AnyValueType.ColorRGBA) result.Type = AnyValueType.ColorRGBA;
-      else if (from.Type == AnyValueType.ColorRGB || to.Type == AnyValueType.ColorRGB) result.Type = AnyValueType.ColorRGB;
-      else result.Type = (AnyValueType)Math.Min(maxSize - 1, 3);
+
+      // Determine resulting type based on max component count
+      switch (maxSize)
+      {
+        case 1: result.Type = AnyValueType.Float; break;
+        case 2: result.Type = AnyValueType.Vec2; break;
+        case 3: result.Type = AnyValueType.Vec3; break;
+        case 4: result.Type = AnyValueType.Vec4; break;
+        default: result.Type = AnyValueType.Float; break;
+      }
 
       if (maxSize >= 1) result.X = from.X + (to.X - from.X) * t;
       if (maxSize >= 2) result.Y = from.Y + (to.Y - from.Y) * t;
@@ -133,7 +179,7 @@ namespace Winithm.Core.Common
 
     public Godot.Color ToGodotColor(float alpha = 1f)
     {
-      if (Type == AnyValueType.Vector4) return new Godot.Color(X, Y, Z, W);
+      if (Type == AnyValueType.Vec4) return new Godot.Color(X, Y, Z, W);
       return new Godot.Color(X, Y, Z, alpha);
     }
 
@@ -146,14 +192,14 @@ namespace Winithm.Core.Common
       {
         case AnyValueType.Inherited: return "-";
         case AnyValueType.String:
-          if (StringValue != null && StringValue.Contains(" ")) return $"\"{StringValue}\""; // Quote if it contains spaces
+          if (StringValue != null && StringValue.Contains(" ")) return $"\"{StringValue}\"";
           return StringValue ?? "";
+        case AnyValueType.Bool: return X == 1 ? "1" : "0";
+        case AnyValueType.Int: return ((int)X).ToString();
         case AnyValueType.Float: return ParserUtils.FormatFloat(X);
-        case AnyValueType.Vector2: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}";
-        case AnyValueType.Vector3:
-        case AnyValueType.ColorRGB: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}|{ParserUtils.FormatFloat(Z)}";
-        case AnyValueType.Vector4:
-        case AnyValueType.ColorRGBA: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}|{ParserUtils.FormatFloat(Z)}|{ParserUtils.FormatFloat(W)}";
+        case AnyValueType.Vec2: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}";
+        case AnyValueType.Vec3: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}|{ParserUtils.FormatFloat(Z)}";
+        case AnyValueType.Vec4: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}|{ParserUtils.FormatFloat(Z)}|{ParserUtils.FormatFloat(W)}";
         default: return "";
       }
     }

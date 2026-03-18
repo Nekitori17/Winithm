@@ -1,5 +1,5 @@
+using System.Diagnostics;
 using Winithm.Core.Common;
-using System.Collections.Generic;
 
 namespace Winithm.Core.Data
 {
@@ -47,7 +47,7 @@ namespace Winithm.Core.Data
         case "Focus": return NoteType.Focus;
         case "Close": return NoteType.Close;
         default:
-          Godot.GD.PushWarning($"[WinithmParser] Unknown note type: '{text}', defaulting to Tap.");
+          Trace.TraceWarning($"[WinithmParser] Unknown note type: '{text}', defaulting to Tap.");
           return NoteType.Tap;
       }
     }
@@ -61,7 +61,7 @@ namespace Winithm.Core.Data
         case "Left": return NoteSide.Left;
         case "Right": return NoteSide.Right;
         default:
-          Godot.GD.PushWarning($"[WinithmParser] Unknown side: '{text}', defaulting to Bottom.");
+          Trace.TraceWarning($"[WinithmParser] Unknown side: '{text}', defaulting to Bottom.");
           return NoteSide.Bottom;
       }
     }

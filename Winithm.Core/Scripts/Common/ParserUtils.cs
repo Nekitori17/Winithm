@@ -32,6 +32,15 @@ namespace Winithm.Core.Common
       return result;
     }
 
+    /// <summary>
+    /// Parses "0"/"1" integer-style boolean values.
+    /// Used for flags in .wnc format where bools are stored as 0 or 1.
+    /// </summary>
+    public static bool ParseIntBool(string text)
+    {
+      return text.Trim() == "1";
+    }
+
     public static bool IsNumeric(string text)
     {
       return float.TryParse(text.Trim(), NumberStyles.Float, INV, out _);
@@ -179,20 +188,7 @@ namespace Winithm.Core.Common
       }
     }
 
-    // /// <summary>
-    // /// Removes notes that start before their window's StartBeat or after their window's EndBeat.
-    // /// </summary>
-    // public static void CullNotesOutsideWindows(ChartData data)
-    // {
-    //   foreach (var window in data.Windows)
-    //   {
-    //     float startBeat = window.StartBeat;
-    //     float endBeat = window.EndBeat;
-    //     window.Notes.RemoveAll(n =>
-    //       n.Start.AbsoluteValue < startBeat || n.Start.AbsoluteValue > endBeat
-    //     );
-    //   }
-    // }
+
 
     public static void ResolveInheritance(ChartData data)
     {
@@ -270,20 +266,6 @@ namespace Winithm.Core.Common
     /// <summary>Validates and adds an event to the target's dictionary, instantiating it lazily if needed.</summary>
     public static void AddEventToTarget<TKey>(IStoryboardTarget<TKey> target, TKey key, StoryboardEvent evt)
     {
-      if (target.PropertyRegistry != null)
-      {
-        if (!target.PropertyRegistry.TryGetValue(key, out var def))
-        {
-          Godot.GD.PushWarning($"[WinithmParser] Property '{key}' not registered for target. Event skipped.");
-          return;
-        }
-
-        if (!def.CanStoryboard)
-        {
-          Godot.GD.PushWarning($"[WinithmParser] Property '{key}' is Init-only and cannot be storyboarded. Event skipped.");
-          return;
-        }
-      }
 
       if (target.StoryboardEvents == null)
       {

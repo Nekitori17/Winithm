@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using Winithm.Core.Common;
 
 namespace Winithm.Core.Data
@@ -18,20 +19,13 @@ namespace Winithm.Core.Data
   public class ComponentData : IStoryboardTarget<StoryboardProperty>
   {
     public ComponentType Type;
+
     public float InitX;
     public float InitY;
     public float InitScale;
     public float InitAlpha;
     public float AnchorX;
     public float AnchorY;
-
-    public Dictionary<StoryboardProperty, PropertyDef> PropertyRegistry { get; } = new Dictionary<StoryboardProperty, PropertyDef>()
-      {
-        { StoryboardProperty.X, new PropertyDef(AnyValueType.Float) },
-        { StoryboardProperty.Y, new PropertyDef(AnyValueType.Float) },
-        { StoryboardProperty.Scale, new PropertyDef(AnyValueType.Float) },
-        { StoryboardProperty.ColorA, new PropertyDef(AnyValueType.Float) },
-      };
 
     public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
 
@@ -44,7 +38,7 @@ namespace Winithm.Core.Data
         case "Info": return ComponentType.Info;
         case "Difficulty": return ComponentType.Difficulty;
         default:
-          Godot.GD.PushWarning($"[WinithmParser] Unknown component type: '{text}', defaulting to Info.");
+          Trace.TraceWarning($"[WinithmParser] Unknown component type: '{text}', defaulting to Info.");
           return ComponentType.Info;
       }
     }

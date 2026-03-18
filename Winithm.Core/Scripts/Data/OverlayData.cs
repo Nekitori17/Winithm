@@ -15,10 +15,8 @@ namespace Winithm.Core.Data
     public string ShaderFile = "";
     public bool AffectsUI = false;
     
-    public Dictionary<string, PropertyDef> PropertyRegistry { get; } = new Dictionary<string, PropertyDef>();
-    
-    /// <summary>Deeper metadata for shader params (ColorRGB hint, etc.)</summary>
-    public Dictionary<string, PropertyDef> ParamMetadata { get; set; } = new Dictionary<string, PropertyDef>();
+    /// <summary>Shader uniform definitions, auto-scanned from .glsl</summary>
+    public Dictionary<string, ShaderParamDef> ShaderParams { get; } = new Dictionary<string, ShaderParamDef>();
     
     public Dictionary<string, AnyValue> InitParams = new Dictionary<string, AnyValue>();
     
