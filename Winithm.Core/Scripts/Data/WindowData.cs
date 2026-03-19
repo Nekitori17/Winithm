@@ -47,6 +47,12 @@ namespace Winithm.Core.Data
     /// <summary>Window despawn beat (last Close note's start, or last SpeedStep's start)</summary>
     public float EndBeat;
 
+    /// <summary>Cached real-time start (in seconds)</summary>
+    public float StartTimeSecs;
+
+    /// <summary>Cached real-time end (in seconds)</summary>
+    public float EndTimeSecs;
+
     /// <summary>
     /// Pre-computes window lifecycle boundaries (StartBeat, EndBeat).
     /// Should be called after all Notes and SpeedSteps are populated.
