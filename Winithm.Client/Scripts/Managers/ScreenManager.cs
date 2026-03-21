@@ -12,18 +12,18 @@ namespace Winithm.Client.Managers
   {
     public static ScreenManager Instance { get; private set; }
 
-    public AppDisplayMode CurrentDisplayMode { get; private set; } = AppDisplayMode.Windowed;
+    public AppDisplayMode DisplayMode { get; private set; } = AppDisplayMode.Windowed;
 
     public override void _Ready()
     {
       Instance = this;
-      SetAppDisplayMode(AppDisplayMode.FullScreen);
+      SetAppDisplayMode(AppDisplayMode.Windowed);
       OS.WindowPosition = Vector2.Zero;
     }
 
     public void SetAppDisplayMode(AppDisplayMode mode)
     {
-      CurrentDisplayMode = mode;
+      DisplayMode = mode;
       switch (mode)
       {
         case AppDisplayMode.FullScreen:
@@ -44,7 +44,7 @@ namespace Winithm.Client.Managers
     /// </summary>
     public void ToggleDisplayMode()
     {
-      SetAppDisplayMode(CurrentDisplayMode == AppDisplayMode.FullScreen
+      SetAppDisplayMode(DisplayMode == AppDisplayMode.FullScreen
           ? AppDisplayMode.Windowed
           : AppDisplayMode.FullScreen);
     }
