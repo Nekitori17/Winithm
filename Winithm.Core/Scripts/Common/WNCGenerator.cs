@@ -122,8 +122,9 @@ namespace Winithm.Core.Common
                 sb.AppendLine(ParserUtils.GenerateStoryboardEventLine(evt, kvp.Key));
 
           // Notes
-          foreach (var n in w.Notes)
-            sb.AppendLine($"  # {n.Type} {n.Start} {n.Length} {n.Side} {n.FakeType}");
+          foreach (var ns in w.Notes.Values)
+            foreach (var n in ns)
+              sb.AppendLine($"  # {n.Type} {n.Start} {n.Length} {n.Side} {n.FakeType}");
 
           // SpeedSteps
           foreach (var ss in w.SpeedSteps)

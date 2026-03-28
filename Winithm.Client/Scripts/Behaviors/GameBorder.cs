@@ -16,7 +16,7 @@ namespace Winithm.Client.Behaviors
 
     public override void _Draw()
     {
-      if (ScreenManager.Instance != null && ScreenManager.Instance.CurrentDisplayMode == AppDisplayMode.Windowed)
+      if (ScreenManager.Instance != null && ScreenManager.Instance.DisplayMode == AppDisplayMode.Windowed)
       {
         // Draw a sleek white border slightly inside the window bounds
         // Thickness of 2.0 with anti-aliasing (aa=true)

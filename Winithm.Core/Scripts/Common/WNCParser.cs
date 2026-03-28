@@ -53,25 +53,80 @@ namespace Winithm.Core.Common
             break;
           case "OVERLAYS":
             ParseOverlayLine(trimmed, data.Overlays, ref currentOverlay);
+
+            foreach (OverlayData overlay in data.Overlays)
+            {
+              foreach (List<StoryboardEvent> events in overlay.StoryboardEvents.Values)
+              {
+                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
+              }
+            }
+
+            data.Overlays.Sort((a, b) => a.ID.CompareTo(b.ID));
             break;
           case "COMPONENTS":
             ParseComponentLine(trimmed, data.Components, ref currentComponent);
+
+            foreach (ComponentData component in data.Components)
+            {
+              foreach (List<StoryboardEvent> events in component.StoryboardEvents.Values)
+              {
+                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
+              }
+            }
+
+            data.Components.Sort((a, b) => a.Type.CompareTo(b.Type));
             break;
           case "THEME_CHANNELS":
             ParseThemeChannelLine(trimmed, data.ThemeChannels, ref currentTheme);
+
+            foreach (ThemeChannelData theme in data.ThemeChannels)
+            {
+              foreach (List<StoryboardEvent> events in theme.StoryboardEvents.Values)
+              {
+                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
+              }
+            }
+
+            data.ThemeChannels.Sort((a, b) => a.ID.CompareTo(b.ID));
             break;
           case "GROUPS":
             ParseGroupLine(trimmed, data.Groups, ref currentGroup);
+
+            foreach (GroupData group in data.Groups)
+            {
+              foreach (List<StoryboardEvent> events in group.StoryboardEvents.Values)
+              {
+                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
+              }
+            }
+
+            data.Groups.Sort((a, b) => a.ID.CompareTo(b.ID));
             break;
           case "WINDOWS":
             ParseWindowLine(trimmed, data.Windows, ref currentWindow,
                             ref currentSpeedStep, ref currentNote);
+
+            foreach (WindowData window in data.Windows)
+            {
+              foreach (List<StoryboardEvent> events in window.StoryboardEvents.Values)
+              {
+                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
+              }
+
+              foreach (List<NoteData> notes in window.Notes.Values)
+              {
+                notes.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
+              }
+
+              window.PreCompute();
+            }            
+
+            data.Windows.Sort((a, b) => a.ID.CompareTo(b.ID));
+
             break;
         }
       }
-
-      foreach (var window in data.Windows)
-        window.PreCompute();
 
       ParserUtils.ResolveInheritance(data);
     }
@@ -322,7 +377,7 @@ namespace Winithm.Core.Common
         if (parts.Length >= 3) currentNote.Length = BeatTime.Parse(parts[2]);
         if (parts.Length >= 4) currentNote.Side = NoteData.ParseSide(parts[3]);
         if (parts.Length >= 5) { int.TryParse(parts[4], out int fake); currentNote.FakeType = fake; }
-        current.Notes.Add(currentNote);
+        current.Notes[currentNote.Side].Add(currentNote);
       }
       else if (trimmed.StartsWith("/ "))
       {

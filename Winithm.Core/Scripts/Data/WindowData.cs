@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Winithm.Core.Behaviors;
 using Winithm.Core.Common;
 
 namespace Winithm.Core.Data
@@ -39,7 +40,7 @@ namespace Winithm.Core.Data
     public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
 
     public List<SpeedStep> SpeedSteps = new List<SpeedStep>();
-    public List<NoteData> Notes = new List<NoteData>();
+    public Dictionary<NoteSide, List<NoteData>> Notes = new Dictionary<NoteSide, List<NoteData>>();
 
     /// <summary>Window spawn beat (first SpeedStep's start)</summary>
     public float StartBeat;
@@ -69,12 +70,15 @@ namespace Winithm.Core.Data
       }
 
       // Find the last "Close" note to determine the end of the window's life
-      for (int i = Notes.Count - 1; i >= 0; i--)
+      foreach (var notes in Notes.Values)
       {
-        if (Notes[i].Type == NoteType.Close)
+        foreach (NoteData note in notes)
         {
-          EndBeat = Notes[i].Start.AbsoluteValue;
-          return;
+          if (note.Type == NoteType.Close)
+          {
+            EndBeat = note.Start.AbsoluteValue;
+            return;
+          }
         }
       }
 

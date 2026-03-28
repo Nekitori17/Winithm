@@ -77,6 +77,39 @@ namespace Winithm.Core.Logic
       return ToSeconds(beatTime.AbsoluteValue);
     }
 
+    public float GetCurrentBPS(float seconds)
+    {
+      if (_stops.Count == 0) return 2f; // Default 120 BPM
+
+      int idx = FindStopIndexByTime(seconds);
+
+      return _stops[idx].BeatsPerSecond;
+    }
+
+    /// <summary>
+    /// Computes AbsoluteBeat for each BPMStop sequentially.
+    /// Call this after loading the level's BPMList.
+    /// </summary>
+    public void PreCompute()
+    {
+      if (_stops == null || _stops.Count == 0) return;
+
+      var first = _stops[0];
+      first.AbsoluteBeat = 0f;
+      _stops[0] = first;
+
+      for (int i = 1; i < _stops.Count; i++)
+      {
+        var prev = _stops[i - 1];
+        var curr = _stops[i];
+
+        float timeDiff = curr.StartTimeSeconds - prev.StartTimeSeconds;
+        curr.AbsoluteBeat = prev.AbsoluteBeat + (timeDiff * prev.BeatsPerSecond);
+
+        _stops[i] = curr;
+      }
+    }
+
     // ──────────────────────────────────────────────
     //  Binary Search
     // ──────────────────────────────────────────────

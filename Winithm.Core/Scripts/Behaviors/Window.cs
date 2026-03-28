@@ -1,244 +1,323 @@
 using Godot;
-using System;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Behaviors
 {
-  public class Window : Control
+  public class Window : Control, IPoolable
   {
-    [Export] public Vector2 Pivot { get; set; } = new Vector2(0.5f, 0.5f);
-    [Export] public Color TitleBarColor { get; set; } = Colors.Aqua;
-    [Export] public Vector2 ScreenSize { get; set; } = new Vector2(1280, 720);
-    [Export] public Vector2 GameScreenSize { get; set; } = new Vector2(1280, 720);
+    // --- Dirty tracking ---
+    struct WindowState
+    {
+      public Vector2 Pivot, ScreenSize, PlayerAreaSize, WindowSize;
+      public Color TitleBarColor, TitleTextColor, WindowColor;
+      public string Title;
+      public bool Borderless, IsNotRespondingTitle;
+      public float FocusOverlayOpacity, UnresponsiveOverlayOpacity;
+    }
+    private WindowState _lastState = new WindowState();
 
-    [Export] public string Title { get; set; } = "Winithm";
-    [Export] public Vector2 WindowSize { get; set; } = new Vector2(300, 500);
-    [Export] public Color WindowColor { get; set; } = new Color(0.1f, 0.1f, 0.1f, 0.85f);
-    [Export] public bool Borderless { get; set; } = false;
-    [Export] public bool Unfocus { get; set; } = false;
-    [Export] public bool Focusable { get; set; } = false;
+    // --- Exported properties ---
+    [Export] public Vector2 Pivot = new Vector2(0.5f, 0.5f);
+    [Export] public Color TitleBarColor = Colors.Coral;
+    [Export] public Color TitleTextColor = Colors.Black;
+    [Export] public Vector2 ScreenSize = new Vector2(1280, 720);
+    [Export] public Vector2 PlayerAreaSize = new Vector2(1280, 720);
 
-    // --- Fields ---
-    public Control _titleBar;
-    public Control _windowBody;
-    public Control _body;
-    public Control _frame;
+    [Export] public string Title = "Winithm";
+    [Export] public Vector2 WindowSize = new Vector2(300, 500);
+    [Export] public Color WindowColor = new Color(0.1f, 0.1f, 0.1f, 0.85f);
+    [Export] public bool Borderless = false;
 
+    // --- Runtime state injected by WindowManager each frame ---
+    public float FocusOverlayOpacity = 0f;
+    public float UnresponsiveOverlayOpacity = 0f;
+    public bool IsNotRespondingTitle = false;
+
+    // --- Child references ---
+    private Control _titleBar;
+    private Control _windowBody;
+    private Control _windowFrame;
+
+    public Vector2 WindowBodySize => _windowBody?.RectSize ?? Vector2.Zero;
+
+    // --- Runtime layers (Z-ordered inside WindowBody) ---
+    // NoteLayer → UnfocusOverlay → FocusNoteLayer → UnresponsiveOverlay
+    public Control NoteLayer;
+    public Control UnfocusOverlay;
+    public Control FocusNoteLayer;
+    public Control UnresponsiveOverlay;
+
+    // --- Resources ---
     private Texture _iconTex;
     private Texture _closeTex;
     private Texture _maxTex;
     private Texture _minTex;
     private DynamicFont _font;
 
-    private float _focusAnimTime = 0f;
-
-    // Cached title bar height in local pixels (updated in RefreshWindowLayout)
-    private float _titleBarHeight = Mathf.Min(1280, 720) * 0.0375f;
+    public const float TitleBarHeightPercent = 0.0375f;
+    internal float TitleBarHeight { get; private set; }
 
     public override void _Ready()
     {
-      RectClipContent = false;
-      SetProcess(true);
       _titleBar = GetNode<Control>("TitleBar");
       _windowBody = GetNode<Control>("WindowBody");
-      _body = GetNode<Control>("WindowBody/Body");
-      _frame = GetNode<Control>("Frame");
+      _windowFrame = GetNode<Control>("Frame");
 
-      // Load Resources
+      NoteLayer = CreateLayer("NoteLayer");
+      UnfocusOverlay = CreateLayer("UnfocusOverlay");
+      FocusNoteLayer = CreateLayer("FocusNoteLayer");
+      UnresponsiveOverlay = CreateLayer("UnresponsiveOverlay");
+
+      _titleBar.Connect("draw", this, nameof(OnTitleBarDraw));
+      _windowBody.Connect("draw", this, nameof(OnWindowBodyDraw));
+      UnfocusOverlay.Connect("draw", this, nameof(OnUnfocusOverlayDraw));
+      UnresponsiveOverlay.Connect("draw", this, nameof(OnUnresponsiveOverlayDraw));
+
       _iconTex = GD.Load<Texture>("res://icon.png");
       _closeTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/close.svg");
       _maxTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/maximize.svg");
       _minTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/minimize.svg");
 
       var fontData = GD.Load<DynamicFontData>("res://Winithm.Core/Resources/Fonts/Quicksand-Regular.ttf");
-      _font = new DynamicFont
-      {
-        FontData = fontData,
-        UseFilter = true
-      };
+      _font = new DynamicFont { FontData = fontData, UseFilter = true };
 
-      if (_titleBar != null) _titleBar.Connect("draw", this, nameof(OnTitleBarDraw));
-      if (_body != null) _body.Connect("draw", this, nameof(OnBodyDraw));
-
-      UpdateWindow();
+      UpdateVisual();
     }
+
+    public void OnSpawn() { }
+    public void OnDespawn() { }
 
     public override void _Process(float delta)
     {
-      if (Focusable)
+      bool overlayDirty =
+        FocusOverlayOpacity != _lastState.FocusOverlayOpacity ||
+        UnresponsiveOverlayOpacity != _lastState.UnresponsiveOverlayOpacity;
+
+      if (overlayDirty)
       {
-        _focusAnimTime += delta * 20f;
-        _body?.Update();
+        UnfocusOverlay?.Update();
+        UnresponsiveOverlay?.Update();
         _titleBar?.Update();
+
+        _lastState.FocusOverlayOpacity = FocusOverlayOpacity;
+        _lastState.UnresponsiveOverlayOpacity = UnresponsiveOverlayOpacity;
       }
     }
 
-    // Design resolution constant — Window was designed at this resolution
-    private static readonly Vector2 DesignResolution = new Vector2(1280f, 720f);
-
-    public void UpdateWindow()
+    /// <summary>
+    /// Recalculates layout of TitleBar, WindowBody, and Frame.
+    /// Call after changing any exported property.
+    /// </summary>
+    public void UpdateVisual()
     {
       if (_titleBar == null || _windowBody == null) return;
 
-      _titleBar.Visible = !Borderless;
-      if (_frame != null) _frame.Visible = !Borderless;
+      bool layoutDirty =
+        Pivot != _lastState.Pivot ||
+        ScreenSize != _lastState.ScreenSize ||
+        PlayerAreaSize != _lastState.PlayerAreaSize ||
+        WindowSize != _lastState.WindowSize ||
+        Borderless != _lastState.Borderless;
 
-      // ViewScale: how much the current screen differs from the design resolution
-      float viewScale = Mathf.Min(
-        GameScreenSize.x / DesignResolution.x,
-        GameScreenSize.y / DesignResolution.y
-      );
-      viewScale = Mathf.Abs(viewScale); // Prevents negative values
+      bool titleBarDirty = layoutDirty ||
+        TitleBarColor != _lastState.TitleBarColor ||
+        TitleTextColor != _lastState.TitleTextColor ||
+        Title != _lastState.Title ||
+        IsNotRespondingTitle != _lastState.IsNotRespondingTitle;
 
-      // Scale WindowSize and title bar height by viewScale
-      Vector2 scaledSize = WindowSize * viewScale;
-      _titleBarHeight = Mathf.Min(ScreenSize.x, ScreenSize.y) * 0.0375f;
+      bool bodyDirty = layoutDirty ||
+        WindowColor != _lastState.WindowColor;
 
-      Vector2 bodyOffset = -scaledSize * Pivot;
-      _windowBody.RectSize = scaledSize;
+      if (!layoutDirty && !titleBarDirty && !bodyDirty) return;
 
-      if (!Borderless)
+      if (layoutDirty)
       {
-        _titleBar.Visible = true;
-        _titleBar.RectSize = new Vector2(scaledSize.x, _titleBarHeight);
-        bodyOffset += new Vector2(0, _titleBarHeight);
-      }
-      else
-      {
-        _titleBar.Visible = false;
-      }
+        float viewScale = Mathf.Abs(Mathf.Min(
+          PlayerAreaSize.x / Constants.DesignResolution.x,
+          PlayerAreaSize.y / Constants.DesignResolution.y
+        ));
 
-      _titleBar.RectPosition = bodyOffset - new Vector2(0, _titleBarHeight);
-      _windowBody.RectPosition = bodyOffset;
+        Vector2 scaledSize = WindowSize * viewScale;
+        TitleBarHeight = Mathf.Min(ScreenSize.x, ScreenSize.y) * TitleBarHeightPercent;
 
-      if (_frame != null)
-      {
-        if (!Borderless)
+        float totalHeight = scaledSize.y + (!Borderless ? TitleBarHeight : 0f);
+        Vector2 bodyOffset = new Vector2(
+          -scaledSize.x * Pivot.x,
+          -totalHeight * Pivot.y + (!Borderless ? TitleBarHeight : 0f)
+        );
+
+        _windowBody.RectSize = scaledSize;
+        _windowBody.RectPosition = bodyOffset;
+
+        _titleBar.Visible = !Borderless;
+        _titleBar.RectSize = new Vector2(scaledSize.x, TitleBarHeight);
+        _titleBar.RectPosition = bodyOffset - new Vector2(0f, TitleBarHeight);
+
+        if (_windowFrame != null)
         {
-          _frame.Visible = true;
-          _frame.RectSize = new Vector2(scaledSize.x, scaledSize.y + _titleBarHeight);
-          _frame.RectPosition = _titleBar.RectPosition;
-          _frame.Update();
+          _windowFrame.Visible = !Borderless;
+          _windowFrame.RectSize = new Vector2(scaledSize.x, scaledSize.y + TitleBarHeight);
+          _windowFrame.RectPosition = _titleBar.RectPosition;
+          _windowFrame.Update();
         }
-        else
-        {
-          _frame.Visible = false;
-        }
+
+        _lastState.Pivot = Pivot;
+        _lastState.ScreenSize = ScreenSize;
+        _lastState.PlayerAreaSize = PlayerAreaSize;
+        _lastState.WindowSize = WindowSize;
+        _lastState.Borderless = Borderless;
       }
 
-      if (_body != null)
+      if (titleBarDirty)
       {
-        _body.RectSize = scaledSize;
-        _body.RectPosition = Vector2.Zero;
+        _titleBar.Update();
+
+        _lastState.TitleBarColor = TitleBarColor;
+        _lastState.TitleTextColor = TitleTextColor;
+        _lastState.Title = Title;
+        _lastState.IsNotRespondingTitle = IsNotRespondingTitle;
       }
-      Update();
-      _titleBar.Update();
-      _body.Update();
+
+      if (bodyDirty)
+      {
+        _windowBody.Update();
+
+        _lastState.WindowColor = WindowColor;
+      }
     }
+
+    // --- Draw callbacks ---
 
     private void OnTitleBarDraw()
     {
-      if (Borderless || _titleBar == null) return;
+      if (Borderless) return;
 
-      float width = _titleBar.RectSize.x;
-      float height = _titleBar.RectSize.y;
+      float w = _titleBar.RectSize.x;
+      float h = _titleBar.RectSize.y;
 
-      // Draw background
-      Color bgColor = TitleBarColor;
-      _titleBar.DrawRect(new Rect2(Vector2.Zero, _titleBar.RectSize), bgColor);
+      _titleBar.DrawRect(new Rect2(Vector2.Zero, _titleBar.RectSize), TitleBarColor);
 
-      float margin = height * 0.2f;
-      float btnSize = height * 0.6f;
-      float spacing = height * 1.25f;
-      float iconSize = height * 0.7f;
+      float margin = h * 0.2f;
+      float btnSize = h * 0.6f;
+      float spacing = h * 1.25f;
+      float iconSize = h * 0.7f;
 
-      // 1. Core areas needed for each button (Close -> Max -> Min)
-      float closeArea = margin + btnSize + margin;
-      float maxArea   = closeArea + spacing + btnSize;
-      float minArea   = maxArea + spacing + btnSize;
+      float iconWidth = margin + iconSize + margin;
+      float oneBtn = margin + btnSize + margin;
+      float twoBtns = margin + btnSize * 2f + spacing + margin;
+      float threeBtns = margin + btnSize * 3f + spacing * 2f + margin;
 
-      // 2. Space needed for Icon and Title
-      float iconNeeded = margin + iconSize + margin;
-      float titleNeeded = height * 1.5f; // Threshold for title to exist
+      bool showIcon = w >= iconWidth;
+      bool showClose = w >= iconWidth + oneBtn;
+      bool showMax = w >= iconWidth + twoBtns;
+      bool showMin = w >= iconWidth + threeBtns;
 
-      // 3. PRIORITY HIERARCHY (Icon > Title > Close > Max > Min)
-      // Hide buttons if we don't have space for Icon + Title
-      float iconTitleSpace = iconNeeded + titleNeeded;
-      bool showMin   = width >= (minArea + iconTitleSpace);
-      bool showMax   = width >= (maxArea + iconTitleSpace);
-      bool showClose = width >= (closeArea + iconTitleSpace);
+      int fontSize = (int)(h * 0.55f);
+      if (_font.Size != fontSize) _font.Size = fontSize;
 
-      // Total space on the right side based on visible buttons
-      float buttonsSpace = margin;
-      if (showClose) buttonsSpace = closeArea;
-      if (showMax)   buttonsSpace = maxArea;
-      if (showMin)   buttonsSpace = minArea;
+      string titleText =
+        IsNotRespondingTitle ? Title + " (Not Responding)" : Title;
+      string displayTitle = "";
+      if (showClose)
+      {
+        float avail = w - iconWidth - threeBtns - 10f;
 
-      // 4. Decide Title and Icon visibility (Icon is absolute last)
-      bool showTitle = width >= (iconNeeded + (showClose ? 40f : 10f));
-      bool shortenTitle = width < (buttonsSpace + iconNeeded + height * 4f);
-      bool showIcon = width >= (margin + iconSize);
+        if (_font.GetStringSize(titleText).x <= avail)
+        {
+          displayTitle = titleText;
+        }
+        else
+        {
+          for (int i = titleText.Length - 1; i >= 1; i--)
+          {
+            string candidate = titleText.Substring(0, i) + "...";
+            if (_font.GetStringSize(candidate).x <= avail)
+            {
+              displayTitle = candidate;
+              break;
+            }
+          }
+        }
+      }
 
       float currentX = margin;
-
-      // Draw Icon (Priority: 1)
       if (showIcon && _iconTex != null)
       {
-        _titleBar.DrawTextureRect(_iconTex, new Rect2(margin, (height - iconSize) / 2f, iconSize, iconSize), false);
+        _titleBar.DrawTextureRect(
+          _iconTex,
+          new Rect2(margin, (h - iconSize) / 2f, iconSize, iconSize),
+          false
+        );
         currentX += iconSize + margin;
       }
 
-      // Draw Title (Priority: 2)
-      if (showTitle && _font != null)
+      if (!string.IsNullOrEmpty(displayTitle))
       {
-        _font.Size = (int)Mathf.Max(height * 0.55f, 8);
-        string displayTitle = Title;
-        if (shortenTitle && displayTitle.Length > 5)
-          displayTitle = displayTitle.Substring(0, 5) + "...";
-
-        Vector2 textPos = new Vector2(currentX, height / 2f + _font.GetAscent() / 2f - 2f * (height / 27f));
-        _titleBar.DrawString(_font, textPos, displayTitle, Colors.Black);
+        Vector2 textPos = new Vector2(
+          currentX,
+          h / 2f + _font.GetAscent() / 2f - 2f * (h / 27f)
+        );
+        _titleBar.DrawString(_font, textPos, displayTitle, TitleTextColor);
       }
 
-      // Draw Buttons (Priority: 3/4/5)
-      float btnX = width - margin - btnSize;
-      float btnY = (height - btnSize) / 2f;
-      Color btnColor = Colors.Black;
+      float btnX = w - margin - btnSize;
+      float btnY = (h - btnSize) / 2f;
 
       if (showClose && _closeTex != null)
       {
-        _titleBar.DrawTextureRect(_closeTex, new Rect2(btnX, btnY, btnSize, btnSize), false, btnColor);
-        btnX -= (btnSize + spacing);
+        _titleBar.DrawTextureRect(_closeTex, new Rect2(btnX, btnY, btnSize, btnSize), false, TitleTextColor);
+        btnX -= btnSize + spacing;
       }
       if (showMax && _maxTex != null)
       {
-        _titleBar.DrawTextureRect(_maxTex, new Rect2(btnX, btnY, btnSize, btnSize), false, btnColor);
-        btnX -= (btnSize + spacing);
+        _titleBar.DrawTextureRect(_maxTex, new Rect2(btnX, btnY, btnSize, btnSize), false, TitleTextColor);
+        btnX -= btnSize + spacing;
       }
       if (showMin && _minTex != null)
       {
-        _titleBar.DrawTextureRect(_minTex, new Rect2(btnX, btnY, btnSize, btnSize), false, btnColor);
+        _titleBar.DrawTextureRect(_minTex, new Rect2(btnX, btnY, btnSize, btnSize), false, TitleTextColor);
+      }
+
+      if (UnresponsiveOverlayOpacity > 0f)
+      {
+        _titleBar.DrawRect(new Rect2(Vector2.Zero, _titleBar.RectSize), new Color(1f, 1f, 1f, UnresponsiveOverlayOpacity));
       }
     }
 
-    private void OnBodyDraw()
+    private void OnWindowBodyDraw()
     {
-      if (_body == null) return;
+      // Background only — notes and overlays live in Z-ordered layers above
+      _windowBody.DrawRect(new Rect2(Vector2.Zero, _windowBody.RectSize), WindowColor);
+    }
 
-      // Draw content background
-      _body.DrawRect(new Rect2(Vector2.Zero, _body.RectSize), WindowColor);
+    private void OnUnfocusOverlayDraw()
+    {
+      UnfocusOverlay.DrawRect(
+        new Rect2(Vector2.Zero, UnfocusOverlay.RectSize),
+        new Color(0.15f, 0.15f, 0.15f, FocusOverlayOpacity)
+      );
+    }
 
-      // Focusable Flicker / Flash (White background)
-      if (Focusable && Mathf.Sin(_focusAnimTime) > 0)
+    private void OnUnresponsiveOverlayDraw()
+    {
+      UnresponsiveOverlay.DrawRect(
+        new Rect2(Vector2.Zero, UnresponsiveOverlay.RectSize),
+        new Color(1f, 1f, 1f, UnresponsiveOverlayOpacity)
+      );
+    }
+
+    // --- Helpers ---
+
+    private Control CreateLayer(string name)
+    {
+      var layer = new Control
       {
-          // Draw pure white over the background
-          _body.DrawRect(new Rect2(Vector2.Zero, _body.RectSize), new Color(1, 1, 1, 0.1f));
-      }
-
-      // Unfocus overlay
-      if (Unfocus)
-      {
-        _body.DrawRect(new Rect2(Vector2.Zero, _body.RectSize), new Color(0, 0, 0, 0.45f));
-      }
+        Name = name,
+        MouseFilter = MouseFilterEnum.Ignore
+      };
+      layer.SetAnchorsAndMarginsPreset(LayoutPreset.Wide);
+      _windowBody.AddChild(layer);
+      return layer;
     }
   }
 }

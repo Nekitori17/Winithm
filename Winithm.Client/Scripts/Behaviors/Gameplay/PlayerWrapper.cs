@@ -2,74 +2,68 @@ using Godot;
 
 namespace Winithm.Client.Behaviors.Gameplay
 {
-  public enum GameplayAspectMode
-  {
-    Ratio16_9,
-    Expand
-  }
+  public enum GameplayAspectMode { Ratio16_9, Expand }
 
   public class PlayerWrapper : Control
   {
-    [Export] public GameplayAspectMode AspectMode { get; set; } = GameplayAspectMode.Ratio16_9;
+    public static PlayerWrapper Instance { get; private set; }
+
+    private GameplayAspectMode _aspectMode = GameplayAspectMode.Ratio16_9;
+        
+    [Export]
+    public GameplayAspectMode AspectMode
+    {
+      get => _aspectMode;
+      set
+      {
+        _aspectMode = value;
+        ApplyAspectMode();
+      }
+    }
 
     private Control _gameArea;
-
     private const float BaseWidth = 1280f;
     private const float BaseHeight = 720f;
+    private const float AspectRatio = BaseWidth / BaseHeight;
 
     public override void _Ready()
     {
+      Instance = this;
       _gameArea = GetNode<Control>("PlayerArea");
-      ApplyAspectMode();
-      GetTree().Root.Connect("size_changed", this, nameof(OnWindowResize));
-    }
-
-    public void OnWindowResize()
-    {
-      ApplyAspectMode();
-    }
-
-    public void SetAspectMode(GameplayAspectMode mode)
-    {
-      AspectMode = mode;
+            
+      Connect("item_rect_changed", this, nameof(ApplyAspectMode));
+            
       ApplyAspectMode();
     }
 
     private void ApplyAspectMode()
     {
-      if (_gameArea == null) return;
+      if (_gameArea == null || !IsInsideTree()) return;
 
-      float containerW = RectSize.x;
-      float containerH = RectSize.y;
+      Vector2 containerSize = RectSize;
 
       switch (AspectMode)
       {
         case GameplayAspectMode.Ratio16_9:
+          float targetW = containerSize.y * AspectRatio;
+          float targetH = containerSize.y;
+
+          if (targetW > containerSize.x)
           {
-            float targetW = containerH * (BaseWidth / BaseHeight);
-            float targetH = containerH;
-
-            if (targetW > containerW)
-            {
-              targetW = containerW;
-              targetH = containerW * (BaseHeight / BaseWidth);
-            }
-
-            _gameArea.RectPosition = new Vector2(
-              (containerW - targetW) / 2f,
-              (containerH - targetH) / 2f
-            );
-            _gameArea.RectSize = new Vector2(targetW, targetH);
-            break;
+            targetW = containerSize.x;
+            targetH = containerSize.x / AspectRatio;
           }
+
+          _gameArea.RectSize = new Vector2(targetW, targetH);
+          _gameArea.RectPosition = (containerSize - _gameArea.RectSize) * 0.5f;
+          break;
 
         case GameplayAspectMode.Expand:
           _gameArea.RectPosition = Vector2.Zero;
-          _gameArea.RectSize = new Vector2(containerW, containerH);
+          _gameArea.RectSize = containerSize;
           break;
       }
 
-      // Trigger GameArea redraw border debug
       _gameArea.Update();
     }
   }

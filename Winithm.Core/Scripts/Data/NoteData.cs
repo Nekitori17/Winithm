@@ -31,6 +31,11 @@ namespace Winithm.Core.Data
     public NoteSide Side;
     public int FakeType;
 
+    /// <summary>
+    /// Tracks if this note has already been evaluated as a Hit.
+    /// Used primarily for Hold notes so they aren't hit multiple times while pinned.
+    /// </summary>
+    public bool IsEvaluated = false;
     public float EndBeat => Start.AbsoluteValue + Length.AbsoluteValue;
 
     public bool IsHittable => FakeType == 0;
