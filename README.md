@@ -2,7 +2,7 @@
 
 # Winithm
 
-<img src="icon.png" width="100"/>
+<img src="icon.png" width="200"/>
 
 <br/>
 
