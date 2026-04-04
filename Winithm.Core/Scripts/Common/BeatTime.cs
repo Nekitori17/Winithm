@@ -62,6 +62,10 @@ namespace Winithm.Core.Common
       return $"{Beat}:{Numerator}/{Denominator}";
     }
 
+    // ==========================================
+    // Comparison Operators
+    // ==========================================
+
     public static bool operator <(BeatTime a, BeatTime b)
     {
       return a.AbsoluteValue < b.AbsoluteValue;
@@ -90,6 +94,79 @@ namespace Winithm.Core.Common
     public static bool operator !=(BeatTime a, BeatTime b)
     {
       return a.AbsoluteValue != b.AbsoluteValue;
+    }
+
+    // ==========================================
+    // Arithmetic Operators
+    // ==========================================
+    public static BeatTime operator +(BeatTime a, BeatTime b)
+    {
+      ToImproper(a, out long n1, out long d1);
+      ToImproper(b, out long n2, out long d2);
+      return FromImproper(n1 * d2 + n2 * d1, d1 * d2);
+    }
+
+    public static BeatTime operator -(BeatTime a, BeatTime b)
+    {
+      ToImproper(a, out long n1, out long d1);
+      ToImproper(b, out long n2, out long d2);
+      return FromImproper(n1 * d2 - n2 * d1, d1 * d2);
+    }
+
+    public static BeatTime operator *(BeatTime a, BeatTime b)
+    {
+      ToImproper(a, out long n1, out long d1);
+      ToImproper(b, out long n2, out long d2);
+      return FromImproper(n1 * n2, d1 * d2);
+    }
+
+    public static BeatTime operator /(BeatTime a, BeatTime b)
+    {
+      ToImproper(a, out long n1, out long d1);
+      ToImproper(b, out long n2, out long d2);
+      return FromImproper(n1 * d2, d1 * n2);
+    }
+
+    private static void ToImproper(BeatTime bt, out long n, out long d)
+    {
+      if (bt.Denominator == 0)
+      {
+        n = bt.Beat;
+        d = 1;
+      }
+      else
+      {
+        n = (long)bt.Beat * bt.Denominator + bt.Numerator;
+        d = bt.Denominator;
+      }
+    }
+
+    private static BeatTime FromImproper(long n, long d)
+    {
+      if (d == 0) return Zero;
+      if (d < 0) { n = -n; d = -d; }
+      if (n == 0) return Zero;
+
+      long gcd = GetGCD(System.Math.Abs(n), d);
+      n /= gcd;
+      d /= gcd;
+
+      if (d == 1) return new BeatTime((int)n, 0, 0);
+
+      int beat = (int)(n / d);
+      int num = (int)(n % d);
+      return new BeatTime(beat, num, (int)d);
+    }
+
+    private static long GetGCD(long a, long b)
+    {
+      while (b != 0)
+      {
+        long temp = b;
+        b = a % b;
+        a = temp;
+      }
+      return a;
     }
 
     public override bool Equals(object obj)
