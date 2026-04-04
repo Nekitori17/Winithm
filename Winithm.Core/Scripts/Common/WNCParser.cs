@@ -1,6 +1,6 @@
+using Godot;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Winithm.Core.Data;
 
 namespace Winithm.Core.Common
@@ -14,7 +14,15 @@ namespace Winithm.Core.Common
     /// <summary>Parse a .wnc chart file into the given ChartData.</summary>
     public static void Parse(string filePath, ChartData data)
     {
-      string[] lines = File.ReadAllLines(filePath);
+      File file = new File();
+      file.Open(filePath, File.ModeFlags.Read);
+
+      if (file.GetError() != Error.Ok)
+      {
+        System.Diagnostics.Trace.TraceError($"[WNCParser] Failed to open file: {filePath}");
+        return;
+      }
+
       string currentSection = "";
 
       ComponentData currentComponent = null;
@@ -25,110 +33,127 @@ namespace Winithm.Core.Common
       SpeedStep currentSpeedStep = null;
       NoteData currentNote = null;
 
-      for (int i = 0; i < lines.Length; i++)
+      try
       {
-        string line = lines[i].TrimEnd();
-        if (string.IsNullOrWhiteSpace(line)) continue;
-
-        if (line.StartsWith("[") && line.EndsWith("]"))
+        string line;
+        while (!file.EofReached())
         {
-          currentSection = line.Substring(1, line.Length - 2);
-          currentComponent = null;
-          currentTheme = null;
-          currentGroup = null;
-          currentWindow = null;
-          currentOverlay = null;
-          currentSpeedStep = null;
-          currentNote = null;
-          continue;
-        }
+          line = file.GetLine().TrimEnd();
+          if (string.IsNullOrWhiteSpace(line)) continue;
 
-        string trimmed = line.TrimStart();
+          if (line.StartsWith("[") && line.EndsWith("]"))
+          {
+            currentSection = line.Substring(1, line.Length - 2);
+            currentComponent = null;
+            currentTheme = null;
+            currentGroup = null;
+            currentWindow = null;
+            currentOverlay = null;
+            currentSpeedStep = null;
+            currentNote = null;
+            continue;
+          }
 
-        switch (currentSection)
-        {
-          case "FORMAT": break;
-          case "METADATA":
-            ParseChartMetadataLine(trimmed, data.Metadata);
-            break;
-          case "OVERLAYS":
-            ParseOverlayLine(trimmed, data.Overlays, ref currentOverlay);
+          string trimmed = line.TrimStart();
 
-            foreach (OverlayData overlay in data.Overlays)
-            {
-              foreach (List<StoryboardEvent> events in overlay.StoryboardEvents.Values)
-              {
-                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
-              }
-            }
-
-            data.Overlays.Sort((a, b) => a.ID.CompareTo(b.ID));
-            break;
-          case "COMPONENTS":
-            ParseComponentLine(trimmed, data.Components, ref currentComponent);
-
-            foreach (ComponentData component in data.Components)
-            {
-              foreach (List<StoryboardEvent> events in component.StoryboardEvents.Values)
-              {
-                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
-              }
-            }
-
-            data.Components.Sort((a, b) => a.Type.CompareTo(b.Type));
-            break;
-          case "THEME_CHANNELS":
-            ParseThemeChannelLine(trimmed, data.ThemeChannels, ref currentTheme);
-
-            foreach (ThemeChannelData theme in data.ThemeChannels)
-            {
-              foreach (List<StoryboardEvent> events in theme.StoryboardEvents.Values)
-              {
-                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
-              }
-            }
-
-            data.ThemeChannels.Sort((a, b) => a.ID.CompareTo(b.ID));
-            break;
-          case "GROUPS":
-            ParseGroupLine(trimmed, data.Groups, ref currentGroup);
-
-            foreach (GroupData group in data.Groups)
-            {
-              foreach (List<StoryboardEvent> events in group.StoryboardEvents.Values)
-              {
-                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
-              }
-            }
-
-            data.Groups.Sort((a, b) => a.ID.CompareTo(b.ID));
-            break;
-          case "WINDOWS":
-            ParseWindowLine(trimmed, data.Windows, ref currentWindow,
-                            ref currentSpeedStep, ref currentNote);
-
-            foreach (WindowData window in data.Windows)
-            {
-              foreach (List<StoryboardEvent> events in window.StoryboardEvents.Values)
-              {
-                events.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
-              }
-
-              foreach (List<NoteData> notes in window.Notes.Values)
-              {
-                notes.Sort((a, b) => a.Start.AbsoluteValue.CompareTo(b.Start.AbsoluteValue));
-              }
-
-              window.PreCompute();
-            }            
-
-            data.Windows.Sort((a, b) => a.ID.CompareTo(b.ID));
-
-            break;
+          switch (currentSection)
+          {
+            case "FORMAT": break;
+            case "METADATA":
+              ParseChartMetadataLine(trimmed, data.Metadata);
+              break;
+            case "OVERLAYS":
+              ParseOverlayLine(trimmed, data.Overlays, ref currentOverlay, ref data.Metadata);
+              break;
+            case "COMPONENTS":
+              ParseComponentLine(trimmed, data.Components, ref currentComponent, ref data.Metadata);
+              break;
+            case "THEME_CHANNELS":
+              ParseThemeChannelLine(trimmed, data.ThemeChannels, ref currentTheme, ref data.Metadata);
+              break;
+            case "GROUPS":
+              ParseGroupLine(trimmed, data.Groups, ref currentGroup, ref data.Metadata);
+              break;
+            case "WINDOWS":
+              ParseWindowLine(trimmed, data.Windows, ref currentWindow,
+                              ref currentSpeedStep, ref currentNote, ref data.Metadata);
+              break;
+            default:
+              GD.PushWarning($"Unknown section: {currentSection}");
+              break;
+          }
         }
       }
+      finally
+      {
+        file.Close();
+      }
 
+      data.Metadata.NextIDSeed++;
+      PostProcess(data);
       ParserUtils.ResolveInheritance(data);
+    }
+
+    /// <summary>
+    /// Sorts and precomputes all parsed data. Called once after parsing completes.
+    /// </summary>
+    private static void PostProcess(ChartData data)
+    {
+      // Overlays
+      foreach (OverlayData overlay in data.Overlays)
+      {
+        foreach (List<StoryboardEvent> events in overlay.StoryboardEvents.Values)
+          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+      }
+      data.Overlays.Sort((a, b) => a.ID.CompareTo(b.ID));
+
+      // Components
+      foreach (ComponentData component in data.Components)
+      {
+        foreach (List<StoryboardEvent> events in component.StoryboardEvents.Values)
+          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+      }
+      data.Components.Sort((a, b) => a.Type.CompareTo(b.Type));
+
+      // Theme Channels
+      foreach (ThemeChannelData theme in data.ThemeChannels)
+      {
+        foreach (List<StoryboardEvent> events in theme.StoryboardEvents.Values)
+          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+      }
+      data.ThemeChannels.Sort((a, b) => a.ID.CompareTo(b.ID));
+
+      // Groups
+      foreach (GroupData group in data.Groups)
+      {
+        foreach (List<StoryboardEvent> events in group.StoryboardEvents.Values)
+          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+      }
+      data.Groups.Sort((a, b) => a.ID.CompareTo(b.ID));
+
+      // Windows (Sort events, notes, then precompute lifecycle + MaxEndBeats)
+      foreach (WindowData window in data.Windows)
+      {
+        foreach (List<StoryboardEvent> events in window.StoryboardEvents.Values)
+          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+
+        foreach (List<NoteData> notes in window.Notes.Values)
+          notes.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+
+        window.PreCompute();
+      }
+      data.Windows.Sort((a, b) => a.ID.CompareTo(b.ID));
+
+    }
+
+    public static void SyncMaxIDSeed(ref ChartMetadata meta, string ID)
+    {
+      if (string.IsNullOrEmpty(ID) || ID.Length != 6) return;
+
+      long seed = UniqueIDGenerator.Decode(ID);
+      if (seed <= 0) return;
+
+      meta.NextIDSeed = Math.Max(meta.NextIDSeed, seed);
     }
 
     // ── METADATA ──
@@ -136,18 +161,20 @@ namespace Winithm.Core.Common
     private static void ParseChartMetadataLine(string line, ChartMetadata meta)
     {
       if (ParserUtils.TryParseProperty(line, "Index:", out string index))
-      { int.TryParse(index, out int idx); meta.Index = idx; }
+        meta.Index = int.TryParse(index, out int idx) ? idx : 0;
+      else if (ParserUtils.TryParseProperty(line, "ID:", out string id))
+        meta.ChartID = id;
       else if (ParserUtils.TryParseProperty(line, "Name:", out string name))
         meta.ChartName = name;
       else if (ParserUtils.TryParseProperty(line, "Level:", out string level))
         meta.Level = level;
       else if (ParserUtils.TryParseProperty(line, "Constant:", out string constant))
-        meta.Constant = ParserUtils.ParseFloat(constant);
+        meta.Constant = ParserUtils.TryParseFloat(constant, out float constantValue) ? constantValue : 0f;
     }
 
     // ── OVERLAYS ──
 
-    private static void ParseOverlayLine(string trimmed, List<OverlayData> overlays, ref OverlayData current)
+    private static void ParseOverlayLine(string trimmed, List<OverlayData> overlays, ref OverlayData current, ref ChartMetadata meta)
     {
       if (trimmed.StartsWith("+ "))
       {
@@ -188,11 +215,13 @@ namespace Winithm.Core.Common
 
           if (hasHint) val.Type = hintType;
           current.InitParams[key] = val;
-          
+
           // Store metadata hint
           current.ShaderParams[key] = new ShaderParamDef(val.Type, val);
         }
         overlays.Add(current);
+
+        SyncMaxIDSeed(ref meta, current.ID);
         return;
       }
 
@@ -207,6 +236,7 @@ namespace Winithm.Core.Common
       else if (trimmed.StartsWith("/ "))
       {
         var evt = ParserUtils.ParseStoryboardEvent(trimmed, out _, out var rawName);
+        SyncMaxIDSeed(ref meta, evt.ID);
         ParserUtils.AddEventToTarget(current, rawName, evt);
       }
     }
@@ -214,7 +244,7 @@ namespace Winithm.Core.Common
     // ── COMPONENTS ──
 
     private static void ParseComponentLine(
-        string trimmed, List<ComponentData> components, ref ComponentData current)
+        string trimmed, List<ComponentData> components, ref ComponentData current, ref ChartMetadata meta)
     {
       if (trimmed.StartsWith("* "))
       {
@@ -244,7 +274,7 @@ namespace Winithm.Core.Common
     // ── THEME CHANNELS ──
 
     private static void ParseThemeChannelLine(
-        string trimmed, List<ThemeChannelData> themes, ref ThemeChannelData current)
+        string trimmed, List<ThemeChannelData> themes, ref ThemeChannelData current, ref ChartMetadata meta)
     {
       if (trimmed.StartsWith("+ "))
       {
@@ -257,6 +287,8 @@ namespace Winithm.Core.Common
         if (parts.Length >= 5) current.InitA = ParserUtils.ParseFloat(parts[4]);
         if (parts.Length >= 6) current.InitNoteA = ParserUtils.ParseFloat(parts[5]);
         themes.Add(current);
+
+        SyncMaxIDSeed(ref meta, current.ID);
         return;
       }
 
@@ -267,6 +299,7 @@ namespace Winithm.Core.Common
       else if (trimmed.StartsWith("/ "))
       {
         var evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
+        SyncMaxIDSeed(ref meta, evt.ID);
         if (type != StoryboardProperty.Custom)
           ParserUtils.AddEventToTarget(current, type, evt);
       }
@@ -275,7 +308,7 @@ namespace Winithm.Core.Common
     // ── GROUPS ──
 
     private static void ParseGroupLine(
-        string trimmed, List<GroupData> groups, ref GroupData current)
+        string trimmed, List<GroupData> groups, ref GroupData current, ref ChartMetadata meta)
     {
       if (trimmed.StartsWith("+ "))
       {
@@ -288,6 +321,8 @@ namespace Winithm.Core.Common
         if (parts.Length >= 5) current.InitScaleY = ParserUtils.ParseFloat(parts[4]);
         if (parts.Length >= 6) current.InitRotation = ParserUtils.ParseFloat(parts[5]);
         groups.Add(current);
+
+        SyncMaxIDSeed(ref meta, current.ID);
         return;
       }
 
@@ -300,6 +335,7 @@ namespace Winithm.Core.Common
       else if (trimmed.StartsWith("/ "))
       {
         var evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
+        SyncMaxIDSeed(ref meta, evt.ID);
         if (type != StoryboardProperty.Custom)
           ParserUtils.AddEventToTarget(current, type, evt);
       }
@@ -309,7 +345,7 @@ namespace Winithm.Core.Common
 
     private static void ParseWindowLine(
         string trimmed, List<WindowData> windows,
-        ref WindowData current, ref SpeedStep currentSpeedStep, ref NoteData currentNote)
+        ref WindowData current, ref SpeedStep currentSpeedStep, ref NoteData currentNote, ref ChartMetadata meta)
     {
       if (trimmed.StartsWith("+ "))
       {
@@ -328,6 +364,8 @@ namespace Winithm.Core.Common
         if (parts.Length >= 9) current.InitA = ParserUtils.ParseFloat(parts[8]);
         if (parts.Length >= 10) current.InitNoteA = ParserUtils.ParseFloat(parts[9]);
         windows.Add(current);
+
+        SyncMaxIDSeed(ref meta, current.ID);
         return;
       }
 
@@ -363,25 +401,35 @@ namespace Winithm.Core.Common
         currentSpeedStep = new SpeedStep();
         currentNote = null;
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 1) currentSpeedStep.Start = BeatTime.Parse(parts[0]);
-        if (parts.Length >= 2) currentSpeedStep.Multiplier = ParserUtils.ParseFloat(parts[1]);
+        if (parts.Length >= 1) currentSpeedStep.ID = parts[0];
+        if (parts.Length >= 2) currentSpeedStep.Start = BeatTime.Parse(parts[1]);
+        if (parts.Length >= 3) currentSpeedStep.Multiplier = ParserUtils.ParseFloat(parts[2]);
         current.SpeedSteps.Add(currentSpeedStep);
+
+        SyncMaxIDSeed(ref meta, currentSpeedStep.ID);
       }
       else if (trimmed.StartsWith("# "))
       {
         currentNote = new NoteData();
         currentSpeedStep = null;
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 1) currentNote.Type = NoteData.ParseNoteType(parts[0]);
-        if (parts.Length >= 2) currentNote.Start = BeatTime.Parse(parts[1]);
-        if (parts.Length >= 3) currentNote.Length = BeatTime.Parse(parts[2]);
-        if (parts.Length >= 4) currentNote.Side = NoteData.ParseSide(parts[3]);
-        if (parts.Length >= 5) { int.TryParse(parts[4], out int fake); currentNote.FakeType = fake; }
+        if (parts.Length >= 1) currentNote.ID = parts[0];
+        if (parts.Length >= 2) currentNote.Type = NoteData.ParseNoteType(parts[1]);
+        if (parts.Length >= 3) currentNote.StartBeat = BeatTime.Parse(parts[2]);
+        if (parts.Length >= 4) currentNote.Length =
+          ParserUtils.TryParseFloat(parts[3], out float length) ? length : 0f;
+        if (parts.Length >= 5) currentNote.Side = NoteData.ParseSide(parts[4]);
+        if (parts.Length >= 6) { int.TryParse(parts[5], out int fake); currentNote.FakeType = fake; }
+        if (!current.Notes.ContainsKey(currentNote.Side))
+          current.Notes[currentNote.Side] = new List<NoteData>();
         current.Notes[currentNote.Side].Add(currentNote);
+
+        SyncMaxIDSeed(ref meta, currentNote.ID);
       }
       else if (trimmed.StartsWith("/ "))
       {
         StoryboardEvent evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
+        SyncMaxIDSeed(ref meta, evt.ID);
 
         // Enforce absolute scales on Windows to avoid clipping / title bar flipping
         if (type == StoryboardProperty.ScaleX || type == StoryboardProperty.ScaleY)

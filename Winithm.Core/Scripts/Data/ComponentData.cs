@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
-using Winithm.Core.Common;
+using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Data
 {
@@ -20,12 +20,12 @@ namespace Winithm.Core.Data
   {
     public ComponentType Type;
 
-    public float InitX;
-    public float InitY;
-    public float InitScale;
-    public float InitAlpha;
-    public float AnchorX;
-    public float AnchorY;
+    public float InitX = 0f;
+    public float InitY = 0f;
+    public float InitScale = 1f;
+    public float InitAlpha = 1f;
+    public float AnchorX = 0.5f;
+    public float AnchorY = 0.5f;
 
     public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
 

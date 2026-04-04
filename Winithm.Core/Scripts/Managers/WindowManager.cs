@@ -10,32 +10,22 @@ namespace Winithm.Core.Managers
   [Tool]
   public class WindowManager : Node
   {
-    [Export] public PackedScene WindowScene { get; set; }
+    [Export] public PackedScene WindowScene;
     
     protected TimeManager _timeManager;
     protected GroupManager _groupManager;
     protected ThemeChannelManager _themeManager;
-    protected ObjectPool<Window> _windowPool;
     
-    private Vector2 _viewportSize = new Vector2(1280, 720);
-    public Vector2 ViewportSize
-    {
-      get => _viewportSize;
-      set { _viewportSize = value; }
-    }
-
-    private Vector2 _gameplayAreaSize = new Vector2(1280, 720);
-    public Vector2 GameplayAreaSize
-    {
-      get => _gameplayAreaSize;
-      set { _gameplayAreaSize = value; }
-    }
+    [Export] public Vector2 ScreenSize = new Vector2(1280, 720);
+    [Export] public Vector2 PlayerAreaSize = new Vector2(1280, 720);
 
     protected List<WindowData> _windowDataList = new List<WindowData>();
     protected Dictionary<string, Window> _activeWindows = new Dictionary<string, Window>();
 
     protected Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>> _cursors 
       = new Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>>();
+
+    protected ObjectPool<Window> _windowPool;
 
     public override void _Ready()
     {
@@ -53,10 +43,8 @@ namespace Winithm.Core.Managers
         actionOnDestroy: w => w.QueueFree(),
         collectionCheck: false,
         defaultCapacity: 10,
-        maxSize: 100
+        maxSize: 1000
       );
-
-      SetProcess(true);
     }
 
     public void InjectManagers(TimeManager timeManager, GroupManager groupManager, ThemeChannelManager themeManager)
@@ -79,6 +67,12 @@ namespace Winithm.Core.Managers
 
       foreach (var wd in _windowDataList)
       {
+        // Pre-compute ms timestamps from Metronome
+        if (_timeManager != null)
+        {
+          wd.PreComputeAnimation(_timeManager.Metronome);
+        }
+
         var propCursors = new Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>();
         if (wd.StoryboardEvents != null)
         {
@@ -89,10 +83,9 @@ namespace Winithm.Core.Managers
       }
     }
 
-    public override void _Process(float delta)
+    public void Update(float currentBeat)
     {
       if (_timeManager == null || _windowDataList == null) return;
-      float currentBeat = _timeManager.CurrentBeat;
       float currentBPS = _timeManager.GetCurrentBPS();
 
       foreach (var wd in _windowDataList)
@@ -140,6 +133,8 @@ namespace Winithm.Core.Managers
         float scaleX = EvaluateProperty(wd, StoryboardProperty.ScaleX, currentBeat, wd.InitScaleX, cursors);
         float scaleY = EvaluateProperty(wd, StoryboardProperty.ScaleY, currentBeat, wd.InitScaleY, cursors);
         float colorA = EvaluateProperty(wd, StoryboardProperty.ColorA, currentBeat, wd.InitA, cursors);
+        float noteA = EvaluateProperty(wd, StoryboardProperty.NoteA, currentBeat, wd.InitNoteA, cursors);
+        w.NoteOpacity = noteA;
         
         if (wd.StoryboardEvents != null && wd.StoryboardEvents.TryGetValue(StoryboardProperty.Title, out var titleEvents) && titleEvents.Count > 0)
         {
@@ -152,32 +147,48 @@ namespace Winithm.Core.Managers
         w.WindowSize = new Vector2(scaleX, scaleY) * animScale;
 
         Color finalWindowColor = w.WindowColor;
+        float finalNoteA = w.NoteOpacity;
         if (_themeManager != null && !string.IsNullOrEmpty(wd.ThemeChannelID))
-        {
-          finalWindowColor = _themeManager.GetThemeColor(wd.ThemeChannelID, currentBeat, w.WindowColor);
+        { 
+          var themeColor = _themeManager.GetThemeColor(wd.ThemeChannelID, currentBeat, w.WindowColor);
+          finalWindowColor = themeColor.WindowColor;
+          finalNoteA = themeColor.NoteA;
         }
         finalWindowColor.a = colorA;
         w.WindowColor = finalWindowColor;
         
         w.Modulate = new Color(1, 1, 1, lifeCycleScale);
 
-        w.ViewportSize = _viewportSize;
-        w.GameplayAreaSize = _gameplayAreaSize;
+        w.ScreenSize = ScreenSize;
+        w.PlayerAreaSize = PlayerAreaSize;
         ApplyFlags(w, wd, currentBeat);
-        w.UpdateWindow();
+        w.UpdateVisual();
+      }
+    }
+
+    /// <summary>
+    /// Called at runtime when a window enters the UnResponsive state.
+    /// Computes overlay animation timestamps and extends the window's lifetime.
+    /// </summary>
+    public void SetUnresponsive(string windowId)
+    {
+      var wd = _windowDataList.Find(w => w.ID == windowId);
+      if (wd == null || wd.Unresponsive) return;
+      
+      if (_timeManager != null)
+      {
+        wd.ComputeWhenUnresponsiveAnimation(_timeManager.Metronome);
       }
     }
 
     protected virtual void ApplyFlags(Window w, WindowData wd, float currentBeat)
     {
-      // Basic implementation: follow the data (may be overridden by input logic in subclasses)
-      w.Unfocus = wd.UnFocus;
+      w.UnFocus = wd.UnFocus;
 
-      // State-driven focus flash: a deterministic sin wave based on beat, not delta time.
-      // This allows perfect rewind/scrub rendering.
-      if (w.Unfocus && w.Focusable)
+      // Focus pulse: deterministic sin wave based on beat for perfect scrub rendering
+      if (w.UnFocus && currentBeat >= wd.FocusableStartBeat && currentBeat <= wd.FocusableEndBeat)
       {
-        float pulseFrequency = 10f; // Oscillations per beat
+        float pulseFrequency = 10f;
         float sinVal = Mathf.Sin(currentBeat * pulseFrequency * Mathf.Pi);
         w.FocusOverlayOpacity = sinVal > 0 ? 0.1f : 0f;
       }
@@ -186,27 +197,53 @@ namespace Winithm.Core.Managers
         w.FocusOverlayOpacity = 0f;
       }
 
-      // Default: no unresponsive overlay
-      w.UnresponsiveOverlayOpacity = 0f;
-      w.IsNotRespondingTitle = false;
+      // UnResponsive overlay: CubicOut fade from StartBeat -> EndBeatUnresponsive
+      if (wd.Unresponsive)
+      {
+        if (currentBeat >= wd.EndBeat.AbsoluteValue && currentBeat <= wd.EndBeatUnresponsive)
+        {
+          float t = (currentBeat - wd.EndBeat.AbsoluteValue) / (wd.EndBeatUnresponsive - wd.EndBeat.AbsoluteValue);
+          w.UnresponsiveOverlayOpacity = EasingFunctions.Evaluate(EasingType.CubicOut, t);
+        }
+        else if (currentBeat > wd.EndBeatUnresponsive)
+        {
+          w.UnresponsiveOverlayOpacity = 1f;
+        }
+        else
+        {
+          w.UnresponsiveOverlayOpacity = 0f;
+        }
+
+        // Title jumps to "Not Responding" the instant we hit EndBeat
+        w.IsNotRespondingTitle = currentBeat >= wd.EndBeat.AbsoluteValue;
+      }
+      else
+      {
+        w.UnresponsiveOverlayOpacity = 0f;
+        w.IsNotRespondingTitle = false;
+      }
     }
 
+    /// <summary>
+    /// Lifecycle scale for spawn/despawn animations.
+    /// Purely beat-driven interpolation using accurate pre-computed animation bounds.
+    /// </summary>
     protected float CalculateLifeCycleScale(WindowData wd, float currentBeat, float bps)
     {
-      float animDuration = 0.2f * bps; // 200ms translated to beats based on current BPM.
+      if (currentBeat < wd.StartBeat.AbsoluteValue) return 0f;
+      if (currentBeat > wd.EndBeatEndOut) return 0f;
 
-      if (currentBeat < wd.StartBeat) return 0f;
-      if (currentBeat > wd.EndBeat + animDuration) return 0f;
-
-      if (currentBeat >= wd.StartBeat && currentBeat < wd.StartBeat + animDuration)
+      // Spawn fade-in
+      if (currentBeat < wd.EndBeatStartIn)
       {
-        float t = (currentBeat - wd.StartBeat) / animDuration;
+        float t = (currentBeat - wd.StartBeat.AbsoluteValue) / (wd.EndBeatStartIn - wd.StartBeat.AbsoluteValue);
         return EasingFunctions.Evaluate(EasingType.CubicOut, t);
       }
-      
-      if (currentBeat >= wd.EndBeat && currentBeat <= wd.EndBeat + animDuration)
+
+      // Despawn fade-out
+      if (currentBeat >= wd.StartBeatEndOut)
       {
-        float t = (currentBeat - wd.EndBeat) / animDuration;
+        float t = (currentBeat - wd.StartBeatEndOut) / (wd.EndBeatEndOut - wd.StartBeatEndOut);
         return 1f - EasingFunctions.Evaluate(EasingType.CubicIn, t);
       }
 

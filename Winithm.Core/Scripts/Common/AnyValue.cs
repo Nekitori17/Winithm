@@ -12,7 +12,6 @@ namespace Winithm.Core.Common
     Vec2,
     Vec3,
     Vec4,
-    Int,
     Bool,
     String,
     Inherited
@@ -59,12 +58,6 @@ namespace Winithm.Core.Common
       Type = AnyValueType.Vec4;
     }
 
-    public AnyValue(int value)
-    {
-      X = value; Y = 0; Z = 0; W = 0;
-      StringValue = null;
-      Type = AnyValueType.Int;
-    }
 
     public AnyValue(string value)
     {
@@ -88,7 +81,6 @@ namespace Winithm.Core.Common
       switch (type)
       {
         case AnyValueType.Float:
-        case AnyValueType.Int:
         case AnyValueType.Bool: return 1;
         case AnyValueType.Vec2: return 2;
         case AnyValueType.Vec3: return 3;
@@ -126,8 +118,14 @@ namespace Winithm.Core.Common
         return result;
       }
 
-      // Plain number (float or int)
-      if (float.TryParse(text, NumberStyles.Float, ParserUtils.INV, out float fValue))
+      // Boolean
+      if (ParserUtils.TryParseBool(text, out bool bValue))
+      {
+        return new AnyValue(bValue);
+      }
+
+      // Plain number (float)
+      if (ParserUtils.TryParseFloat(text, out float fValue))
       {
         return new AnyValue(fValue);
       }
@@ -195,7 +193,6 @@ namespace Winithm.Core.Common
           if (StringValue != null && StringValue.Contains(" ")) return $"\"{StringValue}\"";
           return StringValue ?? "";
         case AnyValueType.Bool: return X == 1 ? "1" : "0";
-        case AnyValueType.Int: return ((int)X).ToString();
         case AnyValueType.Float: return ParserUtils.FormatFloat(X);
         case AnyValueType.Vec2: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}";
         case AnyValueType.Vec3: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}|{ParserUtils.FormatFloat(Z)}";

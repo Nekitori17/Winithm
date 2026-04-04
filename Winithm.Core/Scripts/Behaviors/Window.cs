@@ -1,4 +1,5 @@
 using Godot;
+using Winithm.Core.Constants;
 using Winithm.Core.Managers;
 
 namespace Winithm.Core.Behaviors
@@ -12,7 +13,7 @@ namespace Winithm.Core.Behaviors
       public Color TitleBarColor, TitleTextColor, WindowColor;
       public string Title;
       public bool Borderless, IsNotRespondingTitle;
-      public float FocusOverlayOpacity, UnresponsiveOverlayOpacity;
+      public float FocusOverlayOpacity, UnresponsiveOverlayOpacity, NoteOpacity;
     }
     private WindowState _lastState = new WindowState();
 
@@ -26,7 +27,9 @@ namespace Winithm.Core.Behaviors
     [Export] public string Title = "Winithm";
     [Export] public Vector2 WindowSize = new Vector2(300, 500);
     [Export] public Color WindowColor = new Color(0.1f, 0.1f, 0.1f, 0.85f);
+    [Export] public float NoteOpacity = 1f;
     [Export] public bool Borderless = false;
+    [Export] public bool UnFocus = false;
 
     // --- Runtime state injected by WindowManager each frame ---
     public float FocusOverlayOpacity = 0f;
@@ -54,7 +57,7 @@ namespace Winithm.Core.Behaviors
     private Texture _minTex;
     private DynamicFont _font;
 
-    public const float TitleBarHeightPercent = 0.0375f;
+    public static readonly float TitleBarHeightPercent = 0.0375f;
     internal float TitleBarHeight { get; private set; }
 
     public override void _Ready()
@@ -126,15 +129,16 @@ namespace Winithm.Core.Behaviors
         IsNotRespondingTitle != _lastState.IsNotRespondingTitle;
 
       bool bodyDirty = layoutDirty ||
-        WindowColor != _lastState.WindowColor;
+        WindowColor != _lastState.WindowColor ||
+        NoteOpacity != _lastState.NoteOpacity; // Track NoteOpacity changes
 
       if (!layoutDirty && !titleBarDirty && !bodyDirty) return;
 
       if (layoutDirty)
       {
         float viewScale = Mathf.Abs(Mathf.Min(
-          PlayerAreaSize.x / Constants.DesignResolution.x,
-          PlayerAreaSize.y / Constants.DesignResolution.y
+          PlayerAreaSize.x / Visual.DESIGN_RESOLUTION.x,
+          PlayerAreaSize.y / Visual.DESIGN_RESOLUTION.y
         ));
 
         Vector2 scaledSize = WindowSize * viewScale;
@@ -182,7 +186,13 @@ namespace Winithm.Core.Behaviors
       {
         _windowBody.Update();
 
+        // Apply NoteOpacity to layers containing notes
+        Color noteModulate = new Color(1f, 1f, 1f, NoteOpacity);
+        if (NoteLayer != null) NoteLayer.Modulate = noteModulate;
+        if (FocusNoteLayer != null) FocusNoteLayer.Modulate = noteModulate;
+
         _lastState.WindowColor = WindowColor;
+        _lastState.NoteOpacity = NoteOpacity;
       }
     }
 

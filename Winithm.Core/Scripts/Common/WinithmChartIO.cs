@@ -1,30 +1,38 @@
-using System.IO;
+using Godot;
 using Winithm.Core.Data;
 
 namespace Winithm.Core.Common
 {
   /// <summary>
-  /// High-level I/O facade for loading and saving Winithm level data.
-  /// Delegates to WNMParser/WNCParser for reading, WNMGenerator/WNCGenerator for writing.
+  /// Facade for level I/O operations. 
+  /// Handles directory traversal and file loading using Godot's virtual filesystem (res://, user://).
   /// </summary>
   public static class WinithmChartIO
   {
-    /// <summary>Load and parse both .wnm and .wnc from a level folder.</summary>
+    /// <summary>Loads metadata (.wnm) and a specific chart (.wnc) from a level folder.</summary>
     public static ChartData LoadLevel(string folderPath, string chartFileName)
     {
       string wnmPath = FindWnmFile(folderPath);
-      if (wnmPath == null)
+      if (string.IsNullOrEmpty(wnmPath))
       {
-        System.Diagnostics.Trace.TraceError($"[WinithmIO] No .wnm file found in: {folderPath}");
+        GD.PushError($"[WinithmIO] No .wnm metadata found in: {folderPath}");
         return new ChartData();
       }
 
-      ChartData data = WNMParser.Parse(wnmPath);
+      // Load shared chart metadata
+      SongMetaData songMetaData = WNMParser.Parse(wnmPath);
 
-      string wncPath = Path.Combine(folderPath, chartFileName + ".wnc");
-      if (!File.Exists(wncPath))
+      // Construct platform-safe path for the specific chart
+      string wncPath = folderPath.PlusFile(chartFileName + ".wnc");
+
+      ChartData data = new ChartData();
+      WNCParser.Parse(wncPath, data);
+      data.SongMetaData = songMetaData;
+
+      File file = new File();
+      if (!file.FileExists(wncPath))
       {
-        System.Diagnostics.Trace.TraceError($"[WinithmIO] Chart file not found: {wncPath}");
+        GD.PushError($"[WinithmIO] Chart data file missing: {wncPath}");
         return data;
       }
 
@@ -32,21 +40,40 @@ namespace Winithm.Core.Common
       return data;
     }
 
-    /// <summary>Save both .wnm and .wnc to a level folder.</summary>
+    /// <summary>Saves metadata and chart files to disk, ensuring directory existence.</summary>
     public static void SaveLevel(string folderPath, string chartFileName, ChartData data)
     {
-      string wnmPath = Path.Combine(folderPath, "metadata.wnm");
-      WNMGenerator.Generate(wnmPath, data);
+      Directory dir = new Directory();
+      if (!dir.DirExists(folderPath))
+      {
+        dir.MakeDirRecursive(folderPath);
+      }
 
-      string wncPath = Path.Combine(folderPath, chartFileName + ".wnc");
-      WNCGenerator.Generate(wncPath, data);
+      WNMGenerator.Generate(folderPath.PlusFile("metadata.wnm"), data.SongMetaData);
+      WNCGenerator.Generate(folderPath.PlusFile(chartFileName + ".wnc"), data);
     }
 
+
+    /// <summary>Scans folder to find the first .wnm file using Godot's Directory API.</summary>
     private static string FindWnmFile(string folderPath)
     {
-      if (!Directory.Exists(folderPath)) return null;
-      string[] files = Directory.GetFiles(folderPath, "*.wnm");
-      return files.Length > 0 ? files[0] : null;
+      Directory dir = new Directory();
+      if (dir.Open(folderPath) != Error.Ok) return null;
+
+      dir.ListDirBegin(skipNavigational: true);
+
+      string fileName;
+      while ((fileName = dir.GetNext()) != "")
+      {
+        if (!dir.CurrentIsDir() && fileName.EndsWith(".wnm"))
+        {
+          dir.ListDirEnd();
+          return folderPath.PlusFile(fileName);
+        }
+      }
+
+      dir.ListDirEnd();
+      return null;
     }
   }
 }

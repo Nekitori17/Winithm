@@ -1,20 +1,8 @@
 using System.Collections.Generic;
-using Winithm.Core.Common;
+using Winithm.Core.Data;
 
-namespace Winithm.Core.Data
+namespace Winithm.Core.Interfaces
 {
-  public struct ShaderParamDef
-  {
-    public AnyValueType Type;
-    public AnyValue DefaultValue;
-
-    public ShaderParamDef(AnyValueType type, AnyValue defaultValue)
-    {
-      Type = type;
-      DefaultValue = defaultValue;
-    }
-  }
-
   /// <summary>
   /// Defines an object that supports dynamic runtime modifications via Storyboards.
   /// <typeparam name="TKey">The property type (e.g. StoryboardProperty or string)</typeparam>

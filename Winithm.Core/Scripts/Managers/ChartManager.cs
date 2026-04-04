@@ -45,8 +45,10 @@ namespace Winithm.Core.Managers
       WindowManager = GetNodeOrNull<WindowManager>("WindowManager");
       if (WindowManager == null)
       {
-        WindowManager = new WindowManager();
-        WindowManager.Name = "WindowManager";
+        WindowManager = new WindowManager
+        {
+          Name = "WindowManager"
+        };
         AddChild(WindowManager);
       }
 

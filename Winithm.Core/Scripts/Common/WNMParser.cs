@@ -1,6 +1,6 @@
+using Godot;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Winithm.Core.Data;
 
 namespace Winithm.Core.Common
@@ -12,45 +12,59 @@ namespace Winithm.Core.Common
   public static class WNMParser
   {
     /// <summary>Parse a .wnm metadata file.</summary>
-    public static ChartData Parse(string filePath)
+    public static SongMetaData Parse(string filePath)
     {
-      var data = new ChartData();
-      string[] lines = File.ReadAllLines(filePath);
+      var data = new SongMetaData();
+      var file = new File();
+      file.Open(filePath, File.ModeFlags.Read);
+
+      if (file.GetError() != Error.Ok)
+      {
+        System.Diagnostics.Trace.TraceError($"[WNMParser] Failed to open file: {filePath}");
+        return data;
+      }
+
       string currentSection = "";
       string currentResource = "";
       ChartReference currentChart = null;
 
-      for (int i = 0; i < lines.Length; i++)
+      try
       {
-        string line = lines[i].TrimEnd();
-        if (string.IsNullOrWhiteSpace(line)) continue;
-
-        if (line.StartsWith("[") && line.EndsWith("]"))
+        string line;
+        while (!file.EofReached())
         {
-          currentSection = line.Substring(1, line.Length - 2);
-          continue;
-        }
+          line = file.GetLine().TrimEnd();
+          if (string.IsNullOrWhiteSpace(line)) continue;
 
-        switch (currentSection)
-        {
-          case "FORMAT": break;
-          case "METADATA":
-            ParseMetadataLine(line, data.Metadata);
-            break;
-          case "RESOURCES":
-            ParseResourceLine(line, data.Resources, ref currentResource);
-            break;
-          case "CHARTS":
-            currentChart = ParseChartReferenceLine(line, data.ChartReferences, currentChart);
-            break;
+          if (line.StartsWith("[") && line.EndsWith("]"))
+          {
+            currentSection = line.Substring(1, line.Length - 2);
+            continue;
+          }
+
+          switch (currentSection)
+          {
+            case "FORMAT": break;
+            case "METADATA":
+              ParseMetadataLine(line, data);
+              break;
+            case "RESOURCES":
+              ParseResourceLine(line, data.Resources, ref currentResource);
+              break;
+            case "CHARTS":
+              currentChart = ParseChartReferenceLine(line, data.Charts, currentChart);
+              break;
+          }
         }
       }
-
-      ParserUtils.PreCalculateBPMStops(data.Resources.BPMList);
+      finally
+      {
+        file.Close();
+      }
       return data;
     }
 
-    private static void ParseMetadataLine(string line, ChartMetadata meta)
+    private static void ParseMetadataLine(string line, SongMetaData meta)
     {
       string trimmed = line.TrimStart();
       if (ParserUtils.TryParseProperty(trimmed, "ID:", out string id)) meta.ID = id;
@@ -87,7 +101,7 @@ namespace Winithm.Core.Common
         {
           int.TryParse(parts[2], out int timeSig);
           var stop = new BPMStop(
-              ParserUtils.ParseFloat(parts[0]),
+              BeatTime.Parse(parts[0]),
               ParserUtils.ParseFloat(parts[1]),
               timeSig
           );
@@ -101,6 +115,21 @@ namespace Winithm.Core.Common
         case "Song":
           if (ParserUtils.TryParseProperty(trimmed, "Path:", out string songPath))
             res.SongPath = songPath;
+          if (ParserUtils.TryParseProperty(trimmed, "BPM Base:", out string bpmBase))
+          {
+            string[] parts = trimmed.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 3)
+            {
+              int.TryParse(parts[2], out int timeSig);
+              var baseBPM = new BaseBPM(
+                  float.TryParse(parts[0], out float startTimeSeconds) ? startTimeSeconds : 0f,
+                  ParserUtils.ParseFloat(parts[1]),
+                  timeSig
+              );
+              res.BaseBPM = baseBPM;
+            }
+            return;
+          }
           break;
         case "Illustration":
           if (ParserUtils.TryParseProperty(trimmed, "Illustrator:", out string illustrator))

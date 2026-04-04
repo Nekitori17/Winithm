@@ -64,13 +64,13 @@ namespace Winithm.Core.Logic
     /// </summary>
     private static AnyValue Interpolate(StoryboardEvent evt, float currentBeat, AnyValue defaultValue)
     {
-      float endBeat = evt.EndBeat;
+      float endBeat = evt.StartBeat.AbsoluteValue + evt.Length;
 
       if (currentBeat >= endBeat)
         return evt.To;
 
       // Interpolate
-      float startBeat = evt.Start.AbsoluteValue;
+      float startBeat = evt.StartBeat.AbsoluteValue;
       float length = endBeat - startBeat;
       float t = length > 0f ? (currentBeat - startBeat) / length : 1f;
       t = evt.Easing == EasingType.Bezier
@@ -101,7 +101,7 @@ namespace Winithm.Core.Logic
       if (last >= n) last = n - 1;
 
       // Case 1: Beat went backwards — binary search reset
-      if (last > 0 && events[last].Start.AbsoluteValue > currentBeat)
+      if (last > 0 && events[last].StartBeat.AbsoluteValue > currentBeat)
       {
         int idx = FindLastStarted(events, currentBeat);
         cursor.LastIndex = idx >= 0 ? idx : 0;
@@ -109,7 +109,7 @@ namespace Winithm.Core.Logic
       }
 
       // Case 2: Forward scan — advance cursor until we overshoot
-      while (last + 1 < n && events[last + 1].Start.AbsoluteValue <= currentBeat)
+      while (last + 1 < n && events[last + 1].StartBeat.AbsoluteValue <= currentBeat)
       {
         last++;
       }
@@ -117,7 +117,7 @@ namespace Winithm.Core.Logic
       cursor.LastIndex = last;
 
       // Verify the cursor event has actually started
-      if (events[last].Start.AbsoluteValue > currentBeat)
+      if (events[last].StartBeat.AbsoluteValue > currentBeat)
         return -1;
 
       return last;
@@ -139,7 +139,7 @@ namespace Winithm.Core.Logic
       while (left <= right)
       {
         int mid = left + (right - left) / 2;
-        if (events[mid].Start.AbsoluteValue <= currentBeat)
+        if (events[mid].StartBeat.AbsoluteValue <= currentBeat)
         {
           best = mid;
           left = mid + 1;

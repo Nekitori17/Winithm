@@ -34,12 +34,15 @@ namespace Winithm.Core.Managers
         _groupDataMap[g.ID] = g;
         _lastUpdateBeat[g.ID] = -1f;
 
-        var node = new Node2D();
-        node.Name = string.IsNullOrEmpty(g.ID) ? "Group" : g.ID;
-        node.Position = new Vector2(g.InitX, g.InitY);
-        node.Scale = new Vector2(g.InitScaleX, g.InitScaleY);
-        node.RotationDegrees = g.InitRotation;
-        
+        var node = new Node2D
+        {
+          Name = string.IsNullOrEmpty(g.ID) ? "Group" : g.ID,
+          Position = new Vector2(g.InitX, g.InitY),
+          Scale = new Vector2(g.InitScaleX, g.InitScaleY),
+          RotationDegrees = g.InitRotation
+        };
+
+
         _groupNodes[g.ID] = node;
 
         var propCursors = new Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>();

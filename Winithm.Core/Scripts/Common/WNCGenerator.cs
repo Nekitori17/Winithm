@@ -1,6 +1,5 @@
+using Godot;
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using Winithm.Core.Data;
@@ -13,6 +12,8 @@ namespace Winithm.Core.Common
   /// </summary>
   public static class WNCGenerator
   {
+    public static readonly string CHART_FORMAT_VERSION = "1.2";
+
     public static void Generate(string filePath, ChartData data)
     {
       var sb = new StringBuilder();
@@ -20,12 +21,13 @@ namespace Winithm.Core.Common
       // [FORMAT]
       sb.AppendLine("[FORMAT]");
       sb.AppendLine("Type: Chart");
-      sb.AppendLine("Version: 1");
+      sb.AppendLine($"Version: {CHART_FORMAT_VERSION}");
       sb.AppendLine();
 
       // [METADATA]
       sb.AppendLine("[METADATA]");
       sb.AppendLine($"Index: {data.Metadata.Index}");
+      sb.AppendLine($"ID: {data.Metadata.ChartID}");
       sb.AppendLine($"Name: {data.Metadata.ChartName}");
       sb.AppendLine($"Level: {data.Metadata.Level}");
       sb.AppendLine($"Constant: {ParserUtils.FormatFloat(data.Metadata.Constant)}");
@@ -124,12 +126,12 @@ namespace Winithm.Core.Common
           // Notes
           foreach (var ns in w.Notes.Values)
             foreach (var n in ns)
-              sb.AppendLine($"  # {n.Type} {n.Start} {n.Length} {n.Side} {n.FakeType}");
+              sb.AppendLine($"  # {n.ID} {n.Type} {n.StartBeat} {n.Length} {n.Side} {n.FakeType}");
 
           // SpeedSteps
           foreach (var ss in w.SpeedSteps)
           {
-            sb.AppendLine($"  | {ss.Start} {ParserUtils.FormatFloat(ss.Multiplier)}");
+            sb.AppendLine($"  | {ss.ID} {ss.Start} {ParserUtils.FormatFloat(ss.Multiplier)}");
             if (ss.StoryboardEvents != null)
               foreach (var kvp in ss.StoryboardEvents)
                 foreach (var evt in kvp.Value)
@@ -138,7 +140,10 @@ namespace Winithm.Core.Common
         }
       }
 
-      File.WriteAllText(filePath, sb.ToString());
+      var file = new File();
+      file.Open(filePath, File.ModeFlags.Write);
+      file.StoreString(sb.ToString());
+      file.Close();
     }
   }
 }

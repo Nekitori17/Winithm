@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Winithm.Core.Common;
+using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Data
 {
@@ -9,11 +9,11 @@ namespace Winithm.Core.Data
   /// </summary>
   public class ThemeChannelData : IStoryboardTarget<StoryboardProperty>
   {
-    public string ID = "";
-    public string Name = "";
-    public float InitR;
-    public float InitG;
-    public float InitB;
+    public string ID;
+    public string Name;
+    public float InitR = 0f;
+    public float InitG = 0f;
+    public float InitB = 0f;
     public float InitA = 1f;
     public float InitNoteA = 1f;
 

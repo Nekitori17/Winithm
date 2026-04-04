@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Winithm.Core.Data;
+using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Common
 {
@@ -20,22 +21,36 @@ namespace Winithm.Core.Common
       return true;
     }
 
+    public static bool TryParseFloat(string text, out float result)
+    {
+      return float.TryParse(text.Trim(), NumberStyles.Float, INV, out result);
+    }
+
     public static float ParseFloat(string text)
     {
-      float.TryParse(text.Trim(), NumberStyles.Float, INV, out float result);
-      return result;
+      return float.Parse(text.Trim(), NumberStyles.Float, INV);
+    }
+
+    public static bool TryParseBool(string text, out bool result)
+    {
+      return bool.TryParse(text.Trim(), out result);
     }
 
     public static bool ParseBool(string text)
     {
-      bool.TryParse(text.Trim(), out bool result);
-      return result;
+      return bool.Parse(text.Trim());
     }
 
     /// <summary>
     /// Parses "0"/"1" integer-style boolean values.
     /// Used for flags in .wnc format where bools are stored as 0 or 1.
     /// </summary>
+    public static bool TryParseIntBool(string text, out bool result)
+    {
+      result = text.Trim() == "1";
+      return true;
+    }
+
     public static bool ParseIntBool(string text)
     {
       return text.Trim() == "1";
@@ -48,7 +63,13 @@ namespace Winithm.Core.Common
 
     public static string FormatFloat(float value)
     {
-      return value.ToString(INV);
+      string s = value.ToString("G7", INV);
+
+      if (!s.Contains(".") && !s.Contains("E") && !s.Contains("e"))
+      {
+        return s + ".0";
+      }
+      return s;
     }
 
     public static StoryboardProperty ParseStoryboardProperty(string prop)
@@ -129,33 +150,37 @@ namespace Winithm.Core.Common
 
       if (parts.Count >= 1)
       {
-        type = ParseStoryboardProperty(parts[0]);
-        rawPropertyName = parts[0];
+        evt.ID = parts[0];
       }
 
-      if (parts.Count >= 2) evt.Start = BeatTime.Parse(parts[1]);
-      if (parts.Count >= 3) evt.Length = BeatTime.Parse(parts[2]);
+      if (parts.Count >= 2)
+      {
+        type = ParseStoryboardProperty(parts[0]);
+        rawPropertyName = parts[1];
+      }
 
-      if (parts.Count >= 4)
-        evt.From = AnyValue.Parse(parts[3]);
+      if (parts.Count >= 3) evt.StartBeat = BeatTime.Parse(parts[2]);
+      if (parts.Count >= 4) evt.Length = TryParseFloat(parts[3], out float length) ? length : 0;
 
       if (parts.Count >= 5)
-        evt.To = AnyValue.Parse(parts[4]);
+        evt.From = AnyValue.Parse(parts[4]);
 
       if (parts.Count >= 6)
+        evt.To = AnyValue.Parse(parts[5]);
+
+      if (parts.Count >= 7)
       {
         if (parts[5].Contains("|"))
         {
           evt.Easing = EasingType.Bezier;
-          evt.EasingBezier = AnyValue.Parse(parts[5]);
+          evt.EasingBezier = AnyValue.Parse(parts[6]);
         }
         else
         {
-          evt.Easing = EasingFunctions.ParseEasing(parts[5]);
+          evt.Easing = EasingFunctions.ParseEasing(parts[6]);
         }
       }
 
-      evt.PreCompute();
       return evt;
     }
 
@@ -167,28 +192,8 @@ namespace Winithm.Core.Common
 
       string easingStr = evt.Easing == EasingType.Bezier ? evt.EasingBezier.ToString() : evt.Easing.ToString();
       string propStr = FormatStoryboardProperty(type, customProperty);
-      return $"{indent}/ {propStr} {evt.Start} {evt.Length} {from} {to} {easingStr}";
+      return $"{indent}/ {evt.ID} {propStr} {evt.StartBeat} {evt.Length} {from} {to} {easingStr}";
     }
-
-    public static void PreCalculateBPMStops(List<BPMStop> stops)
-    {
-      if (stops.Count == 0) return;
-
-      var first = stops[0];
-      first.AbsoluteBeat = 0f;
-      stops[0] = first;
-
-      for (int i = 1; i < stops.Count; i++)
-      {
-        var prev = stops[i - 1];
-        var curr = stops[i];
-        float deltaTime = curr.StartTimeSeconds - prev.StartTimeSeconds;
-        curr.AbsoluteBeat = prev.AbsoluteBeat + deltaTime * prev.BeatsPerSecond;
-        stops[i] = curr;
-      }
-    }
-
-
 
     public static void ResolveInheritance(ChartData data)
     {
@@ -226,7 +231,7 @@ namespace Winithm.Core.Common
       if (events.Count == 0) return;
 
       // Stable sort by start beat to ensure chronological order for resolution
-      var sorted = System.Linq.Enumerable.ToList(System.Linq.Enumerable.OrderBy(events, e => e.Start.AbsoluteValue));
+      var sorted = System.Linq.Enumerable.ToList(System.Linq.Enumerable.OrderBy(events, e => e.StartBeat.AbsoluteValue));
       events.Clear();
       events.AddRange(sorted);
 
@@ -237,9 +242,9 @@ namespace Winithm.Core.Common
         if (evt.From.Type == AnyValueType.Inherited)
         {
           var prev = events[i - 1];
-          float currentBeat = evt.Start.AbsoluteValue;
+          float currentBeat = evt.StartBeat.AbsoluteValue;
 
-          if (currentBeat >= prev.EndBeat)
+          if (currentBeat >= prev.StartBeat.AbsoluteValue + prev.Length)
           {
             // The previous event finished before this one started. Inherit its final value.
             evt.From = prev.To;
@@ -248,9 +253,8 @@ namespace Winithm.Core.Common
           {
             // This event starts WHILE the previous one is still interpolating. 
             // Calculate the exact value at this moment.
-            float startBeat = prev.Start.AbsoluteValue;
-            float length = prev.EndBeat - startBeat;
-            float t = length > 0f ? (currentBeat - startBeat) / length : 1f;
+            float startBeat = prev.StartBeat.AbsoluteValue;
+            float t = prev.Length > 0f ? (currentBeat - startBeat) / prev.Length : 1f;
             
             t = prev.Easing == EasingType.Bezier
               ? EasingFunctions.EvaluateBezier(prev.EasingBezier, t)

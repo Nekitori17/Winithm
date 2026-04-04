@@ -1,4 +1,4 @@
-namespace Winithm.Core.Managers
+namespace Winithm.Core.Interfaces
 {
   /// <summary>
   /// Interface for objects that can be pooled.

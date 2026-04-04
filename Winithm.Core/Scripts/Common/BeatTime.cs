@@ -55,9 +55,55 @@ namespace Winithm.Core.Common
 
     public static readonly BeatTime Zero = new BeatTime(0, 0, 0);
 
+    public static readonly BeatTime Max = new BeatTime(int.MaxValue, 0, 0);
+
     public override string ToString()
     {
       return $"{Beat}:{Numerator}/{Denominator}";
+    }
+
+    public static bool operator <(BeatTime a, BeatTime b)
+    {
+      return a.AbsoluteValue < b.AbsoluteValue;
+    }
+
+    public static bool operator >(BeatTime a, BeatTime b)
+    {
+      return a.AbsoluteValue > b.AbsoluteValue;
+    }
+
+    public static bool operator <=(BeatTime a, BeatTime b)
+    {
+      return a.AbsoluteValue <= b.AbsoluteValue;
+    }
+
+    public static bool operator >=(BeatTime a, BeatTime b)
+    {
+      return a.AbsoluteValue >= b.AbsoluteValue;
+    }
+
+    public static bool operator ==(BeatTime a, BeatTime b)
+    {
+      return a.AbsoluteValue == b.AbsoluteValue;
+    }
+
+    public static bool operator !=(BeatTime a, BeatTime b)
+    {
+      return a.AbsoluteValue != b.AbsoluteValue;
+    }
+
+    public override bool Equals(object obj)
+    {
+      if (obj is BeatTime other)
+      {
+        return this == other;
+      }
+      return false;
+    }
+
+    public override int GetHashCode()
+    {
+      return AbsoluteValue.GetHashCode();
     }
   }
 }

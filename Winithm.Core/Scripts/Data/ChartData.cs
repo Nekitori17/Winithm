@@ -8,6 +8,7 @@ namespace Winithm.Core.Data
   public class ChartData
   {
     // From .wnm
+    public SongMetaData SongMetaData = new SongMetaData();
     public ChartMetadata Metadata = new ChartMetadata();
     public ResourceData Resources = new ResourceData();
     public List<ChartReference> ChartReferences = new List<ChartReference>();

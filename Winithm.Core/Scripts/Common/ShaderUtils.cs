@@ -4,6 +4,18 @@ using System.Text.RegularExpressions;
 
 namespace Winithm.Core.Common
 {
+  public struct ShaderParamDef
+  {
+    public AnyValueType Type;
+    public AnyValue DefaultValue;
+
+    public ShaderParamDef(AnyValueType type, AnyValue defaultValue)
+    {
+      Type = type;
+      DefaultValue = defaultValue;
+    }
+  }
+
   /// <summary>
   /// Data structure representing a user-defined uniform in a shader.
   /// </summary>
@@ -29,11 +41,10 @@ namespace Winithm.Core.Common
       switch (glslType)
       {
         case "float": return AnyValueType.Float;
-        case "vec2":  return AnyValueType.Vec2;
-        case "vec3":  return AnyValueType.Vec3;
-        case "vec4":  return AnyValueType.Vec4;
-        case "int":   return AnyValueType.Int;
-        case "bool":  return AnyValueType.Bool;
+        case "vec2": return AnyValueType.Vec2;
+        case "vec3": return AnyValueType.Vec3;
+        case "vec4": return AnyValueType.Vec4;
+        case "bool": return AnyValueType.Bool;
         case "sampler2D": return AnyValueType.String;
         default: return AnyValueType.Float;
       }

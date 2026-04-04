@@ -1,3 +1,5 @@
+using Winithm.Core.Common;
+
 namespace Winithm.Core.Data
 {
   /// <summary>
@@ -6,22 +8,43 @@ namespace Winithm.Core.Data
   /// </summary>
   public struct BPMStop
   {
-    public float StartTimeSeconds;
+    public BeatTime StartBeat;
     public float BPM;
     public int TimeSignature;
+    public float FloatStartBeat;
 
-    /// <summary>Pre-calculated absolute beat at this stop's start time.</summary>
-    public float AbsoluteBeat;
+    /// <summary>Pre-calculated execution time in seconds. Engine computes this based on BaseOffset.</summary>
+    public float StartTimeSeconds;
 
-    public BPMStop(float startTime, float bpm, int timeSignature)
+    public BPMStop(BeatTime startBeat, float bpm, int timeSignature)
     {
-      StartTimeSeconds = startTime;
+      StartBeat = startBeat;
       BPM = bpm;
       TimeSignature = timeSignature;
-      AbsoluteBeat = 0f;
+      FloatStartBeat = startBeat.Beat + startBeat.Numerator / startBeat.Denominator;
+      StartTimeSeconds = 0f;
     }
 
-    /// <summary>Beats per second at this BPM.</summary>
     public float BeatsPerSecond => BPM / 60f;
+  }
+
+  /// <summary>
+  /// Defines the global offset for Beat 0:0/0.
+  /// Used by the Engine to align the entire beat grid to the audio.
+  /// </summary>
+  public struct BaseBPM
+  {
+    public float BaseOffsetSeconds;
+    public float InitialBPM;
+    public int TimeSignature;
+
+    public BaseBPM(float offsetSeconds, float bpm, int timeSignature)
+    {
+      BaseOffsetSeconds = offsetSeconds;
+      InitialBPM = bpm;
+      TimeSignature = timeSignature;
+    }
+
+    public float BeatsPerSecond => InitialBPM / 60f;
   }
 }

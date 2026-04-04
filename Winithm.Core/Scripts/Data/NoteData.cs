@@ -3,6 +3,9 @@ using Winithm.Core.Common;
 
 namespace Winithm.Core.Data
 {
+  /// <summary>
+  /// Hit object data: # <NoteType> <Start> <Length> <Side> <FakeType>
+  /// </summary>
   public enum NoteType
   {
     Tap,
@@ -20,23 +23,27 @@ namespace Winithm.Core.Data
     Right
   }
 
-  /// <summary>
-  /// Hit object data: # <NoteType> <Start> <Length> <Side> <FakeType>
-  /// </summary>
   public class NoteData
-  {
+  { 
+    public string ID;
     public NoteType Type;
-    public BeatTime Start;
-    public BeatTime Length;
+    public BeatTime StartBeat;
+    public float Length;
     public NoteSide Side;
     public int FakeType;
 
-    /// <summary>
-    /// Tracks if this note has already been evaluated as a Hit.
-    /// Used primarily for Hold notes so they aren't hit multiple times while pinned.
-    /// </summary>
+    // --- State for Hold Notes ---
+    /// <summary>True if the note has been fully processed (Hit or Miss).</summary>
     public bool IsEvaluated = false;
-    public float EndBeat => Start.AbsoluteValue + Length.AbsoluteValue;
+
+    /// <summary>Hold Phase 1: Key pressed at StartBeat, waiting for Phase 2 at EndBeat.</summary>
+    public bool IsHoldActive = false;
+
+    /// <summary>True if a Drag note has already fired OnDragReady.</summary>
+    public bool IsDragFired = false;
+
+    /// <summary>Timing offset (ms) captured during Phase 1 for Phase 2 scoring.</summary>
+    public float HoldStartOffsetMs = 0f;
 
     public bool IsHittable => FakeType == 0;
     public bool IsMutedGhost => FakeType == 1;

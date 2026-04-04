@@ -1,7 +1,7 @@
 using System;
 using Godot;
 using Winithm.Core.Data;
-using Winithm.Core.Managers;
+using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Behaviors
 {
@@ -12,7 +12,7 @@ namespace Winithm.Core.Behaviors
     struct NoteState
     {
       public Vector2 PlayerAreaSize;
-      public float LaneWidth, BodyHeight, NoteSize, Opacity;
+      public float LaneWidth, BodyHeight, NoteSize;
     }
     private NoteState _lastState = new NoteState();
 
@@ -35,10 +35,10 @@ namespace Winithm.Core.Behaviors
     [Export] public NoteType Type;
     [Export] public float NoteSize = 1f;
     [Export] public float BodyHeight = 0f;
-    [Export] public float Opacity = 1f;
 
-    public const float HeadPadding = 0.001f;
-    public const float BodyToHeadRatio = 0.9f;
+    public static readonly float HEAD_PADDING = 0.001f;
+    public static readonly float BODY_TO_HEAD_RATIO = 0.9f;
+    public static readonly float NOTE_HEAD_HEIGHT_PERCENT = 0.025f;
 
     // Initialize node references and perform initial visual update
     public override void _Ready()
@@ -58,8 +58,15 @@ namespace Winithm.Core.Behaviors
     }
 
     // Logic to execute when the note is retrieved from the object pool
-    public void OnSpawn()
+    public void OnSpawn(){ }
+
+    public void OnDespawn() { }
+
+    public void SetNoteType (NoteType type)
     {
+      if (Type == type) return;
+      Type = type;
+
       _bodyContainer.Visible = Type == NoteType.Hold;
 
       switch (Type)
@@ -78,60 +85,47 @@ namespace Winithm.Core.Behaviors
       UpdateVisual();
     }
 
-    public void OnDespawn() { }
-
-    /// <summary>
-    /// Recalculates all child sizes, positions, and rotation.
-    /// Call after changing any exported property.
-    /// </summary>
     // Recalculates sizes and positions of all components based on current properties
     public void UpdateVisual()
     {
-      float headH = NoteSize * Math.Min(PlayerAreaSize.x, PlayerAreaSize.y) * 0.025f;
-      float headW = LaneWidth * (1f - HeadPadding * 2f);
+      float headH = NoteSize * Math.Min(PlayerAreaSize.x, PlayerAreaSize.y) * NOTE_HEAD_HEIGHT_PERCENT;
+      float headW = LaneWidth * (1f - HEAD_PADDING * 2f);
       float headCW = headW - headH * 2f;
 
       bool headDirty =
         PlayerAreaSize != _lastState.PlayerAreaSize ||
         LaneWidth != _lastState.LaneWidth ||
-        NoteSize != _lastState.NoteSize ||
-        Opacity != _lastState.Opacity;
+        NoteSize != _lastState.NoteSize;
 
       bool bodyDirty =
         PlayerAreaSize != _lastState.PlayerAreaSize ||
         LaneWidth != _lastState.LaneWidth ||
-        BodyHeight != _lastState.BodyHeight ||
-        Opacity != _lastState.Opacity;
+        BodyHeight != _lastState.BodyHeight;
 
       if (headDirty)
       {
         // Update head component layout
-        // HeadContainer: pivot at bottom-center so (0,0) of Anchor = note hit point
         _headContainer.RectSize = new Vector2(headW, headH);
         _headContainer.RectPosition = new Vector2(-headW / 2f, -headH);
         _headContainer.RectPivotOffset = new Vector2(headW / 2f, headH);
 
         _headLeft.RectSize = new Vector2(headH, headH);
         _headLeft.RectPosition = new Vector2(0f, 0f);
-        _headLeft.Modulate = new Color(1f, 1f, 1f, Opacity);
 
         _headCenter.RectSize = new Vector2(headCW, headH);
         _headCenter.RectPosition = new Vector2(headH, 0f);
-        _headCenter.Modulate = new Color(1f, 1f, 1f, Opacity);
 
         _headRight.RectSize = new Vector2(headH, headH);
         _headRight.RectPosition = new Vector2(headW - headH, 0f);
-        _headRight.Modulate = new Color(1f, 1f, 1f, Opacity);
 
         _headOverlay.RectSize = new Vector2(headH, headH);
         _headOverlay.RectPosition = new Vector2(headW / 2f - headH / 2f, 0f);
-        _headOverlay.Modulate = new Color(1f, 1f, 1f, Opacity);
       }
 
       if (bodyDirty)
       {
         // Update body component layout (for Hold notes)
-        float bodyW = headW * BodyToHeadRatio;
+        float bodyW = headW * BODY_TO_HEAD_RATIO;
         float bodyCW = bodyW - headH * 2f;
 
         _bodyContainer.RectSize = new Vector2(bodyW, BodyHeight);
@@ -140,15 +134,12 @@ namespace Winithm.Core.Behaviors
 
         _bodyLeft.RectSize = new Vector2(headH, BodyHeight);
         _bodyLeft.RectPosition = new Vector2(0f, 0f);
-        _bodyLeft.Modulate = new Color(1f, 1f, 1f, Opacity);
 
         _bodyCenter.RectSize = new Vector2(bodyCW, BodyHeight);
         _bodyCenter.RectPosition = new Vector2(headH, 0f);
-        _bodyCenter.Modulate = new Color(1f, 1f, 1f, Opacity);
 
         _bodyRight.RectSize = new Vector2(headH, BodyHeight);
         _bodyRight.RectPosition = new Vector2(bodyW - headH, 0f);
-        _bodyRight.Modulate = new Color(1f, 1f, 1f, Opacity);
       }
 
       // Save current state for next dirty check
@@ -156,7 +147,6 @@ namespace Winithm.Core.Behaviors
       _lastState.LaneWidth = LaneWidth;
       _lastState.NoteSize = NoteSize;
       _lastState.BodyHeight = BodyHeight;
-      _lastState.Opacity = Opacity;
     }
   }
 }

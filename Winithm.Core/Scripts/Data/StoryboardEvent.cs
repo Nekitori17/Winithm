@@ -10,19 +10,12 @@ namespace Winithm.Core.Data
 
   public struct StoryboardEvent
   {
-    public BeatTime Start;
-    public BeatTime Length;
+    public string ID;
+    public BeatTime StartBeat;
+    public float Length;
     public AnyValue From;
     public AnyValue To;
     public EasingType Easing;
     public AnyValue EasingBezier;
-
-    /// <summary>End beat (Start + Length) pre-computed for runtime.</summary>
-    public float EndBeat;
-
-    public void PreCompute()
-    {
-      EndBeat = Start.AbsoluteValue + Length.AbsoluteValue;
-    }
   }
 }

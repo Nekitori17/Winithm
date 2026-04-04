@@ -10,7 +10,7 @@ namespace Winithm.Core.Managers
   public class ThemeChannelManager : Node
   {
     private Dictionary<string, ThemeChannelData> _themeChannels = new Dictionary<string, ThemeChannelData>();
-    private Dictionary<string, (float LastBeat, Color Color)> _cache = new Dictionary<string, (float, Color)>();
+    private Dictionary<string, (float LastBeat, Color Color, float NoteAlpha)> _lastStates = new Dictionary<string, (float, Color, float)>();
 
     private Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>> _cursors 
       = new Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>>();
@@ -18,7 +18,7 @@ namespace Winithm.Core.Managers
     public void LoadThemeChannels(List<ThemeChannelData> channels)
     {
       _themeChannels.Clear();
-      _cache.Clear();
+      _lastStates.Clear();
       _cursors.Clear();
 
       if (channels == null) return;
@@ -26,7 +26,7 @@ namespace Winithm.Core.Managers
       foreach (var tc in channels)
       {
         _themeChannels[tc.ID] = tc;
-        _cache[tc.ID] = (-1f, new Color(tc.InitR, tc.InitG, tc.InitB, tc.InitA));
+        _lastStates[tc.ID] = (-1f, new Color(tc.InitR, tc.InitG, tc.InitB, tc.InitA), tc.InitNoteA);
         
         var propCursors = new Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>();
         if (tc.StoryboardEvents != null)
@@ -38,23 +38,24 @@ namespace Winithm.Core.Managers
       }
     }
 
-    public Color GetThemeColor(string id, float currentBeat, Color fallback)
+    public (Color WindowColor, float NoteA) GetThemeColor(string id, float currentBeat, Color fallback)
     {
-      if (string.IsNullOrEmpty(id) || !_themeChannels.TryGetValue(id, out var tc)) return fallback;
+      if (string.IsNullOrEmpty(id) || !_themeChannels.TryGetValue(id, out var tc)) return (fallback, 1f);
 
-      var cacheVal = _cache[id];
-      if (Mathf.Abs(cacheVal.LastBeat - currentBeat) <= 0.0001f)
-        return cacheVal.Color;
+      var stateVal = _lastStates[id];
+      if (Mathf.Abs(stateVal.LastBeat - currentBeat) <= 0.0001f)
+        return (stateVal.Color, stateVal.NoteAlpha);
 
       var cursors = _cursors[id];
       float r = EvaluateProperty(tc, StoryboardProperty.ColorR, currentBeat, tc.InitR, GetCursor(cursors, StoryboardProperty.ColorR));
       float g = EvaluateProperty(tc, StoryboardProperty.ColorG, currentBeat, tc.InitG, GetCursor(cursors, StoryboardProperty.ColorG));
       float b = EvaluateProperty(tc, StoryboardProperty.ColorB, currentBeat, tc.InitB, GetCursor(cursors, StoryboardProperty.ColorB));
       float a = EvaluateProperty(tc, StoryboardProperty.ColorA, currentBeat, tc.InitA, GetCursor(cursors, StoryboardProperty.ColorA));
+      float noteA = EvaluateProperty(tc, StoryboardProperty.NoteA, currentBeat, tc.InitNoteA, GetCursor(cursors, StoryboardProperty.NoteA));
 
       Color color = new Color(r, g, b, a);
-      _cache[id] = (currentBeat, color);
-      return color;
+      _lastStates[id] = (currentBeat, color, noteA);
+      return (color, noteA);
     }
 
     private StoryboardEvaluator.Cursor GetCursor(Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor> cursors, StoryboardProperty prop)

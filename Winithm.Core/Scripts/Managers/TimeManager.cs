@@ -56,5 +56,6 @@ namespace Winithm.Core.Managers
       CurrentTime = time;
     }
 
+    public float GetCurrentBPS() => Metronome.GetCurrentBPS(CurrentTime);
   }
 }

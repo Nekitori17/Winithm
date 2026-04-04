@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Winithm.Core.Common;
+using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Data
 {
@@ -10,8 +11,9 @@ namespace Winithm.Core.Data
   /// </summary>
   public class SpeedStep : IStoryboardTarget<StoryboardProperty>
   {
+    public string ID;
     public BeatTime Start;
-    public float Multiplier;
+    public float Multiplier = 1f;
 
     public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
   }

@@ -1,83 +1,85 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using Winithm.Core.Data;
 using Winithm.Core.Behaviors;
+using Winithm.Core.Data;
+using Winithm.Core.Logic;
 
 namespace Winithm.Core.Managers
 {
   /// <summary>
-  /// Global NoteManager: manages note spawning, positioning, and lifecycle
-  /// for ALL windows from a single instance. Notes are keyed by windowId.
-  /// One shared object pool, one _Process loop.
+  /// Manages note spawning, rendering, and lifecycle for all windows.
+  /// Single instance with shared object pool.
   /// </summary>
   public class NoteManager : Node
   {
-    public event Action<string, NoteData> OnNoteHit;   // windowId, note
-    public event Action<string, NoteData> OnNoteMiss;  // windowId, note
+    public event Action<string, NoteData> OnNoteHit;
+    public event Action<string, NoteData> OnNoteMiss;
+    public event Action<string, NoteData, float> OnDragReady;
+    public event Action<string, NoteData> OnActiveHoldEnded;
+    public event Action<string, NoteData> OnActiveHoldTick;
+    public event Action<string, NoteData> OnAutoHit;
 
+    [Export] public float PlayerNoteSize = 1f;
+    [Export] public float PlayerNoteSpeed = 1f;
+
+    public bool Autoplay { get; private set; } = false;
+
+    private float _lastBeat = float.MinValue;
     private TimeManager _timeManager;
     private PackedScene _noteScene;
 
-    // Per-window data
     private class WindowNoteState
     {
       public WindowData Data;
       public Window Visual;
-      public Dictionary<NoteSide, List<NoteData>> PendingNotes;
-      public Dictionary<NoteSide, List<NoteData>> ActiveNotes;
+      public Dictionary<NoteData, Note> NoteVisuals = new Dictionary<NoteData, Note>();
+      public Dictionary<NoteSide, int> SideCursors = new Dictionary<NoteSide, int>();
+      public Dictionary<NoteSide, int> EvalCursors = new Dictionary<NoteSide, int>();
+      public HashSet<NoteData> ActiveNotesThisFrame = new HashSet<NoteData>();
+      public HashSet<NoteData> ActiveHolds = new HashSet<NoteData>();
+      public List<NoteData> KeysToRemove = new List<NoteData>();
+      public SpeedCalculator.FrameCache SpeedCache = new SpeedCalculator.FrameCache();
+      public float LastBeat = float.MinValue;
     }
 
     private Dictionary<string, WindowNoteState> _windowStates = new Dictionary<string, WindowNoteState>();
+    private NodePool<Note> _notePool;
 
-    // Shared visuals: NoteData → Note visual (across all windows)
-    private Dictionary<NoteData, Note> _noteVisuals = new Dictionary<NoteData, Note>();
+    public static readonly float NOTE_SPEED_IN_PIXEL_PER_SEC = 720f;
 
-    // Shared object pool
-    private Stack<Note> _notePool = new Stack<Note>();
-
-    /// <summary>How many beats ahead of StartTime a note should spawn.</summary>
-    public float NoteSpeedBeats = 2f;
-
-    public void Init(TimeManager tm)
+    public NoteManager(TimeManager timeManager, bool autoplay = false)
     {
-      _timeManager = tm;
+      Autoplay = autoplay;
+      _timeManager = timeManager;
       _noteScene = GD.Load<PackedScene>("res://Winithm.Core/Resources/Sprites/Note.tscn");
+      _notePool = new NodePool<Note>(this, _noteScene);
     }
 
-    /// <summary>
-    /// Registers a window and its notes for management.
-    /// Called when a window becomes active.
-    /// </summary>
+    // =============================================
+    // Window Registration
+    // =============================================
+
     public void RegisterWindow(string windowId, WindowData wd, Window window)
     {
       if (_windowStates.ContainsKey(windowId)) return;
 
-      _windowStates[windowId] = new WindowNoteState()
+      var state = new WindowNoteState() { Data = wd, Visual = window };
+
+      foreach (NoteSide side in Enum.GetValues(typeof(NoteSide)))
       {
-        Data = wd,
-        Visual = window,
-        ActiveNotes = new   
-      };
+        state.SideCursors[side] = 0;
+        state.EvalCursors[side] = 0;
+      }
+
+      _windowStates[windowId] = state;
     }
 
-    /// <summary>
-    /// Unregisters a window and cleans up all its notes.
-    /// Called when a window becomes inactive.
-    /// </summary>
     public void UnregisterWindow(string windowId)
     {
       if (!_windowStates.TryGetValue(windowId, out var state)) return;
-
-      foreach (var note in state.ActiveNotes.Values)
-      {
-        if (_noteVisuals.TryGetValue(note, out var visual))
-        {
-          ReturnToPool(visual);
-          _noteVisuals.Remove(note);
-        }
-      }
-
+      foreach (var visual in state.NoteVisuals.Values)
+        ReturnToPool(visual);
       _windowStates.Remove(windowId);
     }
 
@@ -85,88 +87,151 @@ namespace Winithm.Core.Managers
     {
       base._ExitTree();
 
-      foreach (var visual in _noteVisuals.Values)
+      foreach (var state in _windowStates.Values)
       {
-        if (IsInstanceValid(visual)) visual.QueueFree();
+        foreach (var visual in state.NoteVisuals.Values)
+        {
+          if (IsInstanceValid(visual)) visual.QueueFree();
+        }
+        state.NoteVisuals.Clear();
       }
-      _noteVisuals.Clear();
 
-      while (_notePool.Count > 0)
-      {
-        var visual = _notePool.Pop();
-        if (IsInstanceValid(visual)) visual.QueueFree();
-      }
+      _notePool?.Dispose();
     }
 
-    public override void _Process(float delta)
+    // =============================================
+    // Per-Frame Update
+    // =============================================
+
+    public void Update(float currentBeat, bool isScrubbing = false)
     {
-      if (_timeManager == null) return;
-      float currentBeat = _timeManager.CurrentBeat;
+      if (currentBeat == _lastBeat) return;
+      _lastBeat = currentBeat;
 
       foreach (var pair in _windowStates)
-      {
-        ProcessWindow(pair.Key, pair.Value, currentBeat);
-      }
+        ProcessWindow(pair.Key, pair.Value, currentBeat, isScrubbing);
     }
 
-    private void ProcessWindow(string windowId, WindowNoteState state, float currentBeat)
+    public void ForceUpdate(float currentBeat, bool isScrubbing = false)
+    {
+      _lastBeat = float.MinValue;
+
+      foreach (var pair in _windowStates)
+        ProcessWindow(pair.Key, pair.Value, currentBeat, isScrubbing);
+    }
+
+    private void ProcessWindow(string windowId, WindowNoteState state, float currentBeat, bool isScrubbing)
     {
       if (state.Visual == null) return;
+      if (currentBeat == state.LastBeat) return;
 
-      var pending = state.PendingNotes;
-      var active = state.ActiveNotes;
+      bool isRewind = currentBeat < state.LastBeat;
+      state.LastBeat = currentBeat;
 
-      // 1. Spawn notes that entered the visible ahead-time
-      while (pending.Count > 0 && currentBeat >= pending[0].Start.AbsoluteValue - NoteSpeedBeats)
+      // COMPLETION & TICK: Check Active Holds for completion and emit tick
+      if (!isRewind && !isScrubbing)
+        ProcessActiveHoldNotes(windowId, state, currentBeat);
+      
 
+      Vector2 playerAreaSize = state.Visual.PlayerAreaSize;
+      float currentBps = _timeManager.Metronome.GetCurrentBPS(_timeManager.CurrentTime);
+      float basePixelsPerBeat = NOTE_SPEED_IN_PIXEL_PER_SEC * PlayerNoteSpeed / (currentBps > 0f ? currentBps : 2f);
+
+      float noteH = PlayerNoteSize * Mathf.Min(playerAreaSize.x, playerAreaSize.y) * Note.NOTE_HEAD_HEIGHT_PERCENT;
+      float limitPx = noteH * 3f;
+
+      state.ActiveNotesThisFrame.Clear();
+
+      foreach (var sideNotes in state.Data.Notes)
       {
-        SpawnNote(windowId, state, pending[0]);
-        pending.RemoveAt(0);
+        NoteSide side = sideNotes.Key;
+        var notes = sideNotes.Value;
+
+        float scale = Math.Min(
+          playerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
+          playerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
+        );
+        float limitDistPx =
+          (side == NoteSide.Top || side == NoteSide.Bottom)
+          ? state.Visual.WindowSize.y
+          : state.Visual.WindowSize.x;
+
+        int cursor = state.SideCursors[side];
+
+        // BACKWARD SYNC: Pull cursor back using precomputed MaxEndBeats
+        state.Data.MaxEndBeats.TryGetValue(side, out float[] maxEndBeats);
+        while (cursor > 0 && maxEndBeats != null)
+        {
+          float maxEnd = maxEndBeats[cursor - 1];
+          float distPx = SpeedCalculator.GetVisualOffset(state.SpeedCache, state.Data.SpeedSteps, currentBeat, maxEnd) * basePixelsPerBeat * scale;
+          if (distPx >= -limitPx) cursor--;
+          else break;
+        }
+
+        // FORWARD SYNC: Advance past notes whose EndBeat left the screen
+        while (cursor < notes.Count)
+        {
+          float endBeat = notes[cursor].StartBeat.AbsoluteValue + notes[cursor].Length;
+          float distPx = SpeedCalculator.GetVisualOffset(state.SpeedCache, state.Data.SpeedSteps, currentBeat, endBeat) * basePixelsPerBeat * scale;
+          if (distPx < -limitPx) cursor++;
+          else break;
+        }
+
+        state.SideCursors[side] = cursor;
+
+        // LIFECYCLE: Drag auto-fire + Miss evaluation
+        EvaluateNoteLifecycle(windowId, state, side, currentBeat, isRewind);
+
+        // RENDER
+        for (int i = cursor; i < notes.Count; i++)
+        {
+          NoteData data = notes[i];
+
+          float headDistPx = SpeedCalculator.GetVisualOffset(state.SpeedCache, state.Data.SpeedSteps, currentBeat, data.StartBeat.AbsoluteValue) * basePixelsPerBeat * scale;
+
+          // Early exit: notes beyond viewport (sorted by StartBeat)
+          if (headDistPx > limitDistPx + limitPx) break;
+
+          float endBeat = data.StartBeat.AbsoluteValue + data.Length;
+
+          // Missed/dropped Hold notes stay visible but dimmed until EndBeat passes
+          bool isMissedHold =
+            data.IsEvaluated &&
+            !isRewind &&
+            !isScrubbing &&
+            data.Type == NoteType.Hold &&
+            currentBeat < endBeat;
+
+          // Hide evaluated notes during normal play; show during rewind/scrubbing
+          if (data.IsEvaluated && !isRewind && !isScrubbing && !isMissedHold) continue;
+
+          float endDistPx = SpeedCalculator.GetVisualOffset(state.SpeedCache, state.Data.SpeedSteps, currentBeat, endBeat) * basePixelsPerBeat * scale;
+
+          if (!state.NoteVisuals.TryGetValue(data, out Note visual))
+            visual = SpawnNote(windowId, state, data);
+
+          // Dim missed holds, reset pool reuse artifacts otherwise
+          visual.Modulate = isMissedHold
+            ? new Color(0.5f, 0.5f, 0.5f, 0.5f)
+            : new Color(1f, 1f, 1f, 1f);
+
+          UpdateNoteVisual(data, visual, headDistPx, endDistPx, state.Visual);
+          state.ActiveNotesThisFrame.Add(data);
+        }
       }
 
-      // 2. Update positions
-      Vector2 winSize = state.Visual.WindowBodySize;
-
-      List<NoteData> toRemove = null;
-
-      for (int i = 0; i < active.Count; i++)
+      // CLEANUP: Return off-screen visuals to pool
+      state.KeysToRemove.Clear();
+      foreach (var key in state.NoteVisuals.Keys)
       {
-        NoteData data = active[i];
-        if (!_noteVisuals.TryGetValue(data, out Note visual)) continue;
-
-        bool pastJudgement = IsNotePastLimit(data, visual, winSize, currentBeat);
-
-        if (pastJudgement)
-        {
-          if (toRemove == null) toRemove = new List<NoteData>();
-          toRemove.Add(data);
-        }
-        else
-        {
-          UpdateNoteVisual(data, visual, currentBeat, winSize);
-
-          if (IsNoteBeforeVisibleArea(data, currentBeat))
-            break;
-        }
+        if (!state.ActiveNotesThisFrame.Contains(key))
+          state.KeysToRemove.Add(key);
       }
-
-      // 3. Remove expired notes
-      if (toRemove != null)
+      foreach (var key in state.KeysToRemove)
       {
-        foreach (var data in toRemove)
-        {
-          if (_noteVisuals.TryGetValue(data, out var visual))
-          {
-            ReturnToPool(visual);
-            _noteVisuals.Remove(data);
-          }
-          active.Remove(data);
-
-          if (!data.IsEvaluated)
-          {
-            OnNoteMiss?.Invoke(windowId, data);
-          }
-        }
+        ReturnToPool(state.NoteVisuals[key]);
+        state.NoteVisuals.Remove(key);
+        state.ActiveHolds.Remove(key);
       }
     }
 
@@ -174,22 +239,10 @@ namespace Winithm.Core.Managers
     // Spawn & Pool
     // =============================================
 
-    private void SpawnNote(string windowId, WindowNoteState state, NoteData data)
+    private Note SpawnNote(string windowId, WindowNoteState state, NoteData data)
     {
-      Note visual;
-      if (_notePool.Count > 0)
-      {
-        visual = _notePool.Pop();
-        visual.Visible = true;
-      }
-      else
-      {
-        visual = _noteScene.Instance<Note>();
-      }
+      Note visual = _notePool.Get();
 
-      data.IsEvaluated = false;
-
-      // Z-ordering: Focus notes above Unfocus overlay, everything else below
       Control parent = (data.Type == NoteType.Focus)
         ? state.Visual.FocusNoteLayer
         : state.Visual.NoteLayer;
@@ -199,94 +252,42 @@ namespace Winithm.Core.Managers
         if (visual.GetParent() != null) visual.GetParent().RemoveChild(visual);
         parent.AddChild(visual);
       }
-      // Newer notes drawn UNDER older notes (closer to judgement = on top)
-      parent.MoveChild(visual, 0);
+      // Newer notes drawn on top of older ones
+      parent.MoveChild(visual, -1);
 
-      state.ActiveNotes.Add(data);
-      _noteVisuals[data] = visual;
+      state.NoteVisuals[data] = visual;
+      return visual;
     }
 
     private void ReturnToPool(Note visual)
     {
       visual.Visible = false;
       if (visual.GetParent() != null) visual.GetParent().RemoveChild(visual);
-      _notePool.Push(visual);
+      _notePool.Release(visual);
     }
 
     // =============================================
-    // Position & Lifecycle
+    // Note Positioning
     // =============================================
 
-    private bool IsNoteBeforeVisibleArea(NoteData data, float currentBeat)
+    private void UpdateNoteVisual(NoteData data, Note visual, float headDistPx, float endDistPx, Window windowVisual)
     {
-      return currentBeat < data.Start.AbsoluteValue - NoteSpeedBeats;
-    }
+      Vector2 playerAreaSize = windowVisual.PlayerAreaSize;
+      Vector2 winSize = windowVisual.WindowSize;
 
-    private bool IsNotePastLimit(NoteData data, Note visual, Vector2 winSize, float currentBeat)
-    {
-      float endBeat = data.Start.AbsoluteValue + data.Length.AbsoluteValue;
-      float noteH = Mathf.Min(winSize.x, winSize.y) * 0.025f;
-      float limit = noteH * 3f;
-
-      if (data.Type != NoteType.Hold)
-      {
-        float t = (currentBeat - data.Start.AbsoluteValue) / NoteSpeedBeats;
-        if (t <= 0) return false;
-
-        switch (data.Side)
-        {
-          case NoteSide.Bottom: return visual.RectPosition.y > winSize.y + limit;
-          case NoteSide.Top: return visual.RectPosition.y < -limit;
-          case NoteSide.Right: return visual.RectPosition.x > winSize.x + limit;
-          case NoteSide.Left: return visual.RectPosition.x < -limit;
-        }
-        return false;
-      }
-      else
-      {
-        return currentBeat > endBeat + (limit / Mathf.Max(winSize.y, 1f)) * NoteSpeedBeats;
-      }
-    }
-
-    private void UpdateNoteVisual(NoteData data, Note visual, float currentBeat, Vector2 winSize)
-    {
-      float noteH = Mathf.Min(winSize.x, winSize.y) * 0.025f;
-      float laneW = winSize.x; // default for vertical sides
-
-      // t: 0 = just spawned (far edge), 1 = hitting judgement line
-      float t = (currentBeat - (data.Start.AbsoluteValue - NoteSpeedBeats)) / NoteSpeedBeats;
-      t = Mathf.Clamp(t, 0f, 2f);
-
-      bool isHold = data.Type == NoteType.Hold;
+      float headH = visual.NoteSize * Mathf.Min(playerAreaSize.x, playerAreaSize.y) * Note.NOTE_HEAD_HEIGHT_PERCENT;
       float bodyH = 0f;
 
-      if (isHold)
+      if (data.Type == NoteType.Hold)
       {
-        float beatsTotalBody = data.Length.AbsoluteValue;
-        float travelDist;
-
-        switch (data.Side)
+        bodyH = Mathf.Max(0f, endDistPx - headDistPx - headH);
+        if (headDistPx < 0f)
         {
-          case NoteSide.Bottom:
-          case NoteSide.Top:
-            travelDist = winSize.y;
-            break;
-          default:
-            travelDist = winSize.x;
-            break;
-        }
-
-        float pixelsPerBeat = travelDist / NoteSpeedBeats;
-        bodyH = beatsTotalBody * pixelsPerBeat;
-
-        if (t >= 1f)
-        {
-          float beatsElapsed = currentBeat - data.Start.AbsoluteValue;
-          bodyH = Mathf.Max(0f, bodyH - beatsElapsed * pixelsPerBeat);
+          headDistPx = 0f;
+          bodyH = Mathf.Max(0f, endDistPx - headH);
         }
       }
 
-      // Configure Note visual properties
       switch (data.Side)
       {
         case NoteSide.Bottom:
@@ -299,87 +300,221 @@ namespace Winithm.Core.Managers
           break;
       }
 
-      visual.NoteSize = 1f;
-      visual.PlayerAreaSize = winSize;
-      visual.Type = data.Type;
+      visual.NoteSize = PlayerNoteSize;
+      visual.PlayerAreaSize = playerAreaSize;
+      visual.SetNoteType(data.Type);
       visual.BodyHeight = bodyH;
-
-      // Position based on Side
-      float headH = visual.NoteSize * Mathf.Min(winSize.x, winSize.y) * 0.025f;
 
       switch (data.Side)
       {
         case NoteSide.Bottom:
-        {
-          float judgeY = winSize.y - headH;
-          float posY = t < 1f
-            ? Mathf.Lerp(-headH - bodyH, judgeY, t)
-            : judgeY - bodyH;
-          visual.RectPosition = new Vector2(winSize.x / 2f, posY + headH);
+          visual.RectPosition = new Vector2(winSize.x / 2f, winSize.y - headDistPx);
           visual.RectRotation = 0f;
           break;
-        }
         case NoteSide.Top:
-        {
-          float judgeY = headH;
-          float posY = t < 1f
-            ? Mathf.Lerp(winSize.y + bodyH + headH, judgeY, t)
-            : judgeY;
-          visual.RectPosition = new Vector2(winSize.x / 2f, posY);
+          visual.RectPosition = new Vector2(winSize.x / 2f, headDistPx);
           visual.RectRotation = 180f;
           break;
-        }
         case NoteSide.Right:
-        {
-          float judgeX = winSize.x - headH;
-          float posX = t < 1f
-            ? Mathf.Lerp(-headH - bodyH, judgeX, t)
-            : judgeX - bodyH;
-          visual.RectPosition = new Vector2(posX + headH, winSize.y / 2f);
+          visual.RectPosition = new Vector2(winSize.x - headDistPx, winSize.y / 2f);
           visual.RectRotation = -90f;
           break;
-        }
         case NoteSide.Left:
-        {
-          float judgeX = headH;
-          float posX = t < 1f
-            ? Mathf.Lerp(winSize.x + bodyH + headH, judgeX, t)
-            : judgeX;
-          visual.RectPosition = new Vector2(posX, winSize.y / 2f);
+          visual.RectPosition = new Vector2(headDistPx, winSize.y / 2f);
           visual.RectRotation = 90f;
           break;
-        }
       }
 
       visual.UpdateVisual();
     }
 
     // =============================================
-    // HitManager API (called externally)
+    // Note Lifecycle (Miss + Drag auto-fire)
     // =============================================
 
     /// <summary>
-    /// Finds all active notes of the given type across ALL windows within the hit window.
-    /// Returns (windowId, note, offsetMs) tuples. Used for Focus/Close broadcast.
+    /// Per-frame: fires OnDragReady for Drag notes in judgement zone (0-120ms),
+    /// fires OnNoteMiss for notes past the timing window.
     /// </summary>
-    public List<(string WindowId, NoteData Note, float OffsetMs)> TryEvaluateAll(NoteType type, float currentBeat, float maxWindowMs)
+    private void EvaluateNoteLifecycle(
+      string windowId,
+      WindowNoteState state,
+      NoteSide side,
+      float currentBeat,
+      bool isRewind)
     {
-      var results = new List<(string, NoteData, float)>();
+      if (isRewind)
+      {
+        state.EvalCursors[side] = Math.Min(state.EvalCursors[side], state.SideCursors[side]);
+        return;
+      }
 
+      float delayWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Delay];
+      float timeoutWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Timeout];
+      int evalCursor = state.EvalCursors[side];
+      var notes = state.Data.Notes[side];
+
+      while (evalCursor < notes.Count)
+      {
+        NoteData currData = notes[evalCursor];
+
+        if (currData.IsEvaluated) { evalCursor++; continue; }
+        if (currData.IsHoldActive) { evalCursor++; continue; }
+
+        if (currData.StartBeat.AbsoluteValue > currentBeat) break;
+
+        float passedMs = BeatToMs(currentBeat - currData.StartBeat.AbsoluteValue);
+
+        // LOUD GHOST: Auto-hit exactly on perfect timing
+        if (currData.IsLoudGhost && passedMs >= 0f)
+        {
+          if (currData.Type == NoteType.Hold)
+          {
+            currData.IsHoldActive = true;
+            state.ActiveHolds.Add(currData); // Push to ActiveHolds for ticks
+            OnAutoHit?.Invoke(windowId, currData); // Fire initial head hit
+          }
+          else
+          {
+            OnAutoHit?.Invoke(windowId, currData);
+          }
+          evalCursor++;
+          continue;
+        }
+
+        // MUTED GHOST: Consume silently
+        if (currData.IsMutedGhost && passedMs >= 0f)
+        {
+          evalCursor++;
+          continue;
+        }
+
+        // Drag notes: fire event in 0-120ms zone
+        if (currData.Type == NoteType.Drag && currData.IsHittable && passedMs <= delayWindowMs)
+        { 
+          if (!currData.IsDragFired)
+          {
+            currData.IsDragFired = true;
+            OnDragReady?.Invoke(windowId, currData, passedMs);
+          }
+          break; // Drag is earliest un-evaluated note; wait for HitManager or Miss timeout
+        }
+
+        // Miss: note head exceeded the timing window
+        if (passedMs > timeoutWindowMs)
+        {
+          currData.IsEvaluated = true;
+          if (currData.IsHittable) OnNoteMiss?.Invoke(windowId, currData);
+          evalCursor++;
+        }
+        else
+        {
+          break;
+        }
+      }
+      state.EvalCursors[side] = evalCursor;
+    }
+
+    private void ProcessActiveHoldNotes(string windowId, WindowNoteState state, float currentBeat)
+    {
+      foreach (var data in state.ActiveHolds)
+      {
+        if (!data.IsEvaluated && currentBeat >= data.StartBeat.AbsoluteValue + data.Length)
+        {
+          if (data.IsHittable) {
+            data.IsEvaluated = true;
+            OnActiveHoldEnded?.Invoke(windowId, data);
+          }
+          data.IsHoldActive = false;
+        }
+        else if (!data.IsEvaluated)
+        {
+          OnActiveHoldTick?.Invoke(windowId, data);
+        }
+      }
+    }
+
+    // =============================================
+    // HitManager API
+    // =============================================
+
+    /// <summary>
+    /// Broadcast hit: finds all hittable Focus/Close notes. Smart grouping logic:
+    /// - If closest is Perfect → absorb all Perfect notes (max 1 per window)
+    /// - If closest is sloppy → absorb only the closest one
+    /// </summary>
+    public List<(string WindowId, NoteData Note, float OffsetMs)> TryEvaluateAll(NoteType type, float currentBeat)
+    {
+      float timeoutMs = Constants.HitResult.TimmingWindowMs[HitResultType.Timeout];
+      float syncMs = Constants.HitResult.TimmingWindowMs[HitResultType.Sync];
+
+      var allValid = new List<(string WindowId, NoteData Note, float OffsetMs)>();
+      float bestAbsMs = float.MaxValue;
+      (string WindowId, NoteData Note, float OffsetMs)? closestItem = null;
+
+      // Pass 1: Gather all hittable notes and find closest by iterating the temporal streams
       foreach (var pair in _windowStates)
       {
         string windowId = pair.Key;
-        var active = pair.Value.ActiveNotes;
+        WindowNoteState state = pair.Value;
 
-        foreach (var data in active)
+        foreach (var sideNotes in state.Data.Notes)
         {
-          if (data.IsEvaluated) continue;
-          if (data.Type != type) continue;
+          int cursor = state.EvalCursors[sideNotes.Key];
+          var notes = sideNotes.Value;
 
-          float offsetMs = BeatToMs(data.Start.AbsoluteValue - currentBeat);
-          if (Math.Abs(offsetMs) > maxWindowMs) continue;
+          for (int i = cursor; i < notes.Count; i++)
+          {
+            NoteData data = notes[i];
+            if (data.IsEvaluated || data.Type != type || !data.IsHittable) continue;
 
-          results.Add((windowId, data, offsetMs));
+            float offsetMs = BeatToMs(data.StartBeat.AbsoluteValue - currentBeat);
+
+            // Optimization: Notes are sorted chronologically. 
+            // If this note is too far in the future, all subsequent ones are even further.
+            if (offsetMs > timeoutMs) break;
+
+            float absMs = Math.Abs(offsetMs);
+            if (absMs <= timeoutMs)
+            {
+              var item = (windowId, data, offsetMs);
+              allValid.Add(item);
+              if (absMs < bestAbsMs)
+              {
+                bestAbsMs = absMs;
+                closestItem = item;
+              }
+            }
+          }
+        }
+      }
+
+      // Pass 2: Smart grouping
+      var results = new List<(string, NoteData, float)>();
+
+      if (closestItem.HasValue)
+      {
+        if (bestAbsMs <= syncMs)
+        {
+          // Perfect hit: group all Perfect notes (max 1 per window)
+          var bestPerWindow = new Dictionary<string, (string WindowId, NoteData Note, float OffsetMs)>();
+          foreach (var item in allValid)
+          {
+            if (Math.Abs(item.OffsetMs) <= syncMs)
+            {
+              if (!bestPerWindow.ContainsKey(item.WindowId) ||
+                  Math.Abs(item.OffsetMs) < Math.Abs(bestPerWindow[item.WindowId].OffsetMs))
+              {
+                bestPerWindow[item.WindowId] = item;
+              }
+            }
+          }
+          results.AddRange(bestPerWindow.Values);
+        }
+        else
+        {
+          // Sloppy hit: only consume closest to prevent chain-downgrading
+          results.Add(closestItem.Value);
         }
       }
 
@@ -387,109 +522,104 @@ namespace Winithm.Core.Managers
     }
 
     /// <summary>
-    /// Finds the best Drag note across ALL windows within 100ms.
+    /// Single-target hit: finds the closest Tap/Hold note across focused windows.
     /// </summary>
-    public (string WindowId, NoteData Note, float OffsetMs)? TryEvaluateDrag(float currentBeat)
-    {
-      string bestWindowId = null;
-      NoteData bestDrag = null;
-      float bestAbsMs = 100f;
-
-      foreach (var pair in _windowStates)
-      {
-        string windowId = pair.Key;
-        foreach (var data in pair.Value.ActiveNotes)
-        {
-          if (data.IsEvaluated) continue;
-          if (data.Type != NoteType.Drag) continue;
-
-          float offsetMs = BeatToMs(data.Start.AbsoluteValue - currentBeat);
-          float absMs = Math.Abs(offsetMs);
-
-          if (absMs <= bestAbsMs)
-          {
-            bestAbsMs = absMs;
-            bestDrag = data;
-            bestWindowId = windowId;
-          }
-        }
-      }
-
-      if (bestDrag != null)
-      {
-        float offsetMs = BeatToMs(bestDrag.Start.AbsoluteValue - currentBeat);
-        return (bestWindowId, bestDrag, offsetMs);
-      }
-
-      return null;
-    }
-
-    /// <summary>
-    /// Finds the closest Tap/Hold note across ALL windows (skipping blocked windows).
-    /// </summary>
-    public (string WindowId, NoteData Note)? FindClosestNote(NoteType type, float currentBeat, float maxWindowMs, Dictionary<string, bool> inputBlocked)
+    public (string WindowId, NoteData Note)? FindClosestNote(NoteType type, float currentBeat)
     {
       string bestWindowId = null;
       NoteData closest = null;
-      float bestAbsMs = maxWindowMs;
+      float bestAbsMs = Constants.HitResult.TimmingWindowMs[HitResultType.Timeout];
 
       foreach (var pair in _windowStates)
       {
         string windowId = pair.Key;
+        WindowNoteState state = pair.Value;
 
-        if (inputBlocked != null && inputBlocked.TryGetValue(windowId, out bool blocked) && blocked)
-          continue;
+        if (state.Visual.UnFocus) continue;
 
-        foreach (var data in pair.Value.ActiveNotes)
+        foreach (var sideNotes in state.Data.Notes)
         {
-          if (data.IsEvaluated) continue;
+          int cursor = state.EvalCursors[sideNotes.Key];
+          var notes = sideNotes.Value;
 
-          bool matches = data.Type == type
-            || (type == NoteType.Tap && data.Type == NoteType.Hold);
-
-          if (!matches) continue;
-          if (data.Type == NoteType.Drag) continue;
-
-          float offsetMs = BeatToMs(data.Start.AbsoluteValue - currentBeat);
-          float absMs = Math.Abs(offsetMs);
-
-          if (absMs < bestAbsMs)
+          for (int i = cursor; i < notes.Count; i++)
           {
-            bestAbsMs = absMs;
-            closest = data;
-            bestWindowId = windowId;
+            NoteData data = notes[i];
+            if (data.IsEvaluated || data.IsHoldActive || !data.IsHittable) continue;
+
+            bool matches = data.Type == type || (type == NoteType.Tap && data.Type == NoteType.Hold);
+            if (!matches) continue;
+
+            float offsetMs = BeatToMs(data.StartBeat.AbsoluteValue - currentBeat);
+
+            // Optimization: Break early if we've passed the closest possible future note
+            if (offsetMs > bestAbsMs) break;
+
+            float absMs = Math.Abs(offsetMs);
+            if (absMs < bestAbsMs)
+            {
+              bestAbsMs = absMs;
+              closest = data;
+              bestWindowId = windowId;
+            }
           }
         }
       }
 
-      if (closest != null)
-        return (bestWindowId, closest);
-
-      return null;
+      return closest != null ? (bestWindowId, closest) : ((string, NoteData)?)null;
     }
 
-    /// <summary>
-    /// Removes a specific note from its window's active list and frees its visual.
-    /// </summary>
-    public void ConsumeNote(string windowId, NoteData note)
+    /// <summary>Marks a note as an active hold (Phase 1) and tracks it for completion.</summary>
+    public void SetHoldActive(string windowId, NoteData note)
     {
-      if (_noteVisuals.TryGetValue(note, out var visual))
-      {
-        ReturnToPool(visual);
-        _noteVisuals.Remove(note);
-      }
-
       if (_windowStates.TryGetValue(windowId, out var state))
       {
-        state.ActiveNotes.Remove(note);
+        note.IsHoldActive = true;
+        state.ActiveHolds.Add(note);
+      }
+    }
+
+    private List<(string WindowId, NoteData Note)> _activeHoldsCache = new List<(string, NoteData)>();
+
+    /// <summary>Returns all Hold notes in active Phase 1 state (waiting for Phase 2).</summary>
+    public List<(string WindowId, NoteData Note)> GetActiveHolds()
+    {
+      _activeHoldsCache.Clear();
+      foreach (var pair in _windowStates)
+      {
+        foreach (var data in pair.Value.ActiveHolds)
+        {
+          if (!data.IsEvaluated)
+            _activeHoldsCache.Add((pair.Key, data));
+        }
+      }
+      return _activeHoldsCache;
+    }
+
+    // =============================================
+    // Utilities
+    // =============================================
+
+
+    /// <summary>Removes a note's visual and returns it to the pool.</summary>
+    public void ConsumeNote(string windowId, NoteData note)
+    {
+      if (_windowStates.TryGetValue(windowId, out var state))
+      {
+        if (state.NoteVisuals.TryGetValue(note, out var visual))
+        {
+          ReturnToPool(visual);
+          state.NoteVisuals.Remove(note);
+        }
+        state.ActiveHolds.Remove(note);
       }
     }
 
     private float BeatToMs(float beats)
     {
-      if (_timeManager?.Metronome == null) return 0f;
-      float bps = _timeManager.Metronome.GetCurrentBPS(_timeManager.CurrentTime);
-      return bps > 0 ? (beats / bps) * 1000f : 0f;
+      if (_timeManager == null) return 0f;
+      float bps = _timeManager.GetCurrentBPS();
+      return bps > 0 ? beats / bps * 1000f : 0f;
     }
   }
 }
