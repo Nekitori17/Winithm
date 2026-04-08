@@ -45,8 +45,8 @@ namespace Winithm.Core.Logic
 
       for (int i = 1; i < n; i++)
       {
-        float segStart = steps[i - 1].Start.AbsoluteValue;
-        float segEnd = steps[i].Start.AbsoluteValue;
+        float segStart = steps[i - 1].StartBeat.AbsoluteValue;
+        float segEnd = steps[i].StartBeat.AbsoluteValue;
         float segLen = segEnd - segStart;
         float speed = EvaluateSpeed(steps[i - 1], currentBeat);
         cache.PrefixDistance[i] = cache.PrefixDistance[i - 1] + speed * segLen;
@@ -66,7 +66,7 @@ namespace Winithm.Core.Logic
       if (cache.CachedBeat != currentBeat)
         BakeFrameCache(cache, steps, currentBeat);
 
-      float laneStart = steps[0].Start.AbsoluteValue;
+      float laneStart = steps[0].StartBeat.AbsoluteValue;
 
       // Clamp both ends to lane start — no visual meaning before spawn.
       float clampedCurrent = Math.Max(currentBeat, laneStart);
@@ -96,13 +96,13 @@ namespace Winithm.Core.Logic
     /// </summary>
     private static float DistanceFromOrigin(FrameCache cache, List<SpeedStep> steps, float currentBeat, float beat)
     {
-      float laneStart = steps[0].Start.AbsoluteValue;
+      float laneStart = steps[0].StartBeat.AbsoluteValue;
       if (beat <= laneStart) return 0f;
 
       int n = steps.Count;
 
       // Beat is past the last step — extend with last step's speed.
-      float lastStart = steps[n - 1].Start.AbsoluteValue;
+      float lastStart = steps[n - 1].StartBeat.AbsoluteValue;
       if (beat >= lastStart)
       {
         float tail = beat - lastStart;
@@ -113,7 +113,7 @@ namespace Winithm.Core.Logic
       // Binary search: find i such that steps[i].Start <= beat < steps[i+1].Start.
       int idx = FindStepIndex(steps, beat);
 
-      float segStart = steps[idx].Start.AbsoluteValue;
+      float segStart = steps[idx].StartBeat.AbsoluteValue;
       float tail2 = beat - segStart;
       float speed2 = EvaluateSpeed(steps[idx], currentBeat);
       return cache.PrefixDistance[idx] + speed2 * tail2;
@@ -140,7 +140,7 @@ namespace Winithm.Core.Logic
       while (left <= right)
       {
         int mid = left + (right - left) / 2;
-        if (steps[mid].Start.AbsoluteValue <= beat)
+        if (steps[mid].StartBeat.AbsoluteValue <= beat)
         {
           best = mid;
           left = mid + 1;

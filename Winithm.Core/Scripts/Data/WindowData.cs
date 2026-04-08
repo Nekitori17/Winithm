@@ -1,3 +1,4 @@
+using Godot;
 using System;
 using System.Collections.Generic;
 using Winithm.Core.Common;
@@ -17,8 +18,7 @@ namespace Winithm.Core.Data
     public string Name;
     public string Title;
     public int Layer;
-    public float AnchorX = 0.5f;
-    public float AnchorY = 0.5f;
+    public Vector2 Anchor;
     public string GroupID;
     public string ThemeChannelID;
 
@@ -73,10 +73,10 @@ namespace Winithm.Core.Data
     /// Compute and Re-compute EndBeatEndOutAnimation when window is unresponsive.
     /// </summary>
     public float StartBeatEndOut = float.MaxValue;
-    
+
     /// <summary>The beat when the Unresponsive overlay reaches 100% opacity.</summary>
     public float EndBeatUnresponsive = float.MaxValue;
-  
+
 
     /// <summary>MaxEndBeats[side][i] = max EndBeat among notes[0..i]. Used for backward cursor sync.</summary>
     public Dictionary<NoteSide, float[]> MaxEndBeats = new Dictionary<NoteSide, float[]>();
@@ -87,7 +87,7 @@ namespace Winithm.Core.Data
     /// </summary>
     public void PreCompute()
     {
-      StartBeat = SpeedSteps.Count > 0 ? SpeedSteps[0].Start : BeatTime.Zero;
+      StartBeat = SpeedSteps.Count > 0 ? SpeedSteps[0].StartBeat : BeatTime.Zero;
 
       if (SpeedSteps.Count < 2)
       {
@@ -95,7 +95,7 @@ namespace Winithm.Core.Data
         return;
       }
 
-      EndBeat = SpeedSteps[SpeedSteps.Count - 1].Start;
+      EndBeat = SpeedSteps[SpeedSteps.Count - 1].StartBeat;
 
       // Find the last "Close" note to determine the end of the window's life
       foreach (var notes in Notes.Values)
@@ -148,7 +148,7 @@ namespace Winithm.Core.Data
     /// Computes animation-related values when the window is unresponsive.
     /// Call when TimeManager.Instance.IsReady
     /// </summary>
-    public void ComputeWhenUnresponsiveAnimation(Metronome metronome)
+    public void ComputeAnimationWhenUnresponsive(Metronome metronome)
     {
       float endBeatInSecs = metronome.ToSeconds(EndBeat);
 

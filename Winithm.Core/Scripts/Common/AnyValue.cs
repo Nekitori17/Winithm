@@ -192,7 +192,7 @@ namespace Winithm.Core.Common
         case AnyValueType.String:
           if (StringValue != null && StringValue.Contains(" ")) return $"\"{StringValue}\"";
           return StringValue ?? "";
-        case AnyValueType.Bool: return X == 1 ? "1" : "0";
+        case AnyValueType.Bool: return ParserUtils.FormatIntBool(X);
         case AnyValueType.Float: return ParserUtils.FormatFloat(X);
         case AnyValueType.Vec2: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}";
         case AnyValueType.Vec3: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}|{ParserUtils.FormatFloat(Z)}";

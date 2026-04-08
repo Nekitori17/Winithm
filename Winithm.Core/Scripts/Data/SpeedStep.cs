@@ -12,7 +12,7 @@ namespace Winithm.Core.Data
   public class SpeedStep : IStoryboardTarget<StoryboardProperty>
   {
     public string ID;
-    public BeatTime Start;
+    public BeatTime StartBeat;
     public float Multiplier = 1f;
 
     public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }

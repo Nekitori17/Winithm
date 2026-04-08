@@ -13,7 +13,7 @@ namespace Winithm.Core.Managers
     private Dictionary<string, Node2D> _groupNodes = new Dictionary<string, Node2D>();
     private Dictionary<string, float> _lastUpdateBeat = new Dictionary<string, float>();
 
-    private Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>> _cursors 
+    private Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>> _cursors
       = new Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>>();
 
     public void LoadGroups(List<GroupData> groups)
@@ -68,17 +68,23 @@ namespace Winithm.Core.Managers
       }
     }
 
-    public Node2D GetAndUpdateGroupNode(string id, float currentBeat)
+    public Node2D GetGroupNode(string id, float currentBeat)
     {
-      if (string.IsNullOrEmpty(id) || !_groupDataMap.TryGetValue(id, out var g)) return null;
+      if (string.IsNullOrEmpty(id) || !_groupDataMap.ContainsKey(id)) return null;
 
       if (Mathf.Abs(_lastUpdateBeat[id] - currentBeat) <= 0.0001f)
         return _groupNodes[id];
 
+      return ForceGetGroupNode(id, currentBeat, false);
+    }
+
+    public Node2D ForceGetGroupNode(string id, float currentBeat, bool _force = true)
+    {
+      if (string.IsNullOrEmpty(id) || !_groupDataMap.TryGetValue(id, out var g)) return null;
+
       if (!string.IsNullOrEmpty(g.ParentGroupID))
-      {
-        GetAndUpdateGroupNode(g.ParentGroupID, currentBeat);
-      }
+        if (_force) ForceGetGroupNode(g.ParentGroupID, currentBeat);
+        else GetGroupNode(g.ParentGroupID, currentBeat);
 
       var node = _groupNodes[id];
       var cursors = _cursors[id];

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Managers
 {

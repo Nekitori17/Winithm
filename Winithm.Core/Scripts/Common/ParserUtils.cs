@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing.Imaging;
 using System.Globalization;
 using Winithm.Core.Data;
 using Winithm.Core.Interfaces;
@@ -70,6 +71,21 @@ namespace Winithm.Core.Common
         return s + ".0";
       }
       return s;
+    }
+
+    public static string FormatIntBool(bool value)
+    {
+      return value ? "1" : "0";
+    }
+
+    public static string FormatIntBool(int value)
+    {
+      return value != 0 ? "1" : "0";
+    }
+
+    public static string FormatIntBool(float value)
+    {
+      return value != 0 ? "1" : "0";
     }
 
     public static StoryboardProperty ParseStoryboardProperty(string prop)
@@ -187,12 +203,10 @@ namespace Winithm.Core.Common
     /// <summary>Generate a storyboard event line: / Property Start Length From To Easing</summary>
     public static string GenerateStoryboardEventLine(StoryboardEvent evt, StoryboardProperty type, string customProperty = null, string indent = "  ")
     {
-      string from = evt.From.ToString();
-      string to = evt.To.ToString();
-
       string easingStr = evt.Easing == EasingType.Bezier ? evt.EasingBezier.ToString() : evt.Easing.ToString();
       string propStr = FormatStoryboardProperty(type, customProperty);
-      return $"{indent}/ {evt.ID} {propStr} {evt.StartBeat} {evt.Length} {from} {to} {easingStr}";
+
+      return $"{indent}/ {evt.ID} {propStr} {evt.StartBeat} {evt.Length} {evt.From} {evt.To} {easingStr}";
     }
 
     public static void ResolveInheritance(ChartData data)

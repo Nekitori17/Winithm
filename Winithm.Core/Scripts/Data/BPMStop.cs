@@ -6,7 +6,7 @@ namespace Winithm.Core.Data
   /// BPM stop defining tempo at a given time.
   /// Format: + <StartTimeSeconds> <BPM> <TimeSignature>
   /// </summary>
-  public struct BPMStop
+  public class BPMStop
   {
     public BeatTime StartBeat;
     public float BPM;
@@ -32,7 +32,7 @@ namespace Winithm.Core.Data
   /// Defines the global offset for Beat 0:0/0.
   /// Used by the Engine to align the entire beat grid to the audio.
   /// </summary>
-  public struct BaseBPM
+  public class BaseBPM
   {
     public float BaseOffsetSeconds;
     public float InitialBPM;

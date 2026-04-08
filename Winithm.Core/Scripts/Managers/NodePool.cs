@@ -1,5 +1,5 @@
-using System;
 using Godot;
+using System;
 
 namespace Winithm.Core.Managers
 {
@@ -32,14 +32,14 @@ namespace Winithm.Core.Managers
         int defaultCapacity = 10,
         int maxSize = 10000)
         : base(
-            createFunc ?? (Func<T>)(() =>
+            createFunc ?? (() =>
             {
-              T instance = scene != null ? scene.Instance<T>() : (System.Activator.CreateInstance<T>());
+              T instance = scene != null ? scene.Instance<T>() : Activator.CreateInstance<T>();
               // Instantly add it to the tree so it doesn't have to be re-parented later
               parent.AddChild(instance);
               return instance;
             }),
-            actionOnGet ?? (Action<T>)(element =>
+            actionOnGet ?? (element =>
             {
               // Toggling visibility and processing is significantly faster than RemoveChild() and AddChild()
               if (element is CanvasItem canvasItem) canvasItem.Visible = true;
@@ -48,7 +48,7 @@ namespace Winithm.Core.Managers
               element.SetProcess(true);
               element.SetPhysicsProcess(true);
             }),
-            actionOnRelease ?? (Action<T>)(element =>
+            actionOnRelease ?? (element =>
             {
               if (element is CanvasItem canvasItem) canvasItem.Visible = false;
               if (element is Spatial spatial) spatial.Visible = false;
@@ -56,7 +56,7 @@ namespace Winithm.Core.Managers
               element.SetProcess(false);
               element.SetPhysicsProcess(false);
             }),
-            actionOnDestroy ?? (Action<T>)(element =>
+            actionOnDestroy ?? (element =>
             {
               if (Godot.Object.IsInstanceValid(element) && !element.IsQueuedForDeletion())
               {

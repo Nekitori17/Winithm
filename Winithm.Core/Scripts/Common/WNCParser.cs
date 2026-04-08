@@ -102,43 +102,86 @@ namespace Winithm.Core.Common
       // Overlays
       foreach (OverlayData overlay in data.Overlays)
       {
-        foreach (List<StoryboardEvent> events in overlay.StoryboardEvents.Values)
+        if (overlay.StoryboardEvents.Keys.Count <= 0) continue;
+
+        foreach (List<StoryboardEvent> events in overlay.StoryboardEvents.Values) {
+          if (events.Count <= 0) continue;
+
           events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+        }
       }
       data.Overlays.Sort((a, b) => a.ID.CompareTo(b.ID));
 
       // Components
       foreach (ComponentData component in data.Components)
       {
-        foreach (List<StoryboardEvent> events in component.StoryboardEvents.Values)
+        if (component.StoryboardEvents.Keys.Count <= 0) continue;
+
+        foreach (List<StoryboardEvent> events in component.StoryboardEvents.Values) {
+          if (events.Count <= 0) continue;
+
           events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+        }
       }
       data.Components.Sort((a, b) => a.Type.CompareTo(b.Type));
 
       // Theme Channels
       foreach (ThemeChannelData theme in data.ThemeChannels)
       {
-        foreach (List<StoryboardEvent> events in theme.StoryboardEvents.Values)
+        if (theme.StoryboardEvents.Keys.Count <= 0) continue;
+
+        foreach (List<StoryboardEvent> events in theme.StoryboardEvents.Values) {
+          if (events.Count <= 0) continue;
+
           events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+        }
       }
       data.ThemeChannels.Sort((a, b) => a.ID.CompareTo(b.ID));
 
       // Groups
       foreach (GroupData group in data.Groups)
       {
-        foreach (List<StoryboardEvent> events in group.StoryboardEvents.Values)
+        if (group.StoryboardEvents.Keys.Count <= 0) continue;
+
+        foreach (List<StoryboardEvent> events in group.StoryboardEvents.Values) {
+          if (events.Count <= 0) continue;
+
           events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+        }
       }
       data.Groups.Sort((a, b) => a.ID.CompareTo(b.ID));
 
       // Windows (Sort events, notes, then precompute lifecycle + MaxEndBeats)
       foreach (WindowData window in data.Windows)
-      {
-        foreach (List<StoryboardEvent> events in window.StoryboardEvents.Values)
-          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+      { 
+        if (window.SpeedSteps.Count <= 0) continue;
+        window.SpeedSteps.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+        
+        foreach (SpeedStep speedstep in window.SpeedSteps)
+        {
+          if (speedstep.StoryboardEvents.Keys.Count <= 0) continue;
 
-        foreach (List<NoteData> notes in window.Notes.Values)
-          notes.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+          foreach (List<StoryboardEvent> events in speedstep.StoryboardEvents.Values)
+          {
+            if (events.Count <= 0) continue;
+
+            events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+          }
+        }
+
+        if (window.StoryboardEvents.Keys.Count >= 1)
+          foreach (List<StoryboardEvent> events in window.StoryboardEvents.Values) {
+            if (events.Count <= 0) continue;
+
+            events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+          }
+
+        if (window.Notes.Keys.Count >= 1)
+          foreach (List<NoteData> notes in window.Notes.Values) {
+            if (notes.Count <= 0) continue;
+
+            notes.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+          }
 
         window.PreCompute();
       }
@@ -255,8 +298,10 @@ namespace Winithm.Core.Common
         if (parts.Length >= 3) current.InitY = ParserUtils.ParseFloat(parts[2]);
         if (parts.Length >= 4) current.InitScale = ParserUtils.ParseFloat(parts[3]);
         if (parts.Length >= 5) current.InitAlpha = ParserUtils.ParseFloat(parts[4]);
-        if (parts.Length >= 6) current.AnchorX = ParserUtils.ParseFloat(parts[5]);
-        if (parts.Length >= 7) current.AnchorY = ParserUtils.ParseFloat(parts[6]);
+        if (parts.Length >= 7) current.Anchor = new Vector2(
+          ParserUtils.ParseFloat(parts[5]),
+          ParserUtils.ParseFloat(parts[6])
+        );
         components.Add(current);
         return;
       }
@@ -388,8 +433,10 @@ namespace Winithm.Core.Common
         string[] parts = anchor.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 2)
         {
-          current.AnchorX = ParserUtils.ParseFloat(parts[0]);
-          current.AnchorY = ParserUtils.ParseFloat(parts[1]);
+          current.Anchor = new Vector2(
+            ParserUtils.ParseFloat(parts[0]),
+            ParserUtils.ParseFloat(parts[1])
+          );
         }
       }
       else if (ParserUtils.TryParseProperty(trimmed, "Group:", out string groupId))
@@ -402,7 +449,7 @@ namespace Winithm.Core.Common
         currentNote = null;
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 1) currentSpeedStep.ID = parts[0];
-        if (parts.Length >= 2) currentSpeedStep.Start = BeatTime.Parse(parts[1]);
+        if (parts.Length >= 2) currentSpeedStep.StartBeat = BeatTime.Parse(parts[1]);
         if (parts.Length >= 3) currentSpeedStep.Multiplier = ParserUtils.ParseFloat(parts[2]);
         current.SpeedSteps.Add(currentSpeedStep);
 
@@ -418,8 +465,10 @@ namespace Winithm.Core.Common
         if (parts.Length >= 3) currentNote.StartBeat = BeatTime.Parse(parts[2]);
         if (parts.Length >= 4) currentNote.Length =
           ParserUtils.TryParseFloat(parts[3], out float length) ? length : 0f;
-        if (parts.Length >= 5) currentNote.Side = NoteData.ParseSide(parts[4]);
-        if (parts.Length >= 6) { int.TryParse(parts[5], out int fake); currentNote.FakeType = fake; }
+        if (parts.Length >= 5) currentNote.X = ParserUtils.ParseFloat(parts[4]);
+        if (parts.Length >= 6) currentNote.Width = ParserUtils.ParseFloat(parts[5]);
+        if (parts.Length >= 7) currentNote.Side = NoteData.ParseSide(parts[6]);
+        if (parts.Length >= 8) { int.TryParse(parts[7], out int fake); currentNote.FakeType = fake; }
         if (!current.Notes.ContainsKey(currentNote.Side))
           current.Notes[currentNote.Side] = new List<NoteData>();
         current.Notes[currentNote.Side].Add(currentNote);

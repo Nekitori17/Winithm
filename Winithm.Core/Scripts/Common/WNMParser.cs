@@ -115,9 +115,9 @@ namespace Winithm.Core.Common
         case "Song":
           if (ParserUtils.TryParseProperty(trimmed, "Path:", out string songPath))
             res.SongPath = songPath;
-          if (ParserUtils.TryParseProperty(trimmed, "BPM Base:", out string bpmBase))
+          if (ParserUtils.TryParseProperty(trimmed, "Base BPM:", out string bpmBase))
           {
-            string[] parts = trimmed.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = bpmBase.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 3)
             {
               int.TryParse(parts[2], out int timeSig);

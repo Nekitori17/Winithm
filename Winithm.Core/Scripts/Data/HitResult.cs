@@ -1,5 +1,3 @@
-using Winithm.Core.Constants;
-
 namespace Winithm.Core.Data
 {
   public enum HitResultType
@@ -13,7 +11,7 @@ namespace Winithm.Core.Data
   /// <summary>
   /// Result of evaluating a note hit.
   /// </summary>
-  public class HitResult
+  public struct HitResult
   {
     /// <summary>Weight: 1.0 (Sync), 0.65 (Delay), 0.1 (Lag), 0.0 (Timeout).</summary>
     public float Weight;

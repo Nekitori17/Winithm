@@ -12,7 +12,7 @@ namespace Winithm.Core.Managers
     private Dictionary<string, ThemeChannelData> _themeChannels = new Dictionary<string, ThemeChannelData>();
     private Dictionary<string, (float LastBeat, Color Color, float NoteAlpha)> _lastStates = new Dictionary<string, (float, Color, float)>();
 
-    private Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>> _cursors 
+    private Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>> _cursors
       = new Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>>();
 
     public void LoadThemeChannels(List<ThemeChannelData> channels)
@@ -27,7 +27,7 @@ namespace Winithm.Core.Managers
       {
         _themeChannels[tc.ID] = tc;
         _lastStates[tc.ID] = (-1f, new Color(tc.InitR, tc.InitG, tc.InitB, tc.InitA), tc.InitNoteA);
-        
+
         var propCursors = new Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>();
         if (tc.StoryboardEvents != null)
         {
@@ -38,13 +38,22 @@ namespace Winithm.Core.Managers
       }
     }
 
+    public bool HasThemeChannel(string id) => _themeChannels.ContainsKey(id);
+
     public (Color WindowColor, float NoteA) GetThemeColor(string id, float currentBeat, Color fallback)
     {
-      if (string.IsNullOrEmpty(id) || !_themeChannels.TryGetValue(id, out var tc)) return (fallback, 1f);
+      if (string.IsNullOrEmpty(id) || !_themeChannels.ContainsKey(id)) return (fallback, 1f);
 
       var stateVal = _lastStates[id];
       if (Mathf.Abs(stateVal.LastBeat - currentBeat) <= 0.0001f)
         return (stateVal.Color, stateVal.NoteAlpha);
+
+      return ForceGetThemeColor(id, currentBeat, fallback);
+    }
+
+    public (Color WindowColor, float NoteA) ForceGetThemeColor(string id, float currentBeat, Color fallback)
+    {
+      if (string.IsNullOrEmpty(id) || !_themeChannels.TryGetValue(id, out var tc)) return (fallback, 1f);
 
       var cursors = _cursors[id];
       float r = EvaluateProperty(tc, StoryboardProperty.ColorR, currentBeat, tc.InitR, GetCursor(cursors, StoryboardProperty.ColorR));

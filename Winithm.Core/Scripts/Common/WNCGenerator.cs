@@ -60,7 +60,7 @@ namespace Winithm.Core.Common
         sb.AppendLine("[COMPONENTS]");
         foreach (var comp in data.Components)
         {
-          sb.AppendLine($"* {comp.Type} {ParserUtils.FormatFloat(comp.InitX)} {ParserUtils.FormatFloat(comp.InitY)} {ParserUtils.FormatFloat(comp.InitScale)} {ParserUtils.FormatFloat(comp.InitAlpha)} {ParserUtils.FormatFloat(comp.AnchorX)} {ParserUtils.FormatFloat(comp.AnchorY)}");
+          sb.AppendLine($"* {comp.Type} {ParserUtils.FormatFloat(comp.InitX)} {ParserUtils.FormatFloat(comp.InitY)} {ParserUtils.FormatFloat(comp.InitScale)} {ParserUtils.FormatFloat(comp.InitAlpha)} {ParserUtils.FormatFloat(comp.Anchor.x)} {ParserUtils.FormatFloat(comp.Anchor.y)}");
           if (comp.StoryboardEvents != null)
             foreach (var kvp in comp.StoryboardEvents)
               foreach (var evt in kvp.Value)
@@ -111,8 +111,8 @@ namespace Winithm.Core.Common
           sb.AppendLine($"+ {w.ID} {ParserUtils.FormatFloat(w.InitX)} {ParserUtils.FormatFloat(w.InitY)} {ParserUtils.FormatFloat(w.InitScaleX)} {ParserUtils.FormatFloat(w.InitScaleY)} {ParserUtils.FormatFloat(w.InitR)} {ParserUtils.FormatFloat(w.InitG)} {ParserUtils.FormatFloat(w.InitB)} {ParserUtils.FormatFloat(w.InitA)} {ParserUtils.FormatFloat(w.InitNoteA)}");
           sb.AppendLine($"  Name: {w.Name ?? ""}");
           sb.AppendLine($"  Title: {w.Title ?? ""}");
-          sb.AppendLine($"  Flags: {Convert.ToInt32(w.Borderless)} {Convert.ToInt32(w.UnFocus)}");
-          sb.AppendLine($"  Anchor: {ParserUtils.FormatFloat(w.AnchorX)} {ParserUtils.FormatFloat(w.AnchorY)}");
+          sb.AppendLine($"  Flags: {ParserUtils.FormatIntBool(w.Borderless)} {ParserUtils.FormatIntBool(w.UnFocus)}");
+          sb.AppendLine($"  Anchor: {ParserUtils.FormatFloat(w.Anchor.x)} {ParserUtils.FormatFloat(w.Anchor.y)}");
           sb.AppendLine($"  Layer: {w.Layer}");
           sb.AppendLine($"  Group: {w.GroupID ?? ""}");
           sb.AppendLine($"  Theme Channel: {w.ThemeChannelID ?? ""}");
@@ -126,12 +126,12 @@ namespace Winithm.Core.Common
           // Notes
           foreach (var ns in w.Notes.Values)
             foreach (var n in ns)
-              sb.AppendLine($"  # {n.ID} {n.Type} {n.StartBeat} {n.Length} {n.Side} {n.FakeType}");
+              sb.AppendLine($"  # {n.ID} {n.Type} {n.StartBeat} {ParserUtils.FormatFloat(n.Length)} {ParserUtils.FormatFloat(n.X)} {ParserUtils.FormatFloat(n.Width)} {n.Side} {n.FakeType}");
 
           // SpeedSteps
           foreach (var ss in w.SpeedSteps)
           {
-            sb.AppendLine($"  | {ss.ID} {ss.Start} {ParserUtils.FormatFloat(ss.Multiplier)}");
+            sb.AppendLine($"  | {ss.ID} {ss.StartBeat} {ParserUtils.FormatFloat(ss.Multiplier)}");
             if (ss.StoryboardEvents != null)
               foreach (var kvp in ss.StoryboardEvents)
                 foreach (var evt in kvp.Value)

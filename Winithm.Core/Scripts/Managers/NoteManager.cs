@@ -48,7 +48,7 @@ namespace Winithm.Core.Managers
 
     public static readonly float NOTE_SPEED_IN_PIXEL_PER_SEC = 720f;
 
-    public NoteManager(TimeManager timeManager, bool autoplay = false)
+    public void Initialize(TimeManager timeManager, bool autoplay = false)
     {
       Autoplay = autoplay;
       _timeManager = timeManager;
@@ -106,15 +106,13 @@ namespace Winithm.Core.Managers
     public void Update(float currentBeat, bool isScrubbing = false)
     {
       if (currentBeat == _lastBeat) return;
-      _lastBeat = currentBeat;
 
-      foreach (var pair in _windowStates)
-        ProcessWindow(pair.Key, pair.Value, currentBeat, isScrubbing);
+      ForceUpdate(currentBeat, isScrubbing);
     }
 
     public void ForceUpdate(float currentBeat, bool isScrubbing = false)
     {
-      _lastBeat = float.MinValue;
+      _lastBeat = currentBeat;
 
       foreach (var pair in _windowStates)
         ProcessWindow(pair.Key, pair.Value, currentBeat, isScrubbing);
@@ -137,7 +135,7 @@ namespace Winithm.Core.Managers
       float currentBps = _timeManager.Metronome.GetCurrentBPS(_timeManager.CurrentTime);
       float basePixelsPerBeat = NOTE_SPEED_IN_PIXEL_PER_SEC * PlayerNoteSpeed / (currentBps > 0f ? currentBps : 2f);
 
-      float noteH = PlayerNoteSize * Mathf.Min(playerAreaSize.x, playerAreaSize.y) * Note.NOTE_HEAD_HEIGHT_PERCENT;
+      float noteH = PlayerNoteSize * Mathf.Min(playerAreaSize.x, playerAreaSize.y) * Note.NOTE_HEAD_HEIGHT_RATIO;
       float limitPx = noteH * 3f;
 
       state.ActiveNotesThisFrame.Clear();
@@ -205,7 +203,10 @@ namespace Winithm.Core.Managers
           // Hide evaluated notes during normal play; show during rewind/scrubbing
           if (data.IsEvaluated && !isRewind && !isScrubbing && !isMissedHold) continue;
 
-          float endDistPx = SpeedCalculator.GetVisualOffset(state.SpeedCache, state.Data.SpeedSteps, currentBeat, endBeat) * basePixelsPerBeat * scale;
+          float endDistPx =
+            endBeat == data.StartBeat.AbsoluteValue
+            ? headDistPx
+            : SpeedCalculator.GetVisualOffset(state.SpeedCache, state.Data.SpeedSteps, currentBeat, endBeat) * basePixelsPerBeat * scale;
 
           if (!state.NoteVisuals.TryGetValue(data, out Note visual))
             visual = SpawnNote(windowId, state, data);
@@ -259,6 +260,20 @@ namespace Winithm.Core.Managers
       return visual;
     }
 
+    /// <summary>Removes a note's visual and returns it to the pool.</summary>
+    public void ConsumeNote(string windowId, NoteData note)
+    {
+      if (_windowStates.TryGetValue(windowId, out var state))
+      {
+        if (state.NoteVisuals.TryGetValue(note, out var visual))
+        {
+          ReturnToPool(visual);
+          state.NoteVisuals.Remove(note);
+        }
+        state.ActiveHolds.Remove(note);
+      }
+    }
+
     private void ReturnToPool(Note visual)
     {
       visual.Visible = false;
@@ -275,7 +290,7 @@ namespace Winithm.Core.Managers
       Vector2 playerAreaSize = windowVisual.PlayerAreaSize;
       Vector2 winSize = windowVisual.WindowSize;
 
-      float headH = visual.NoteSize * Mathf.Min(playerAreaSize.x, playerAreaSize.y) * Note.NOTE_HEAD_HEIGHT_PERCENT;
+      float headH = visual.NoteSize * Mathf.Min(playerAreaSize.x, playerAreaSize.y) * Note.NOTE_HEAD_HEIGHT_RATIO;
       float bodyH = 0f;
 
       if (data.Type == NoteType.Hold)
@@ -292,11 +307,11 @@ namespace Winithm.Core.Managers
       {
         case NoteSide.Bottom:
         case NoteSide.Top:
-          visual.LaneWidth = winSize.x;
+          visual.Width = winSize.x * data.Width;
           break;
         case NoteSide.Left:
         case NoteSide.Right:
-          visual.LaneWidth = winSize.y;
+          visual.Width = winSize.y * data.Width;
           break;
       }
 
@@ -308,19 +323,31 @@ namespace Winithm.Core.Managers
       switch (data.Side)
       {
         case NoteSide.Bottom:
-          visual.RectPosition = new Vector2(winSize.x / 2f, winSize.y - headDistPx);
+          visual.RectPosition = new Vector2(
+            winSize.x * data.X / 2 + winSize.x * data.Width / 2,
+            winSize.y - headDistPx
+          );
           visual.RectRotation = 0f;
           break;
         case NoteSide.Top:
-          visual.RectPosition = new Vector2(winSize.x / 2f, headDistPx);
+          visual.RectPosition = new Vector2(
+            winSize.x * data.X / 2 + winSize.x * data.Width / 2,
+            headDistPx
+          );
           visual.RectRotation = 180f;
           break;
         case NoteSide.Right:
-          visual.RectPosition = new Vector2(winSize.x - headDistPx, winSize.y / 2f);
+          visual.RectPosition = new Vector2(
+            winSize.x - headDistPx,
+            winSize.y * data.X / 2 + winSize.y * data.Width / 2
+          );
           visual.RectRotation = -90f;
           break;
         case NoteSide.Left:
-          visual.RectPosition = new Vector2(headDistPx, winSize.y / 2f);
+          visual.RectPosition = new Vector2(
+            headDistPx,
+            winSize.y * data.X / 2 + winSize.y * data.Width / 2
+          );
           visual.RectRotation = 90f;
           break;
       }
@@ -391,7 +418,7 @@ namespace Winithm.Core.Managers
 
         // Drag notes: fire event in 0-120ms zone
         if (currData.Type == NoteType.Drag && currData.IsHittable && passedMs <= delayWindowMs)
-        { 
+        {
           if (!currData.IsDragFired)
           {
             currData.IsDragFired = true;
@@ -421,7 +448,8 @@ namespace Winithm.Core.Managers
       {
         if (!data.IsEvaluated && currentBeat >= data.StartBeat.AbsoluteValue + data.Length)
         {
-          if (data.IsHittable) {
+          if (data.IsHittable)
+          {
             data.IsEvaluated = true;
             OnActiveHoldEnded?.Invoke(windowId, data);
           }
@@ -457,6 +485,8 @@ namespace Winithm.Core.Managers
       {
         string windowId = pair.Key;
         WindowNoteState state = pair.Value;
+
+        if (type != NoteType.Focus && state.Visual.UnFocus) continue;
 
         foreach (var sideNotes in state.Data.Notes)
         {
@@ -599,21 +629,6 @@ namespace Winithm.Core.Managers
     // =============================================
     // Utilities
     // =============================================
-
-
-    /// <summary>Removes a note's visual and returns it to the pool.</summary>
-    public void ConsumeNote(string windowId, NoteData note)
-    {
-      if (_windowStates.TryGetValue(windowId, out var state))
-      {
-        if (state.NoteVisuals.TryGetValue(note, out var visual))
-        {
-          ReturnToPool(visual);
-          state.NoteVisuals.Remove(note);
-        }
-        state.ActiveHolds.Remove(note);
-      }
-    }
 
     private float BeatToMs(float beats)
     {

@@ -6,16 +6,16 @@ namespace Winithm.Core.Data
   {
     // From .wnm [METADATA]
     public string ID;
-    public string Name;
+    public string Name = "Unnamed";
     public string NameAlt;
-    public string Artist;
+    public string Artist = "Noname";
     public string ArtistAlt;
-    public string Tags;
-    public float PreviewStart;
-    public float PreviewEnd;
+    public string Tags = "Genreless";
+    public float PreviewStart = 0;
+    public float PreviewEnd = 15;
 
-    public ResourceData Resources;
-    public List<ChartReference> Charts;
+    public ResourceData Resources = new ResourceData();
+    public List<ChartReference> Charts = new List<ChartReference>();
   }
 
   /// <summary>
@@ -25,12 +25,12 @@ namespace Winithm.Core.Data
   {
     // Song
     public string SongPath;
-    public BaseBPM BaseBPM;
+    public BaseBPM BaseBPM = new BaseBPM(0, 120, 4);
     public List<BPMStop> BPMList = new List<BPMStop>();
 
     // Illustration
     public string IllustrationPath;
-    public string Illustrator;
+    public string Illustrator = "Noname";
     public float IconCenterX = 0.5f;
     public float IconCenterY = 0.5f;
     public float IconSize = 1f;
@@ -42,10 +42,10 @@ namespace Winithm.Core.Data
   public class ChartReference
   {
     public string ID;
-    public int Index;
-    public string Name;
-    public string Charter;
-    public string Level;
-    public float Constant;
+    public int Index = 0;
+    public string Name = "Unamed";
+    public string Charter = "Noname";
+    public string Level = "1";
+    public float Constant = 1f;
   }
 }

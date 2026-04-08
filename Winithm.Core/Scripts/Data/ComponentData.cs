@@ -1,3 +1,4 @@
+using Godot;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Winithm.Core.Interfaces;
@@ -24,8 +25,7 @@ namespace Winithm.Core.Data
     public float InitY = 0f;
     public float InitScale = 1f;
     public float InitAlpha = 1f;
-    public float AnchorX = 0.5f;
-    public float AnchorY = 0.5f;
+    public Vector2 Anchor;
 
     public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
 

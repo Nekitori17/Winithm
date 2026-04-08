@@ -1,5 +1,5 @@
-using System;
 using Godot;
+using System;
 using Winithm.Core.Data;
 using Winithm.Core.Interfaces;
 
@@ -12,7 +12,7 @@ namespace Winithm.Core.Behaviors
     struct NoteState
     {
       public Vector2 PlayerAreaSize;
-      public float LaneWidth, BodyHeight, NoteSize;
+      public float Width, BodyHeight, NoteSize;
     }
     private NoteState _lastState = new NoteState();
 
@@ -31,14 +31,14 @@ namespace Winithm.Core.Behaviors
     // --- Properties set by NoteManager ---
     // Configurable properties typically managed by NoteManager
     [Export] public Vector2 PlayerAreaSize = new Vector2(1280, 720);
-    [Export] public float LaneWidth = 300f;
+    [Export] public float Width = 300f;
     [Export] public NoteType Type;
     [Export] public float NoteSize = 1f;
     [Export] public float BodyHeight = 0f;
 
     public static readonly float HEAD_PADDING = 0.001f;
     public static readonly float BODY_TO_HEAD_RATIO = 0.9f;
-    public static readonly float NOTE_HEAD_HEIGHT_PERCENT = 0.025f;
+    public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.025f;
 
     // Initialize node references and perform initial visual update
     public override void _Ready()
@@ -88,18 +88,18 @@ namespace Winithm.Core.Behaviors
     // Recalculates sizes and positions of all components based on current properties
     public void UpdateVisual()
     {
-      float headH = NoteSize * Math.Min(PlayerAreaSize.x, PlayerAreaSize.y) * NOTE_HEAD_HEIGHT_PERCENT;
-      float headW = LaneWidth * (1f - HEAD_PADDING * 2f);
+      float headH = NoteSize * Math.Min(PlayerAreaSize.x, PlayerAreaSize.y) * NOTE_HEAD_HEIGHT_RATIO;
+      float headW = Width * (1f - HEAD_PADDING * 2f);
       float headCW = headW - headH * 2f;
 
       bool headDirty =
         PlayerAreaSize != _lastState.PlayerAreaSize ||
-        LaneWidth != _lastState.LaneWidth ||
+        Width != _lastState.Width ||
         NoteSize != _lastState.NoteSize;
 
       bool bodyDirty =
         PlayerAreaSize != _lastState.PlayerAreaSize ||
-        LaneWidth != _lastState.LaneWidth ||
+        Width != _lastState.Width ||
         BodyHeight != _lastState.BodyHeight;
 
       if (headDirty)
@@ -144,7 +144,7 @@ namespace Winithm.Core.Behaviors
 
       // Save current state for next dirty check
       _lastState.PlayerAreaSize = PlayerAreaSize;
-      _lastState.LaneWidth = LaneWidth;
+      _lastState.Width = Width;
       _lastState.NoteSize = NoteSize;
       _lastState.BodyHeight = BodyHeight;
     }

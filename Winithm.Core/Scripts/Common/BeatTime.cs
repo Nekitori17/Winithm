@@ -5,7 +5,7 @@ namespace Winithm.Core.Common
   /// where B = base beat, N = numerator, D = denominator.
   /// Example: "0:1/2" = 0.5 beats, "1:3/4" = 1.75 beats
   /// </summary>
-  public struct BeatTime
+  public class BeatTime
   {
     public int Beat;
     public int Numerator;

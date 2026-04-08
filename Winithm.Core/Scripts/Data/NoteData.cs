@@ -26,11 +26,13 @@ namespace Winithm.Core.Data
   public class NoteData
   { 
     public string ID;
-    public NoteType Type;
+    public NoteType Type = NoteType.Tap;
     public BeatTime StartBeat;
-    public float Length;
-    public NoteSide Side;
-    public int FakeType;
+    public float Length = 0;
+    public float X = 0;
+    public float Width = 1;
+    public NoteSide Side = NoteSide.Bottom;
+    public int FakeType = 0;
 
     // --- State for Hold Notes ---
     /// <summary>True if the note has been fully processed (Hit or Miss).</summary>

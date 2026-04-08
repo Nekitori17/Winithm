@@ -1,7 +1,6 @@
 using Godot;
 using Winithm.Core.Constants;
-using Winithm.Core.Managers;
-
+using Winithm.Core.Interfaces;
 namespace Winithm.Core.Behaviors
 {
   public class Window : Control, IPoolable
@@ -41,7 +40,7 @@ namespace Winithm.Core.Behaviors
     private Control _windowBody;
     private Control _windowFrame;
 
-    public Vector2 WindowBodySize => _windowBody?.RectSize ?? Vector2.Zero;
+    // public Vector2 WindowBodySize => _windowBody?.RectSize ?? Vector2.Zero;
 
     // --- Runtime layers (Z-ordered inside WindowBody) ---
     // NoteLayer → UnfocusOverlay → FocusNoteLayer → UnresponsiveOverlay
@@ -57,7 +56,7 @@ namespace Winithm.Core.Behaviors
     private Texture _minTex;
     private DynamicFont _font;
 
-    public static readonly float TitleBarHeightPercent = 0.0375f;
+    public static readonly float TITLE_BAR_HEIGHT_RATIO = 0.0375f;
     internal float TitleBarHeight { get; private set; }
 
     public override void _Ready()
@@ -130,7 +129,7 @@ namespace Winithm.Core.Behaviors
 
       bool bodyDirty = layoutDirty ||
         WindowColor != _lastState.WindowColor ||
-        NoteOpacity != _lastState.NoteOpacity; // Track NoteOpacity changes
+        NoteOpacity != _lastState.NoteOpacity;
 
       if (!layoutDirty && !titleBarDirty && !bodyDirty) return;
 
@@ -142,7 +141,7 @@ namespace Winithm.Core.Behaviors
         ));
 
         Vector2 scaledSize = WindowSize * viewScale;
-        TitleBarHeight = Mathf.Min(ScreenSize.x, ScreenSize.y) * TitleBarHeightPercent;
+        TitleBarHeight = Mathf.Min(ScreenSize.x, ScreenSize.y) * TITLE_BAR_HEIGHT_RATIO;
 
         float totalHeight = scaledSize.y + (!Borderless ? TitleBarHeight : 0f);
         Vector2 bodyOffset = new Vector2(

@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Winithm.Core.Data
 {
   /// <summary>
@@ -7,15 +5,15 @@ namespace Winithm.Core.Data
   /// </summary>
   public class ChartMetadata
   {
-    public SongMetaData SongMetaData;
+    public SongMetaData SongMetaData = new SongMetaData();
 
     // From .wnc [METADATA] or .wnm [CHARTS]
-    public int Index;
-    public string ChartID;
-    public string ChartName;
-    public string Charter;
-    public string Level;
-    public float Constant;
-    public long NextIDSeed;
+    public int Index = 0;
+    public string ChartID = "unnamed";
+    public string ChartName = "Unamed";
+    public string Charter = "Noname";
+    public string Level = "1";
+    public float Constant = 1f;
+    public long NextIDSeed = 0;
   }
 }
