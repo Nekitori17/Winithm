@@ -205,7 +205,7 @@ namespace Winithm.Core.Managers
           AnimateFocusableOverlay(w, wd, currentBeat);
         else
         {
-          w.UnFocusOverlayColor = Colors.Transparent;
+          w.UnFocusOverlayOpacity = 0f;
           w.UnFocus = false;
         }
 
@@ -225,7 +225,7 @@ namespace Winithm.Core.Managers
     {
       if (currentBeat < wd.FocusableStartBeat)
       {
-        w.UnFocusOverlayColor = new Color(0.25f, 0.25f, 0.25f, 0.25f);
+        w.UnFocusOverlayOpacity = Window.UNFOCUS_OVERLAY_TINT;
         w.UnFocus = true;
         return;
       }
@@ -234,15 +234,14 @@ namespace Winithm.Core.Managers
       if (currentBeat >= wd.FocusableStartBeat && currentBeat <= wd.FocusableEndBeat)
       {
         float sinVal = Mathf.Sin(currentBeat * FocusablePulseFrequency * Mathf.Pi);
-        float val = sinVal > 0 ? 0.25f : 0f;
-        w.UnFocusOverlayColor = new Color(val, val, val, val);
+        w.UnFocusOverlayOpacity = sinVal > 0 ? Window.UNFOCUS_OVERLAY_TINT : 0f;
         w.UnFocus = true;
       }
       
 
       if (currentBeat > wd.FocusableEndBeat)
       {
-        w.UnFocusOverlayColor = Colors.Transparent;
+        w.UnFocusOverlayOpacity = 0f;
         w.UnFocus = false;
       }
     }

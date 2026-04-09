@@ -9,10 +9,10 @@ namespace Winithm.Core.Behaviors
     struct WindowState
     {
       public Vector2 Pivot, ScreenSize, PlayerAreaSize, WindowSize;
-      public Color TitleBarColor, TitleTextColor, WindowColor, UnfocusOverlayColor;
+      public Color TitleBarColor, TitleTextColor, WindowColor;
       public string Title;
       public bool Borderless, IsNotRespondingTitle;
-      public float UnresponsiveOverlayOpacity, NoteOpacity;
+      public float UnFocusOverlayOpacity, UnresponsiveOverlayOpacity, NoteOpacity;
     }
     private WindowState _lastState = new WindowState();
 
@@ -31,7 +31,7 @@ namespace Winithm.Core.Behaviors
     [Export] public bool UnFocus = false;
 
     // --- Runtime state injected by WindowManager each frame ---
-    public Color UnFocusOverlayColor = Colors.Transparent;
+    public float UnFocusOverlayOpacity = 0f;
     public float UnresponsiveOverlayOpacity = 0f;
     public bool IsNotRespondingTitle = false;
 
@@ -57,6 +57,7 @@ namespace Winithm.Core.Behaviors
     private DynamicFont _font;
 
     public static readonly float TITLE_BAR_HEIGHT_RATIO = 0.0375f;
+    public static readonly float UNFOCUS_OVERLAY_TINT = 0.25f;
     internal float TitleBarHeight { get; private set; }
 
     public override void _Ready()
@@ -92,7 +93,7 @@ namespace Winithm.Core.Behaviors
     public override void _Process(float delta)
     {
       bool overlayDirty =
-        UnFocusOverlayColor != _lastState.UnfocusOverlayColor ||
+        UnFocusOverlayOpacity != _lastState.UnFocusOverlayOpacity ||
         UnresponsiveOverlayOpacity != _lastState.UnresponsiveOverlayOpacity;
 
       if (overlayDirty)
@@ -101,7 +102,7 @@ namespace Winithm.Core.Behaviors
         UnresponsiveOverlay?.Update();
         _titleBar?.Update();
 
-        _lastState.UnfocusOverlayColor = UnFocusOverlayColor;
+        _lastState.UnFocusOverlayOpacity = UnFocusOverlayOpacity;
         _lastState.UnresponsiveOverlayOpacity = UnresponsiveOverlayOpacity;
       }
     }
@@ -303,7 +304,12 @@ namespace Winithm.Core.Behaviors
     {
       UnfocusOverlay.DrawRect(
         new Rect2(Vector2.Zero, UnfocusOverlay.RectSize),
-        UnFocusOverlayColor
+        new Color(
+          UNFOCUS_OVERLAY_TINT,
+          UNFOCUS_OVERLAY_TINT,
+          UNFOCUS_OVERLAY_TINT,
+          UnFocusOverlayOpacity
+        )
       );
     }
 
