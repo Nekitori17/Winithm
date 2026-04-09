@@ -26,9 +26,6 @@ namespace Winithm.Core.Common
       string wncPath = folderPath.PlusFile(chartFileName + ".wnc");
 
       ChartData data = new ChartData();
-      WNCParser.Parse(wncPath, data);
-      data.SongMetaData = songMetaData;
-
       File file = new File();
       if (!file.FileExists(wncPath))
       {
@@ -37,6 +34,8 @@ namespace Winithm.Core.Common
       }
 
       WNCParser.Parse(wncPath, data);
+      data.SongMetaData = songMetaData;
+
       return data;
     }
 

@@ -132,7 +132,7 @@ namespace Winithm.Core.Common
     }
 
     /// <summary>
-    /// Parse: / Property Start Length From To Easing
+    /// Parse: / ID Property Start Length From To EasingOrBezier
     /// </summary>
     public static StoryboardEvent ParseStoryboardEvent(string trimmed, out StoryboardProperty type, out string rawPropertyName)
     {
@@ -171,8 +171,8 @@ namespace Winithm.Core.Common
 
       if (parts.Count >= 2)
       {
-        type = ParseStoryboardProperty(parts[0]);
         rawPropertyName = parts[1];
+        type = ParseStoryboardProperty(rawPropertyName);
       }
 
       if (parts.Count >= 3) evt.StartBeat = BeatTime.Parse(parts[2]);
@@ -186,7 +186,7 @@ namespace Winithm.Core.Common
 
       if (parts.Count >= 7)
       {
-        if (parts[5].Contains("|"))
+        if (parts[6].Contains("|"))
         {
           evt.Easing = EasingType.Bezier;
           evt.EasingBezier = AnyValue.Parse(parts[6]);
