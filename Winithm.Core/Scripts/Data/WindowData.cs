@@ -47,7 +47,7 @@ namespace Winithm.Core.Data
     /// <summary>Window spawn beat (first SpeedStep's start)</summary>
     public BeatTime StartBeat;
 
-    /// <summary>Window despawn beat (last Close note's start, or last SpeedStep's start)</summary>
+    /// <summary>Window despawn beat (first Close note's start, or last SpeedStep's start)</summary>
     public BeatTime EndBeat;
 
     /// <summary>Whether the window will be unresponsive at end beat, triggerring a "Not Responding" visual state.</summary>

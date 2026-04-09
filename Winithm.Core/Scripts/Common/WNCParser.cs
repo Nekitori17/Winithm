@@ -102,52 +102,28 @@ namespace Winithm.Core.Common
       // Overlays
       foreach (OverlayData overlay in data.Overlays)
       {
-        if (overlay.StoryboardEvents.Keys.Count <= 0) continue;
-
-        foreach (List<StoryboardEvent> events in overlay.StoryboardEvents.Values) {
-          if (events.Count <= 0) continue;
-
-          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-        }
+        SortStoryboardEvents(overlay.StoryboardEvents);
       }
       data.Overlays.Sort((a, b) => a.ID.CompareTo(b.ID));
 
       // Components
       foreach (ComponentData component in data.Components)
       {
-        if (component.StoryboardEvents.Keys.Count <= 0) continue;
-
-        foreach (List<StoryboardEvent> events in component.StoryboardEvents.Values) {
-          if (events.Count <= 0) continue;
-
-          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-        }
+        SortStoryboardEvents(component.StoryboardEvents);
       }
       data.Components.Sort((a, b) => a.Type.CompareTo(b.Type));
 
       // Theme Channels
       foreach (ThemeChannelData theme in data.ThemeChannels)
       {
-        if (theme.StoryboardEvents.Keys.Count <= 0) continue;
-
-        foreach (List<StoryboardEvent> events in theme.StoryboardEvents.Values) {
-          if (events.Count <= 0) continue;
-
-          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-        }
+        SortStoryboardEvents(theme.StoryboardEvents);
       }
       data.ThemeChannels.Sort((a, b) => a.ID.CompareTo(b.ID));
 
       // Groups
       foreach (GroupData group in data.Groups)
       {
-        if (group.StoryboardEvents.Keys.Count <= 0) continue;
-
-        foreach (List<StoryboardEvent> events in group.StoryboardEvents.Values) {
-          if (events.Count <= 0) continue;
-
-          events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-        }
+        SortStoryboardEvents(group.StoryboardEvents);
       }
       data.Groups.Sort((a, b) => a.ID.CompareTo(b.ID));
 
@@ -159,22 +135,10 @@ namespace Winithm.Core.Common
         
         foreach (SpeedStep speedstep in window.SpeedSteps)
         {
-          if (speedstep.StoryboardEvents.Keys.Count <= 0) continue;
-
-          foreach (List<StoryboardEvent> events in speedstep.StoryboardEvents.Values)
-          {
-            if (events.Count <= 0) continue;
-
-            events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-          }
+          SortStoryboardEvents(speedstep.StoryboardEvents);
         }
 
-        if (window.StoryboardEvents.Keys.Count >= 1)
-          foreach (List<StoryboardEvent> events in window.StoryboardEvents.Values) {
-            if (events.Count <= 0) continue;
-
-            events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-          }
+        SortStoryboardEvents(window.StoryboardEvents);
 
         if (window.Notes.Keys.Count >= 1)
           foreach (List<NoteData> notes in window.Notes.Values) {
@@ -187,6 +151,18 @@ namespace Winithm.Core.Common
       }
       data.Windows.Sort((a, b) => a.ID.CompareTo(b.ID));
 
+    }
+
+    private static void SortStoryboardEvents<TKey>(Dictionary<TKey, List<StoryboardEvent>> storyboardEvents)
+    {
+      if (storyboardEvents == null || storyboardEvents.Count == 0) return;
+
+      foreach (List<StoryboardEvent> events in storyboardEvents.Values)
+      {
+        if (events == null || events.Count <= 0) continue;
+
+        events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+      }
     }
 
     public static void SyncMaxIDSeed(ref ChartMetadata meta, string ID)
