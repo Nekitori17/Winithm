@@ -324,14 +324,14 @@ namespace Winithm.Core.Managers
       {
         case NoteSide.Bottom:
           visual.RectPosition = new Vector2(
-            winSize.x * data.X / 2 + winSize.x * data.Width / 2,
+            winSize.x * (data.Width / 2f + data.X * (1f - data.Width)),
             winSize.y - headDistPx
           );
           visual.RectRotation = 0f;
           break;
         case NoteSide.Top:
           visual.RectPosition = new Vector2(
-            winSize.x * data.X / 2 + winSize.x * data.Width / 2,
+            winSize.x * (data.Width / 2f + data.X * (1f - data.Width)),
             headDistPx
           );
           visual.RectRotation = 180f;
@@ -339,14 +339,14 @@ namespace Winithm.Core.Managers
         case NoteSide.Right:
           visual.RectPosition = new Vector2(
             winSize.x - headDistPx,
-            winSize.y * data.X / 2 + winSize.y * data.Width / 2
+            winSize.y * (data.Width / 2f + data.X * (1f - data.Width))
           );
           visual.RectRotation = -90f;
           break;
         case NoteSide.Left:
           visual.RectPosition = new Vector2(
             headDistPx,
-            winSize.y * data.X / 2 + winSize.y * data.Width / 2
+            winSize.y * (data.Width / 2f + data.X * (1f - data.Width))
           );
           visual.RectRotation = 90f;
           break;
@@ -430,7 +430,6 @@ namespace Winithm.Core.Managers
         // Miss: note head exceeded the timing window
         if (passedMs > timeoutWindowMs)
         {
-          currData.IsEvaluated = true;
           if (currData.IsHittable) OnNoteMiss?.Invoke(windowId, currData);
           evalCursor++;
         }
@@ -446,11 +445,10 @@ namespace Winithm.Core.Managers
     {
       foreach (var data in state.ActiveHolds)
       {
-        if (!data.IsEvaluated && currentBeat >= data.StartBeat.AbsoluteValue + data.Length)
+        if (data.IsHoldActive && !data.IsEvaluated && currentBeat >= data.StartBeat.AbsoluteValue + data.Length)
         {
           if (data.IsHittable)
           {
-            data.IsEvaluated = true;
             OnActiveHoldEnded?.Invoke(windowId, data);
           }
           data.IsHoldActive = false;
