@@ -9,10 +9,10 @@ namespace Winithm.Core.Behaviors
     struct WindowState
     {
       public Vector2 Pivot, ScreenSize, PlayerAreaSize, WindowSize;
-      public Color TitleBarColor, TitleTextColor, WindowColor;
+      public Color TitleBarColor, TitleTextColor, WindowColor, UnfocusOverlayColor;
       public string Title;
       public bool Borderless, IsNotRespondingTitle;
-      public float FocusOverlayOpacity, UnresponsiveOverlayOpacity, NoteOpacity;
+      public float UnresponsiveOverlayOpacity, NoteOpacity;
     }
     private WindowState _lastState = new WindowState();
 
@@ -31,7 +31,7 @@ namespace Winithm.Core.Behaviors
     [Export] public bool UnFocus = false;
 
     // --- Runtime state injected by WindowManager each frame ---
-    public float FocusOverlayOpacity = 0f;
+    public Color UnFocusOverlayColor = Colors.Transparent;
     public float UnresponsiveOverlayOpacity = 0f;
     public bool IsNotRespondingTitle = false;
 
@@ -92,7 +92,7 @@ namespace Winithm.Core.Behaviors
     public override void _Process(float delta)
     {
       bool overlayDirty =
-        FocusOverlayOpacity != _lastState.FocusOverlayOpacity ||
+        UnFocusOverlayColor != _lastState.UnfocusOverlayColor ||
         UnresponsiveOverlayOpacity != _lastState.UnresponsiveOverlayOpacity;
 
       if (overlayDirty)
@@ -101,7 +101,7 @@ namespace Winithm.Core.Behaviors
         UnresponsiveOverlay?.Update();
         _titleBar?.Update();
 
-        _lastState.FocusOverlayOpacity = FocusOverlayOpacity;
+        _lastState.UnfocusOverlayColor = UnFocusOverlayColor;
         _lastState.UnresponsiveOverlayOpacity = UnresponsiveOverlayOpacity;
       }
     }
@@ -303,7 +303,7 @@ namespace Winithm.Core.Behaviors
     {
       UnfocusOverlay.DrawRect(
         new Rect2(Vector2.Zero, UnfocusOverlay.RectSize),
-        new Color(0.15f, 0.15f, 0.15f, FocusOverlayOpacity)
+        UnFocusOverlayColor
       );
     }
 

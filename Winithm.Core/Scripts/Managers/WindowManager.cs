@@ -204,7 +204,10 @@ namespace Winithm.Core.Managers
         if (wd.UnFocus)
           AnimateFocusableOverlay(w, wd, currentBeat);
         else
-          w.FocusOverlayOpacity = 0f;
+        {
+          w.UnFocusOverlayColor = Colors.Transparent;
+          w.UnFocus = false;
+        }
 
         if (wd.Unresponsive)
           AnimateUnresponsiveOverlay(w, wd, currentBeat);
@@ -220,20 +223,27 @@ namespace Winithm.Core.Managers
 
     private void AnimateFocusableOverlay(Window w, WindowData wd, float currentBeat)
     {
+      if (currentBeat < wd.FocusableStartBeat)
+      {
+        w.UnFocusOverlayColor = new Color(0.25f, 0.25f, 0.25f, 0.25f);
+        w.UnFocus = true;
+        return;
+      }
+
       // Focus pulse: deterministic sin wave based on beat for perfect scrub rendering
       if (currentBeat >= wd.FocusableStartBeat && currentBeat <= wd.FocusableEndBeat)
       {
         float sinVal = Mathf.Sin(currentBeat * FocusablePulseFrequency * Mathf.Pi);
-        w.FocusOverlayOpacity = sinVal > 0 ? 0.1f : 0f;
+        float val = sinVal > 0 ? 0.25f : 0f;
+        w.UnFocusOverlayColor = new Color(val, val, val, val);
         w.UnFocus = true;
       }
-      else if (currentBeat >= wd.FocusableStartBeat && wd.UnFocus)
+      
+
+      if (currentBeat > wd.FocusableEndBeat)
       {
-        w.UnFocus = true;
-        w.FocusOverlayOpacity = 0f;
-      } else
-      {
-        w.FocusOverlayOpacity = 0f;
+        w.UnFocusOverlayColor = Colors.Transparent;
+        w.UnFocus = false;
       }
     }
 
