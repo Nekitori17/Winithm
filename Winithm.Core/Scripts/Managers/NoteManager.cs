@@ -129,7 +129,7 @@ namespace Winithm.Core.Managers
       // COMPLETION & TICK: Check Active Holds for completion and emit tick
       if (!isRewind && !isScrubbing)
         ProcessActiveHoldNotes(windowId, state, currentBeat);
-      
+
 
       Vector2 playerAreaSize = state.Visual.PlayerAreaSize;
       float currentBps = _timeManager.Metronome.GetCurrentBPS(_timeManager.CurrentTime);
@@ -443,20 +443,43 @@ namespace Winithm.Core.Managers
 
     private void ProcessActiveHoldNotes(string windowId, WindowNoteState state, float currentBeat)
     {
+      state.KeysToRemove.Clear();
+
       foreach (var data in state.ActiveHolds)
       {
-        if (data.IsHoldActive && !data.IsEvaluated && currentBeat >= data.StartBeat.AbsoluteValue + data.Length)
+        // 1. Defensive reset: if playback is before the hold head, clear the active state.
+        if (currentBeat < data.StartBeat.AbsoluteValue)
+        {
+          data.IsHoldActive = false;
+          state.KeysToRemove.Add(data);
+          continue;
+        }
+
+        // 2. Hold tail reached: end the active phase and let the caller finalize scoring.
+        if (
+          !data.IsEvaluated &&
+          currentBeat >= data.StartBeat.AbsoluteValue + data.Length
+        )
         {
           if (data.IsHittable)
           {
             OnActiveHoldEnded?.Invoke(windowId, data);
           }
           data.IsHoldActive = false;
+          state.KeysToRemove.Add(data);
+          continue;
         }
-        else if (!data.IsEvaluated)
+
+        // 3. Hold is still active between the head and tail, emit sustain tick.
+        if (data.IsHoldActive)
         {
           OnActiveHoldTick?.Invoke(windowId, data);
         }
+      }
+
+      foreach (var key in state.KeysToRemove)
+      {
+        state.ActiveHolds.Remove(key);
       }
     }
 
