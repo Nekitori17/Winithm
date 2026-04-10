@@ -56,26 +56,26 @@ namespace Winithm.Core.Data
     public bool Focusable = false;
 
     /// <summary>The beat when this window becomes focusable.</summary>
-    public float FocusableStartBeat = float.MaxValue;
+    public float FocusableStartBeat = float.NaN;
 
     /// <summary>The beat when this window becomes unresponsive.</summary>
-    public float FocusableEndBeat = float.MaxValue;
+    public float FocusableEndBeat = float.NaN;
 
     // --------- Pre-computed values ---------
 
     /// <summary>The beat when this window finishes start animation.</summary>
-    public float EndBeatStartIn = float.MaxValue;
+    public float EndBeatStartIn = float.NaN;
     /// <summary>The beat when this window finishes close animation.</summary>
-    public float EndBeatEndOut = float.MaxValue;
+    public float EndBeatEndOut = float.NaN;
 
     /// <summary>
     /// The beat when this window starting close animation.
     /// Compute and Re-compute EndBeatEndOutAnimation when window is unresponsive.
     /// </summary>
-    public float StartBeatEndOut = float.MaxValue;
+    public float StartBeatEndOut = float.NaN;
 
     /// <summary>The beat when the Unresponsive overlay reaches 100% opacity.</summary>
-    public float EndBeatUnresponsive = float.MaxValue;
+    public float EndBeatUnresponsive = float.NaN;
 
 
     /// <summary>MaxEndBeats[side][i] = max EndBeat among notes[0..i]. Used for backward cursor sync.</summary>
