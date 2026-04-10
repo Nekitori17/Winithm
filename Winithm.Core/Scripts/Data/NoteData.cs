@@ -34,6 +34,10 @@ namespace Winithm.Core.Data
     public NoteSide Side = NoteSide.Bottom;
     public int FakeType = 0;
 
+    public bool IsHittable => FakeType == 0;
+    public bool IsMutedGhost => FakeType == 1;
+    public bool IsLoudGhost => FakeType == 2;
+
     // --- State for Hold Notes ---
     /// <summary>True if the note has been fully processed (Hit or Miss).</summary>
     public bool IsEvaluated = false;
@@ -45,11 +49,7 @@ namespace Winithm.Core.Data
     public bool IsDragFired = false;
 
     /// <summary>Timing offset (ms) captured during Phase 1 for Phase 2 scoring.</summary>
-    public float HoldStartOffsetMs = 0f;
-
-    public bool IsHittable => FakeType == 0;
-    public bool IsMutedGhost => FakeType == 1;
-    public bool IsLoudGhost => FakeType == 2;
+    public float HoldStartOffsetMs = float.NaN;
 
     public static NoteType ParseNoteType(string text)
     {

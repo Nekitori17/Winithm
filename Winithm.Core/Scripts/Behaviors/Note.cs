@@ -62,7 +62,7 @@ namespace Winithm.Core.Behaviors
 
     public void OnDespawn() { }
 
-    public void SetNoteType (NoteType type)
+    public void SetNoteType (NoteType type, bool hightlight = false)
     {
       if (Type == type) return;
       Type = type;

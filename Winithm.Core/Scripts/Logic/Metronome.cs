@@ -95,6 +95,16 @@ namespace Winithm.Core.Logic
       return ToSeconds(beatTime.AbsoluteValue);
     }
 
+    public float ToMiliSeconds(float beatTime)
+    {
+      return ToSeconds(beatTime) * 1000;
+    }
+
+    public float ToMiliSeconds(BeatTime beatTime)
+    {
+      return ToMiliSeconds(beatTime.AbsoluteValue);
+    }
+
     public float GetCurrentBPS(float seconds)
     {
       int idx = FindStopIndexByTime(seconds);

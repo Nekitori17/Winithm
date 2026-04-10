@@ -110,12 +110,12 @@ namespace Winithm.Core.Managers
       ForceUpdate(currentBeat, isScrubbing);
     }
 
-    public void ForceUpdate(float currentBeat, bool isScrubbing = false)
+    public void ForceUpdate(float currentBeat, bool isScrubbing = true)
     {
-      _lastBeat = currentBeat;
-
       foreach (var pair in _windowStates)
         ProcessWindow(pair.Key, pair.Value, currentBeat, isScrubbing);
+
+      _lastBeat = currentBeat;
     }
 
     private void ProcessWindow(string windowId, WindowNoteState state, float currentBeat, bool isScrubbing)
@@ -124,11 +124,8 @@ namespace Winithm.Core.Managers
       if (currentBeat == state.LastBeat) return;
 
       bool isRewind = currentBeat < state.LastBeat;
-      state.LastBeat = currentBeat;
 
-      // COMPLETION & TICK: Check Active Holds for completion and emit tick
-      if (!isRewind && !isScrubbing)
-        ProcessActiveHoldNotes(windowId, state, currentBeat);
+      ProcessActiveHoldNotes(windowId, state, currentBeat);
 
 
       Vector2 playerAreaSize = state.Visual.PlayerAreaSize;
@@ -228,12 +225,15 @@ namespace Winithm.Core.Managers
         if (!state.ActiveNotesThisFrame.Contains(key))
           state.KeysToRemove.Add(key);
       }
+      
       foreach (var key in state.KeysToRemove)
       {
         ReturnToPool(state.NoteVisuals[key]);
         state.NoteVisuals.Remove(key);
         state.ActiveHolds.Remove(key);
       }
+
+      state.LastBeat = currentBeat;
     }
 
     // =============================================
@@ -390,7 +390,8 @@ namespace Winithm.Core.Managers
 
         if (currData.StartBeat.AbsoluteValue > currentBeat) break;
 
-        float passedMs = BeatToMs(currentBeat - currData.StartBeat.AbsoluteValue);
+        float passedMs =
+          _timeManager.Metronome.ToMiliSeconds(currentBeat - currData.StartBeat.AbsoluteValue);
 
         // LOUD GHOST: Auto-hit exactly on perfect timing
         if (currData.IsLoudGhost && passedMs >= 0f)
@@ -438,6 +439,7 @@ namespace Winithm.Core.Managers
           break;
         }
       }
+
       state.EvalCursors[side] = evalCursor;
     }
 
@@ -448,7 +450,11 @@ namespace Winithm.Core.Managers
       foreach (var data in state.ActiveHolds)
       {
         // 1. Defensive reset: if playback is before the hold head, clear the active state.
-        if (currentBeat < data.StartBeat.AbsoluteValue)
+        if
+        (
+        currentBeat < data.StartBeat.AbsoluteValue
+        && data.HoldStartOffsetMs != float.NaN
+        )
         {
           data.IsHoldActive = false;
           state.KeysToRemove.Add(data);
@@ -470,11 +476,16 @@ namespace Winithm.Core.Managers
           continue;
         }
 
-        // 3. Hold is still active between the head and tail, emit sustain tick.
-        if (data.IsHoldActive)
+        // 3. Evaluated note: if the note is already judged (e.g., hit or missed), stop tracking it.
+        if (data.IsEvaluated)
         {
-          OnActiveHoldTick?.Invoke(windowId, data);
+          data.IsHoldActive = false;
+          state.KeysToRemove.Add(data);
+          continue;
         }
+
+        // 4. Hold is still active between the head and tail, emit sustain tick.
+        OnActiveHoldTick?.Invoke(windowId, data);
       }
 
       foreach (var key in state.KeysToRemove)
@@ -519,7 +530,10 @@ namespace Winithm.Core.Managers
             NoteData data = notes[i];
             if (data.IsEvaluated || data.Type != type || !data.IsHittable) continue;
 
-            float offsetMs = BeatToMs(data.StartBeat.AbsoluteValue - currentBeat);
+            float offsetMs =
+            _timeManager.Metronome.ToMiliSeconds(data.StartBeat.AbsoluteValue)
+            -
+            _timeManager.Metronome.ToMiliSeconds(currentBeat); ;
 
             // Optimization: Notes are sorted chronologically. 
             // If this note is too far in the future, all subsequent ones are even further.
@@ -601,7 +615,10 @@ namespace Winithm.Core.Managers
             bool matches = data.Type == type || (type == NoteType.Tap && data.Type == NoteType.Hold);
             if (!matches) continue;
 
-            float offsetMs = BeatToMs(data.StartBeat.AbsoluteValue - currentBeat);
+            float offsetMs = 
+              _timeManager.Metronome.ToMiliSeconds(data.StartBeat.AbsoluteValue)
+              -
+              _timeManager.Metronome.ToMiliSeconds(currentBeat);
 
             // Optimization: Break early if we've passed the closest possible future note
             if (offsetMs > bestAbsMs) break;
@@ -647,15 +664,5 @@ namespace Winithm.Core.Managers
       return _activeHoldsCache;
     }
 
-    // =============================================
-    // Utilities
-    // =============================================
-
-    private float BeatToMs(float beats)
-    {
-      if (_timeManager == null) return 0f;
-      float bps = _timeManager.GetCurrentBPS();
-      return bps > 0 ? beats / bps * 1000f : 0f;
-    }
   }
 }
