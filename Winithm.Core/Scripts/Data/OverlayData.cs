@@ -16,6 +16,8 @@ namespace Winithm.Core.Data
     public string ShaderFile;
     public bool AffectsUI = false;
 
+    public int Layer = 0;
+
     /// <summary>Shader uniform definitions, auto-scanned from .glsl</summary>
     public Dictionary<string, ShaderParamDef> ShaderParams { get; } = new Dictionary<string, ShaderParamDef>();
 

@@ -45,7 +45,8 @@ namespace Winithm.Core.Common
           sb.AppendLine($"+ {overlay.ID}{initParams}");
           sb.AppendLine($"  Name: {overlay.Name ?? ""}");
           sb.AppendLine($"  Shader: {overlay.ShaderFile}");
-          sb.AppendLine($"  Affects UI: {Convert.ToInt32(overlay.AffectsUI)}");
+          sb.AppendLine($"  Affects UI: {ParserUtils.FormatIntBool(overlay.AffectsUI)}");
+          sb.AppendLine($"  Layer: {overlay.Layer}");
           if (overlay.StoryboardEvents != null)
             foreach (var kvp in overlay.StoryboardEvents)
               foreach (var evt in kvp.Value)
