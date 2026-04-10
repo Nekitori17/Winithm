@@ -57,7 +57,7 @@ namespace Winithm.Core.Behaviors
     private DynamicFont _font;
 
     public static readonly float TITLE_BAR_HEIGHT_RATIO = 0.0375f;
-    public static readonly float UNFOCUS_OVERLAY_TINT = 0.25f;
+    public static readonly float UNFOCUS_OVERLAY_TINT = 0.75f;
     internal float TitleBarHeight { get; private set; }
 
     public override void _Ready()
@@ -295,7 +295,9 @@ namespace Winithm.Core.Behaviors
     }
 
     private void OnWindowBodyDraw()
-    {
+    { 
+      WindowColor.a *= Mathf.Lerp(1f, 0.9f, UnFocusOverlayOpacity);
+
       // Background only — notes and overlays live in Z-ordered layers above
       _windowBody.DrawRect(new Rect2(Vector2.Zero, _windowBody.RectSize), WindowColor);
     }
