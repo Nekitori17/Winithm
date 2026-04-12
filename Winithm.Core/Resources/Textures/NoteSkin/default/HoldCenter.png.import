@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/close.svg-26a8b5ee5fa5982a3ce86cb12137e3d0.stex"
+path="res://.import/HoldCenter.png-1047c2df24a8d5f113b9381e82ba8d91.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Winithm.Core/Resources/Icons/WIndow/close.svg"
-dest_files=[ "res://.import/close.svg-26a8b5ee5fa5982a3ce86cb12137e3d0.stex" ]
+source_file="res://Winithm.Core/Resources/Textures/NoteSkin/default/HoldCenter.png"
+dest_files=[ "res://.import/HoldCenter.png-1047c2df24a8d5f113b9381e82ba8d91.stex" ]
 
 [params]
 
@@ -19,7 +19,7 @@ compress/lossy_quality=0.7
 compress/hdr_mode=0
 compress/bptc_ldr=0
 compress/normal_map=0
-flags/repeat=0
+flags/repeat=1
 flags/filter=false
 flags/mipmaps=false
 flags/anisotropic=false
