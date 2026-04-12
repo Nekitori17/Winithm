@@ -105,6 +105,16 @@ namespace Winithm.Core.Logic
       return ToMiliSeconds(beatTime.AbsoluteValue);
     }
 
+    public float ToDeltaMilliSeconds(float beat1, float beat2)
+    {
+      return (ToSeconds(beat2) - ToSeconds(beat1)) * 1000f;
+    }
+
+    public float ToDeltaMilliSeconds(BeatTime beat1, BeatTime beat2)
+    {
+      return ToDeltaMilliSeconds(beat1.AbsoluteValue, beat2.AbsoluteValue);
+    }
+
     public float GetCurrentBPS(float seconds)
     {
       int idx = FindStopIndexByTime(seconds);

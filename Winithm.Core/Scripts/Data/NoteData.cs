@@ -50,7 +50,7 @@ namespace Winithm.Core.Data
     public float HoldStartOffsetMs = float.NaN;
 
     // Resource Pack
-    public ResourcePack ResourcePack = NoteResourceManager.Instance.GetActiveResourcePack();
+    public ResourcePack? ResourcePack;
 
     public static NoteType ParseNoteType(string text)
     {

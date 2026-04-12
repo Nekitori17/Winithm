@@ -103,22 +103,22 @@ namespace Winithm.Core.Managers
     // Per-Frame Update
     // =============================================
 
-    public void Update(float currentBeat, bool isScrubbing = false)
+    public void Update(float currentBeat)
     {
       if (currentBeat == _lastBeat) return;
 
-      ForceUpdate(currentBeat, isScrubbing);
-    }
-
-    public void ForceUpdate(float currentBeat, bool isScrubbing = true)
-    {
-      foreach (var pair in _windowStates)
-        ProcessWindow(pair.Key, pair.Value, currentBeat, isScrubbing);
+      ForceUpdate(currentBeat, false);
 
       _lastBeat = currentBeat;
     }
 
-    private void ProcessWindow(string windowId, WindowNoteState state, float currentBeat, bool isScrubbing)
+    public void ForceUpdate(float currentBeat, bool _force = true)
+    {
+      foreach (var pair in _windowStates)
+        ProcessWindow(pair.Key, pair.Value, currentBeat);
+    }
+
+    private void ProcessWindow(string windowId, WindowNoteState state, float currentBeat)
     {
       if (state.Visual == null) return;
       if (currentBeat == state.LastBeat) return;
@@ -126,7 +126,6 @@ namespace Winithm.Core.Managers
       bool isRewind = currentBeat < state.LastBeat;
 
       ProcessActiveHoldNotes(windowId, state, currentBeat);
-
 
       Vector2 playerAreaSize = state.Visual.PlayerAreaSize;
       float currentBps = _timeManager.Metronome.GetCurrentBPS(_timeManager.CurrentTime);
@@ -182,6 +181,14 @@ namespace Winithm.Core.Managers
         {
           NoteData data = notes[i];
 
+          if (data.IsEvaluated && !data.IsHittable)
+          {
+            if (data.Type == NoteType.Hold && currentBeat > data.StartBeat.AbsoluteValue + data.Length)
+            continue;
+
+            if (currentBeat > data.StartBeat.AbsoluteValue) continue;
+          }
+
           float headDistPx = SpeedCalculator.GetVisualOffset(state.SpeedCache, state.Data.SpeedSteps, currentBeat, data.StartBeat.AbsoluteValue) * basePixelsPerBeat * scale;
 
           // Early exit: notes beyond viewport (sorted by StartBeat)
@@ -193,12 +200,8 @@ namespace Winithm.Core.Managers
           bool isMissedHold =
             data.IsEvaluated &&
             !isRewind &&
-            !isScrubbing &&
             data.Type == NoteType.Hold &&
             currentBeat < endBeat;
-
-          // Hide evaluated notes during normal play; show during rewind/scrubbing
-          if (data.IsEvaluated && !isRewind && !isScrubbing && !isMissedHold) continue;
 
           float endDistPx =
             endBeat == data.StartBeat.AbsoluteValue
@@ -230,7 +233,6 @@ namespace Winithm.Core.Managers
       {
         ReturnToPool(state.NoteVisuals[key]);
         state.NoteVisuals.Remove(key);
-        state.ActiveHolds.Remove(key);
       }
 
       state.LastBeat = currentBeat;
@@ -317,7 +319,8 @@ namespace Winithm.Core.Managers
 
       visual.NoteSize = PlayerNoteSize;
       visual.PlayerAreaSize = playerAreaSize;
-      visual.SetNoteType(data.Type);
+      if (data.ResourcePack.HasValue) visual.SetNoteType(data.Type, data.ResourcePack.Value);
+      else visual.SetNoteType(data.Type, NoteResourceManager.Instance.GetActiveResourcePack());
       visual.BodyHeight = bodyH;
 
       switch (data.Side)
@@ -390,11 +393,15 @@ namespace Winithm.Core.Managers
 
         if (currData.StartBeat.AbsoluteValue > currentBeat) break;
 
-        float passedMs =
-          _timeManager.Metronome.ToMiliSeconds(currentBeat - currData.StartBeat.AbsoluteValue);
+        float passedMs = _timeManager.Metronome.ToDeltaMilliSeconds(
+          currData.StartBeat.AbsoluteValue, currentBeat
+        );
 
         // LOUD GHOST: Auto-hit exactly on perfect timing
-        if (currData.IsLoudGhost && passedMs >= 0f)
+        if (currData.IsLoudGhost
+            && passedMs >= 0f
+            && state.NoteVisuals.ContainsKey(currData)
+        )
         {
           if (currData.Type == NoteType.Hold)
           {
@@ -406,6 +413,7 @@ namespace Winithm.Core.Managers
           {
             OnAutoHit?.Invoke(windowId, currData);
           }
+
           evalCursor++;
           continue;
         }
@@ -420,12 +428,7 @@ namespace Winithm.Core.Managers
         // Drag notes: fire event in 0-120ms zone
         if (currData.Type == NoteType.Drag && currData.IsHittable && passedMs <= badWindowMs)
         {
-          if (!currData.IsDragFired)
-          {
-            currData.IsDragFired = true;
-            OnDragReady?.Invoke(windowId, currData, passedMs);
-          }
-          break; // Drag is earliest un-evaluated note; wait for HitManager or Miss timeout
+          OnDragReady?.Invoke(windowId, currData, passedMs);
         }
 
         // Miss: note head exceeded the timing window
@@ -434,10 +437,8 @@ namespace Winithm.Core.Managers
           if (currData.IsHittable) OnNoteMiss?.Invoke(windowId, currData);
           evalCursor++;
         }
-        else
-        {
-          break;
-        }
+        
+        if (passedMs <= 0) break;
       }
 
       state.EvalCursors[side] = evalCursor;
@@ -530,10 +531,9 @@ namespace Winithm.Core.Managers
             NoteData data = notes[i];
             if (data.IsEvaluated || data.Type != type || !data.IsHittable) continue;
 
-            float offsetMs =
-            _timeManager.Metronome.ToMiliSeconds(data.StartBeat.AbsoluteValue)
-            -
-            _timeManager.Metronome.ToMiliSeconds(currentBeat); ;
+            float offsetMs = _timeManager.Metronome.ToDeltaMilliSeconds(
+              data.StartBeat.AbsoluteValue, currentBeat
+            );
 
             // Optimization: Notes are sorted chronologically. 
             // If this note is too far in the future, all subsequent ones are even further.
@@ -615,10 +615,9 @@ namespace Winithm.Core.Managers
             bool matches = data.Type == type || (type == NoteType.Tap && data.Type == NoteType.Hold);
             if (!matches) continue;
 
-            float offsetMs =
-              _timeManager.Metronome.ToMiliSeconds(data.StartBeat.AbsoluteValue)
-              -
-              _timeManager.Metronome.ToMiliSeconds(currentBeat);
+            float offsetMs = _timeManager.Metronome.ToDeltaMilliSeconds(
+              data.StartBeat.AbsoluteValue, currentBeat
+            );
 
             // Optimization: Break early if we've passed the closest possible future note
             if (offsetMs > bestAbsMs) break;
