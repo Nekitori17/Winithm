@@ -1,8 +1,16 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=4 format=2]
 
 [ext_resource path="res://Winithm.Core/Scripts/Behaviors/Note.cs" type="Script" id=1]
+[ext_resource path="res://Winithm.Core/Resources/Shaders/NoteHighlight.gdshader" type="Shader" id=2]
+
+[sub_resource type="ShaderMaterial" id=1]
+shader = ExtResource( 2 )
+shader_param/is_highlighted = false
+shader_param/glow_color = Color( 1, 0.85, 0.2, 0.7 )
+shader_param/glow_size = 5.0
 
 [node name="Note" type="Control"]
+material = SubResource( 1 )
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5

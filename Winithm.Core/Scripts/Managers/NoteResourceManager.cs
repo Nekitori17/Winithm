@@ -19,6 +19,7 @@ namespace Winithm.Core.Managers
     public Dictionary<HitResultType, Color> JudgeColors;
     public float VFXSpeed;
     public bool Particle;
+    public Color HighlightColor;
   }
 
   public struct ResourcePack
@@ -42,7 +43,7 @@ namespace Winithm.Core.Managers
     public string ActiveResourcePackName
     {
       get => _activeResourcePackName;
-      set => SetActiveSkinPack(value);
+      set => SetActiveResourcePack(value);
     }
 
     public override void _Ready()
@@ -102,7 +103,7 @@ namespace Winithm.Core.Managers
       resourcePacksDir.ListDirEnd();
 
       // Ensure active resource pack is cached properly
-      SetActiveSkinPack(_activeResourcePackName);
+      SetActiveResourcePack(_activeResourcePackName);
     }
 
     private static void LoadConfig(string path, ref ResourcePack resourcePack)
@@ -143,6 +144,9 @@ namespace Winithm.Core.Managers
             case "vfxSpeed":
               resourcePack.Config.VFXSpeed = ParserUtils.TryParseFloat(val, out float vfxS) ? vfxS : 1f;
               break;
+            case "highlightColor":
+              resourcePack.Config.HighlightColor = StringToColor(val);
+              break;
           }
         }
       }
@@ -154,23 +158,16 @@ namespace Winithm.Core.Managers
 
     private static Color StringToColor(string str)
     {
-      // Format expected: R|G|B
-      int firstPipe = str.IndexOf('|');
-      int lastPipe = str.LastIndexOf('|');
+      string[] parts = str.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
 
-      // Safety fallback to white if invalid format
-      if (firstPipe == -1 || firstPipe == lastPipe) return Colors.White; 
+      float r = 0, g = 0, b = 0, a = 1;
 
-      // Manually parse parts to minimize allocations
-      string rStr = str.Substring(0, firstPipe);
-      string gStr = str.Substring(firstPipe + 1, lastPipe - firstPipe - 1);
-      string bStr = str.Substring(lastPipe + 1);
+      if (parts.Length >= 1) float.TryParse(parts[0], out r);
+      if (parts.Length >= 2) float.TryParse(parts[1], out g);
+      if (parts.Length >= 3) float.TryParse(parts[2], out b);
+      if (parts.Length >= 4) float.TryParse(parts[3], out a);
 
-      return new Color(
-        ParserUtils.TryParseFloat(rStr, out float r) ? r : 0,
-        ParserUtils.TryParseFloat(gStr, out float g) ? g : 0,
-        ParserUtils.TryParseFloat(bStr, out float b) ? b : 0
-      );
+      return new Color(r, g, b, a);
     }
 
     private static void LoadTexture(string path, ref ResourcePack resourcePack)
@@ -232,7 +229,7 @@ namespace Winithm.Core.Managers
       dir.ListDirEnd();
     }
 
-    public void SetActiveSkinPack(string resourcePackName)
+    public void SetActiveResourcePack(string resourcePackName)
     {
       // TryGetValue acts directly without double lookup (ContainsKey + Indexer)
       if (_resourcePacks.TryGetValue(resourcePackName, out ResourcePack pack))
@@ -247,6 +244,6 @@ namespace Winithm.Core.Managers
     }
 
     // Direct memory access without dictionary lookup guarantees O(1) high performance calls
-    public ResourcePack GetActiveSkinPack() => _activeResourcePack;
+    public ResourcePack GetActiveResourcePack() => _activeResourcePack;
   }
 }

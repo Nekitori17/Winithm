@@ -36,6 +36,7 @@ namespace Winithm.Core.Behaviors
     [Export] public NoteType Type;
     [Export] public float NoteSize = 1f;
     [Export] public float BodyHeight = 0f;
+    [Export] public ResourcePack ResourcePack = NoteResourceManager.Instance.GetActiveResourcePack();
 
     public static readonly float HEAD_PADDING = 0.001f;
     public static readonly float BODY_TO_HEAD_RATIO = 0.9f;
@@ -64,57 +65,62 @@ namespace Winithm.Core.Behaviors
 
     public void OnDespawn() { }
 
-    public void SetNoteType (NoteType type)
+    public void SetNoteType(NoteType type, ResourcePack resourcePack, bool force = false)
     {
-      if (Type == type) return;
+      bool isDirty = Type != type || !ReferenceEquals(ResourcePack, resourcePack);
+      if (isDirty && !force) return;
+
       Type = type;
+      ResourcePack = resourcePack;
 
       _bodyContainer.Visible = Type == NoteType.Hold;
-
-      var skinPack = NoteResourceManager.Instance.GetActiveSkinPack().TEX;
 
       switch (Type)
       {
         case NoteType.Tap:
-          _headLeft.Texture = skinPack[NoteType.Tap][NotePart.Left];
-          _headCenter.Texture = skinPack[NoteType.Tap][NotePart.Center];
-          _headRight.Texture = skinPack[NoteType.Tap][NotePart.Right];
-          _headOverlay.Texture = skinPack[NoteType.Tap][NotePart.Overlay];
+          _headLeft.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Left];
+          _headCenter.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Center];
+          _headRight.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Right];
+          _headOverlay.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Overlay];
           break;
         case NoteType.Hold:
-          _headLeft.Texture = skinPack[NoteType.Tap][NotePart.Left];
-          _headCenter.Texture = skinPack[NoteType.Tap][NotePart.Center];
-          _headRight.Texture = skinPack[NoteType.Tap][NotePart.Right];
-          _headOverlay.Texture = skinPack[NoteType.Tap][NotePart.Overlay];
+          _headLeft.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Left];
+          _headCenter.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Center];
+          _headRight.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Right];
+          _headOverlay.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Overlay];
 
-          _bodyLeft.Texture = skinPack[NoteType.Hold][NotePart.Left];
-          _bodyCenter.Texture = skinPack[NoteType.Hold][NotePart.Center];
-          _bodyRight.Texture = skinPack[NoteType.Hold][NotePart.Right];
+          _bodyLeft.Texture = ResourcePack.TEX[NoteType.Hold][NotePart.Left];
+          _bodyCenter.Texture = ResourcePack.TEX[NoteType.Hold][NotePart.Center];
+          _bodyRight.Texture = ResourcePack.TEX[NoteType.Hold][NotePart.Right];
           break;
         case NoteType.Drag:
-          _headLeft.Texture = skinPack[NoteType.Drag][NotePart.Left];
-          _headCenter.Texture = skinPack[NoteType.Drag][NotePart.Center];
-          _headRight.Texture = skinPack[NoteType.Drag][NotePart.Right];
-          _headOverlay.Texture = skinPack[NoteType.Drag][NotePart.Overlay];
+          _headLeft.Texture = ResourcePack.TEX[NoteType.Drag][NotePart.Left];
+          _headCenter.Texture = ResourcePack.TEX[NoteType.Drag][NotePart.Center];
+          _headRight.Texture = ResourcePack.TEX[NoteType.Drag][NotePart.Right];
+          _headOverlay.Texture = ResourcePack.TEX[NoteType.Drag][NotePart.Overlay];
           break;
         case NoteType.Focus:
-          _headLeft.Texture = skinPack[NoteType.Focus][NotePart.Left];
-          _headCenter.Texture = skinPack[NoteType.Focus][NotePart.Center];
-          _headRight.Texture = skinPack[NoteType.Focus][NotePart.Right];
-          _headOverlay.Texture = skinPack[NoteType.Focus][NotePart.Overlay];
+          _headLeft.Texture = ResourcePack.TEX[NoteType.Focus][NotePart.Left];
+          _headCenter.Texture = ResourcePack.TEX[NoteType.Focus][NotePart.Center];
+          _headRight.Texture = ResourcePack.TEX[NoteType.Focus][NotePart.Right];
+          _headOverlay.Texture = ResourcePack.TEX[NoteType.Focus][NotePart.Overlay];
           break;
         case NoteType.Close:
-          _headLeft.Texture = skinPack[NoteType.Close][NotePart.Left];
-          _headCenter.Texture = skinPack[NoteType.Close][NotePart.Center];
-          _headRight.Texture = skinPack[NoteType.Close][NotePart.Right];
-          _headOverlay.Texture = skinPack[NoteType.Close][NotePart.Overlay];
+          _headLeft.Texture = ResourcePack.TEX[NoteType.Close][NotePart.Left];
+          _headCenter.Texture = ResourcePack.TEX[NoteType.Close][NotePart.Center];
+          _headRight.Texture = ResourcePack.TEX[NoteType.Close][NotePart.Right];
+          _headOverlay.Texture = ResourcePack.TEX[NoteType.Close][NotePart.Overlay];
           break;
       }
     }
 
     public void SetNoteHighlighting(bool active)
     {
-      
+      if (Material is ShaderMaterial shaderMaterial)
+      {
+        shaderMaterial.SetShaderParam("is_highlighted", active);
+        shaderMaterial.SetShaderParam("glow_color", ResourcePack.Config.HighlightColor);
+      }
     }
 
     // Recalculates sizes and positions of all components based on current properties

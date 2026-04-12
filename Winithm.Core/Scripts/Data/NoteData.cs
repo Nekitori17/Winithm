@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Winithm.Core.Common;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
 {
@@ -45,11 +46,11 @@ namespace Winithm.Core.Data
     /// <summary>Hold Phase 1: Key pressed at StartBeat, waiting for Phase 2 at EndBeat.</summary>
     public bool IsHoldActive = false;
 
-    /// <summary>True if a Drag note has already fired OnDragReady.</summary>
-    public bool IsDragFired = false;
-
     /// <summary>Timing offset (ms) captured during Phase 1 for Phase 2 scoring.</summary>
     public float HoldStartOffsetMs = float.NaN;
+
+    // Resource Pack
+    public ResourcePack ResourcePack = NoteResourceManager.Instance.GetActiveResourcePack();
 
     public static NoteType ParseNoteType(string text)
     {

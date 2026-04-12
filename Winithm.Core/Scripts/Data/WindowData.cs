@@ -50,6 +50,8 @@ namespace Winithm.Core.Data
     /// <summary>Window despawn beat (first Close note's start, or last SpeedStep's start)</summary>
     public BeatTime EndBeat;
 
+
+    // ---------- Unresponsive & Focusable ----------
     /// <summary>Whether the window will be unresponsive at end beat, triggerring a "Not Responding" visual state.</summary>
     public bool Unresponsive = false;
     /// <summary>Whether the window is currently focusable, preventing player interaction and capable of processing player input.</summary>
@@ -60,6 +62,7 @@ namespace Winithm.Core.Data
 
     /// <summary>The beat when this window becomes unresponsive.</summary>
     public float FocusableEndBeat = float.NaN;
+
 
     // --------- Pre-computed values ---------
 
