@@ -2,6 +2,7 @@ using Godot;
 using System;
 using Winithm.Core.Data;
 using Winithm.Core.Interfaces;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Behaviors
 {
@@ -39,6 +40,7 @@ namespace Winithm.Core.Behaviors
     public static readonly float HEAD_PADDING = 0.001f;
     public static readonly float BODY_TO_HEAD_RATIO = 0.9f;
     public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.025f;
+    public static readonly float NOTE_OVERLAY_RATIO = 1.2f;
 
     // Initialize node references and perform initial visual update
     public override void _Ready()
@@ -62,27 +64,57 @@ namespace Winithm.Core.Behaviors
 
     public void OnDespawn() { }
 
-    public void SetNoteType (NoteType type, bool hightlight = false)
+    public void SetNoteType (NoteType type)
     {
       if (Type == type) return;
       Type = type;
 
       _bodyContainer.Visible = Type == NoteType.Hold;
 
+      var skinPack = NoteResourceManager.Instance.GetActiveSkinPack().TEX;
+
       switch (Type)
       {
         case NoteType.Tap:
+          _headLeft.Texture = skinPack[NoteType.Tap][NotePart.Left];
+          _headCenter.Texture = skinPack[NoteType.Tap][NotePart.Center];
+          _headRight.Texture = skinPack[NoteType.Tap][NotePart.Right];
+          _headOverlay.Texture = skinPack[NoteType.Tap][NotePart.Overlay];
           break;
         case NoteType.Hold:
+          _headLeft.Texture = skinPack[NoteType.Tap][NotePart.Left];
+          _headCenter.Texture = skinPack[NoteType.Tap][NotePart.Center];
+          _headRight.Texture = skinPack[NoteType.Tap][NotePart.Right];
+          _headOverlay.Texture = skinPack[NoteType.Tap][NotePart.Overlay];
+
+          _bodyLeft.Texture = skinPack[NoteType.Hold][NotePart.Left];
+          _bodyCenter.Texture = skinPack[NoteType.Hold][NotePart.Center];
+          _bodyRight.Texture = skinPack[NoteType.Hold][NotePart.Right];
           break;
         case NoteType.Drag:
+          _headLeft.Texture = skinPack[NoteType.Drag][NotePart.Left];
+          _headCenter.Texture = skinPack[NoteType.Drag][NotePart.Center];
+          _headRight.Texture = skinPack[NoteType.Drag][NotePart.Right];
+          _headOverlay.Texture = skinPack[NoteType.Drag][NotePart.Overlay];
           break;
         case NoteType.Focus:
+          _headLeft.Texture = skinPack[NoteType.Focus][NotePart.Left];
+          _headCenter.Texture = skinPack[NoteType.Focus][NotePart.Center];
+          _headRight.Texture = skinPack[NoteType.Focus][NotePart.Right];
+          _headOverlay.Texture = skinPack[NoteType.Focus][NotePart.Overlay];
           break;
         case NoteType.Close:
+          _headLeft.Texture = skinPack[NoteType.Close][NotePart.Left];
+          _headCenter.Texture = skinPack[NoteType.Close][NotePart.Center];
+          _headRight.Texture = skinPack[NoteType.Close][NotePart.Right];
+          _headOverlay.Texture = skinPack[NoteType.Close][NotePart.Overlay];
           break;
       }
-      UpdateVisual();
+    }
+
+    public void SetNoteHighlighting(bool active)
+    {
+      
     }
 
     // Recalculates sizes and positions of all components based on current properties
@@ -118,8 +150,9 @@ namespace Winithm.Core.Behaviors
         _headRight.RectSize = new Vector2(headH, headH);
         _headRight.RectPosition = new Vector2(headW - headH, 0f);
 
-        _headOverlay.RectSize = new Vector2(headH, headH);
-        _headOverlay.RectPosition = new Vector2(headW / 2f - headH / 2f, 0f);
+        float overlaySize = headH * NOTE_OVERLAY_RATIO;
+        _headOverlay.RectSize = new Vector2(overlaySize, overlaySize);
+        _headOverlay.RectPosition = new Vector2(headW / 2f - overlaySize / 2f, headH / 2f - overlaySize / 2f);
       }
 
       if (bodyDirty)

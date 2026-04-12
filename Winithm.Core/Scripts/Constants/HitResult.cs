@@ -7,19 +7,19 @@ namespace Winithm.Core.Constants
   {
     public static readonly Dictionary<HitResultType, float> TimmingWindowMs = new Dictionary<HitResultType, float>
     {
-      { HitResultType.Sync, 60f },
-      { HitResultType.Delay, 120f },
-      { HitResultType.Lag, 180f },
-      // Timeout is not a timing window, but a flag for notes that were not hit.
-      { HitResultType.Timeout, 180f },
+      { HitResultType.Perfect, 40f },
+      { HitResultType.Good, 85f },
+      { HitResultType.Bad, 150f },
+      // Miss is not a timing window, but a flag for notes that were not hit.
+      { HitResultType.Miss, 150f },
     };
 
     public static readonly Dictionary<HitResultType, float> ResultWeight = new Dictionary<HitResultType, float>
     {
-      { HitResultType.Sync, 1f },
-      { HitResultType.Delay, 0.65f },
-      { HitResultType.Lag, 0.1f },
-      { HitResultType.Timeout, 0f },
+      { HitResultType.Perfect, 1f },
+      { HitResultType.Good, 0.65f },
+      { HitResultType.Bad, 0.1f },
+      { HitResultType.Miss, 0f },
     };
   }
 }

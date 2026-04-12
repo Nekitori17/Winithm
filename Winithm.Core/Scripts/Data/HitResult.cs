@@ -2,10 +2,10 @@ namespace Winithm.Core.Data
 {
   public enum HitResultType
   {
-    Sync,
-    Delay,
-    Lag,
-    Timeout
+    Perfect,
+    Good,
+    Bad,
+    Miss
   }
 
   /// <summary>
@@ -13,7 +13,7 @@ namespace Winithm.Core.Data
   /// </summary>
   public struct HitResult
   {
-    /// <summary>Weight: 1.0 (Sync), 0.65 (Delay), 0.1 (Lag), 0.0 (Timeout).</summary>
+    /// <summary>Weight: 1.0 (Perfect), 0.65 (Good), 0.1 (Bad), 0.0 (Miss).</summary>
     public float Weight;
     /// <summary>Timing offset in milliseconds (negative = early, positive = late).</summary>
     public float OffsetMs;
@@ -28,10 +28,10 @@ namespace Winithm.Core.Data
     public static HitResult Miss(NoteData note) =>
       new HitResult
       {
-        Weight = Constants.HitResult.ResultWeight[HitResultType.Timeout],
+        Weight = Constants.HitResult.ResultWeight[HitResultType.Miss],
         OffsetMs = float.MaxValue,
         Note = note,
-        Type = HitResultType.Timeout
+        Type = HitResultType.Miss
       };
 
     public static HitResult FromOffset(NoteData note, float offsetMs)
@@ -40,25 +40,25 @@ namespace Winithm.Core.Data
       float weight;
       HitResultType type;
 
-      if (absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Sync])
+      if (absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Perfect])
       {
-        type = HitResultType.Sync;
-        weight = Constants.HitResult.ResultWeight[HitResultType.Sync];
+        type = HitResultType.Perfect;
+        weight = Constants.HitResult.ResultWeight[HitResultType.Perfect];
       }
-      else if (absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Delay])
+      else if (absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Good])
       {
-        type = HitResultType.Delay;
-        weight = Constants.HitResult.ResultWeight[HitResultType.Delay];
+        type = HitResultType.Good;
+        weight = Constants.HitResult.ResultWeight[HitResultType.Good];
       }
-      else if (absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Lag])
+      else if (absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Bad])
       {
-        type = HitResultType.Lag;
-        weight = Constants.HitResult.ResultWeight[HitResultType.Lag];
+        type = HitResultType.Bad;
+        weight = Constants.HitResult.ResultWeight[HitResultType.Bad];
       }
       else
       {
-        type = HitResultType.Timeout;
-        weight = Constants.HitResult.ResultWeight[HitResultType.Timeout];
+        type = HitResultType.Miss;
+        weight = Constants.HitResult.ResultWeight[HitResultType.Miss];
       }
 
       return new HitResult { Weight = weight, OffsetMs = offsetMs, Note = note, Type = type };
@@ -69,13 +69,13 @@ namespace Winithm.Core.Data
     {
       float absMs = System.Math.Abs(offsetMs);
       float weight =
-        absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Delay] ?
-        Constants.HitResult.ResultWeight[HitResultType.Sync]
-        : Constants.HitResult.ResultWeight[HitResultType.Timeout];
+        absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Good] ?
+        Constants.HitResult.ResultWeight[HitResultType.Perfect]
+        : Constants.HitResult.ResultWeight[HitResultType.Miss];
       HitResultType type =
-        absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Delay] ?
-        HitResultType.Sync
-        : HitResultType.Timeout;
+        absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Good] ?
+        HitResultType.Perfect
+        : HitResultType.Miss;
 
       return new HitResult { Weight = weight, OffsetMs = offsetMs, Note = note, Type = type };
     }

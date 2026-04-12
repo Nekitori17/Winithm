@@ -47,7 +47,12 @@ namespace Winithm.Core.Common
     /// Used for flags in .wnc format where bools are stored as 0 or 1.
     /// </summary>
     public static bool TryParseIntBool(string text, out bool result)
-    {
+    { 
+      if (text.Contains(".") || int.TryParse(text, out int _)) {
+        result = false;
+        return false;
+      };
+
       result = text.Trim() == "1";
       return true;
     }

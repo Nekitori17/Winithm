@@ -225,7 +225,7 @@ namespace Winithm.Core.Managers
         if (!state.ActiveNotesThisFrame.Contains(key))
           state.KeysToRemove.Add(key);
       }
-      
+
       foreach (var key in state.KeysToRemove)
       {
         ReturnToPool(state.NoteVisuals[key]);
@@ -376,8 +376,8 @@ namespace Winithm.Core.Managers
         return;
       }
 
-      float delayWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Delay];
-      float timeoutWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Timeout];
+      float badWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Bad];
+      float missWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
       int evalCursor = state.EvalCursors[side];
       var notes = state.Data.Notes[side];
 
@@ -418,7 +418,7 @@ namespace Winithm.Core.Managers
         }
 
         // Drag notes: fire event in 0-120ms zone
-        if (currData.Type == NoteType.Drag && currData.IsHittable && passedMs <= delayWindowMs)
+        if (currData.Type == NoteType.Drag && currData.IsHittable && passedMs <= badWindowMs)
         {
           if (!currData.IsDragFired)
           {
@@ -429,7 +429,7 @@ namespace Winithm.Core.Managers
         }
 
         // Miss: note head exceeded the timing window
-        if (passedMs > timeoutWindowMs)
+        if (passedMs > missWindowMs)
         {
           if (currData.IsHittable) OnNoteMiss?.Invoke(windowId, currData);
           evalCursor++;
@@ -505,8 +505,8 @@ namespace Winithm.Core.Managers
     /// </summary>
     public List<(string WindowId, NoteData Note, float OffsetMs)> TryEvaluateAll(NoteType type, float currentBeat)
     {
-      float timeoutMs = Constants.HitResult.TimmingWindowMs[HitResultType.Timeout];
-      float syncMs = Constants.HitResult.TimmingWindowMs[HitResultType.Sync];
+      float missMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
+      float perfectMs = Constants.HitResult.TimmingWindowMs[HitResultType.Perfect];
 
       var allValid = new List<(string WindowId, NoteData Note, float OffsetMs)>();
       float bestAbsMs = float.MaxValue;
@@ -537,10 +537,10 @@ namespace Winithm.Core.Managers
 
             // Optimization: Notes are sorted chronologically. 
             // If this note is too far in the future, all subsequent ones are even further.
-            if (offsetMs > timeoutMs) break;
+            if (offsetMs > missMs) break;
 
             float absMs = Math.Abs(offsetMs);
-            if (absMs <= timeoutMs)
+            if (absMs <= missMs)
             {
               var item = (windowId, data, offsetMs);
               allValid.Add(item);
@@ -559,13 +559,13 @@ namespace Winithm.Core.Managers
 
       if (closestItem.HasValue)
       {
-        if (bestAbsMs <= syncMs)
+        if (bestAbsMs <= perfectMs)
         {
           // Perfect hit: group all Perfect notes (max 1 per window)
           var bestPerWindow = new Dictionary<string, (string WindowId, NoteData Note, float OffsetMs)>();
           foreach (var item in allValid)
           {
-            if (Math.Abs(item.OffsetMs) <= syncMs)
+            if (Math.Abs(item.OffsetMs) <= perfectMs)
             {
               if (!bestPerWindow.ContainsKey(item.WindowId) ||
                   Math.Abs(item.OffsetMs) < Math.Abs(bestPerWindow[item.WindowId].OffsetMs))
@@ -593,7 +593,7 @@ namespace Winithm.Core.Managers
     {
       string bestWindowId = null;
       NoteData closest = null;
-      float bestAbsMs = Constants.HitResult.TimmingWindowMs[HitResultType.Timeout];
+      float bestAbsMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
 
       foreach (var pair in _windowStates)
       {
@@ -615,7 +615,7 @@ namespace Winithm.Core.Managers
             bool matches = data.Type == type || (type == NoteType.Tap && data.Type == NoteType.Hold);
             if (!matches) continue;
 
-            float offsetMs = 
+            float offsetMs =
               _timeManager.Metronome.ToMiliSeconds(data.StartBeat.AbsoluteValue)
               -
               _timeManager.Metronome.ToMiliSeconds(currentBeat);

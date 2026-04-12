@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/icon.png-487276ed1e3a0c39cad0279d744ee560.stex"
+path="res://.import/close_center.png-275dac37861eae781eb442c120a7cc05.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://icon.png"
-dest_files=[ "res://.import/icon.png-487276ed1e3a0c39cad0279d744ee560.stex" ]
+source_file="res://Winithm.Core/Resources/NoteResourcePacks/default/tex/close_center.png"
+dest_files=[ "res://.import/close_center.png-275dac37861eae781eb442c120a7cc05.stex" ]
 
 [params]
 
