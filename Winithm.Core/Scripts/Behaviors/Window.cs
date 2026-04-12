@@ -50,11 +50,15 @@ namespace Winithm.Core.Behaviors
     public Control UnresponsiveOverlay;
 
     // --- Resources ---
-    private Texture _iconTex;
-    private Texture _closeTex;
-    private Texture _maxTex;
-    private Texture _minTex;
-    private DynamicFont _font;
+    private static readonly Texture _iconTex = GD.Load<Texture>("res://icon.png");
+    private static readonly Texture _closeTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/close.svg");
+    private static readonly Texture _maxTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/maximize.svg");
+    private static readonly Texture _minTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/minimize.svg");
+    private static readonly DynamicFont _font = new DynamicFont
+    {
+      FontData = GD.Load<DynamicFontData>("res://Winithm.Core/Resources/Fonts/Quicksand-Regular.ttf"),
+      UseFilter = true
+    };
 
     public static readonly float TITLE_BAR_HEIGHT_RATIO = 0.0375f;
     public static readonly float UNFOCUS_OVERLAY_TINT = 0.75f;
@@ -75,14 +79,6 @@ namespace Winithm.Core.Behaviors
       _windowBody.Connect("draw", this, nameof(OnWindowBodyDraw));
       UnfocusOverlay.Connect("draw", this, nameof(OnUnfocusOverlayDraw));
       UnresponsiveOverlay.Connect("draw", this, nameof(OnUnresponsiveOverlayDraw));
-
-      _iconTex = GD.Load<Texture>("res://icon.png");
-      _closeTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/close.svg");
-      _maxTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/maximize.svg");
-      _minTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/minimize.svg");
-
-      var fontData = GD.Load<DynamicFontData>("res://Winithm.Core/Resources/Fonts/Quicksand-Regular.ttf");
-      _font = new DynamicFont { FontData = fontData, UseFilter = true };
 
       UpdateVisual();
     }
