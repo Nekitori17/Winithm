@@ -65,10 +65,10 @@ namespace Winithm.Core.Behaviors
 
     public void OnDespawn() { }
 
-    public void SetNoteType(NoteType type, ResourcePack resourcePack, bool force = false)
+    public void SetNoteType(NoteType type, ResourcePack resourcePack)
     {
       bool isDirty = Type != type || !ReferenceEquals(ResourcePack, resourcePack);
-      if (isDirty && !force) return;
+      if (!isDirty) return;
 
       Type = type;
       ResourcePack = resourcePack;
