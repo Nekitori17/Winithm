@@ -39,10 +39,16 @@ namespace Winithm.Core.Data
     public bool IsMutedGhost => FakeType == 1;
     public bool IsLoudGhost => FakeType == 2;
 
-    // --- State for Hold Notes ---
+    // --- State for all Notes ---
     /// <summary>True if the note has been fully processed (Hit or Miss).</summary>
     public bool IsEvaluated = false;
 
+    /// <summary>Session token for auto-fired notes.</summary>
+    public int AutoFiredSessionToken = -1;
+
+    public int LastSeenFrameSessionToken = -1;
+
+    // --- State for Hold Notes ---
     /// <summary>Hold Phase 1: Key pressed at StartBeat, waiting for Phase 2 at EndBeat.</summary>
     public bool IsHoldActive = false;
 

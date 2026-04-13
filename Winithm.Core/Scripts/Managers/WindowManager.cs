@@ -14,6 +14,7 @@ namespace Winithm.Core.Managers
     protected TimeManager _timeManager;
     protected GroupManager _groupManager;
     protected ThemeChannelManager _themeManager;
+    protected NoteManager _noteManager;
 
     private PackedScene _windowScene;
 
@@ -43,11 +44,17 @@ namespace Winithm.Core.Managers
       _windowPool = new NodePool<Window>(this, _windowScene);
     }
 
-    public void InjectManagers(TimeManager timeManager, GroupManager groupManager, ThemeChannelManager themeManager)
+    public void InjectManagers(
+      TimeManager timeManager,
+      GroupManager groupManager,
+      ThemeChannelManager themeManager,
+      NoteManager noteManager
+    )
     {
       _timeManager = timeManager;
       _groupManager = groupManager;
       _themeManager = themeManager;
+      _noteManager = noteManager;
     }
 
     public void LoadWindows(List<WindowData> windows)
@@ -106,6 +113,7 @@ namespace Winithm.Core.Managers
         {
           _windowPool.Release(w);
           _activeWindows.Remove(wd.ID);
+          _noteManager.UnregisterWindow(wd.ID);
 
           continue;
         }
@@ -123,6 +131,7 @@ namespace Winithm.Core.Managers
           w.TitleTextColor = TitleTextColor;
 
           _activeWindows[wd.ID] = w;
+          _noteManager.RegisterWindow(wd.ID, wd, w);
 
           if (w.GetParent() != this)
           {

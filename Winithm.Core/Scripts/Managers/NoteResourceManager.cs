@@ -50,7 +50,7 @@ namespace Winithm.Core.Managers
     {
       Instance = this;
 
-      string resourcePacksPath = "res://Winithm.Core/Resources/NoteResourcePacks";
+      string resourcePacksPath = "res://Winithm.Core/Resources/ResourcePacks";
 
       Directory resourcePacksDir = new Directory();
       if (resourcePacksDir.Open(resourcePacksPath) != Error.Ok)
@@ -91,7 +91,7 @@ namespace Winithm.Core.Managers
         LoadSoundEffect(resourcePackPath.PlusFile("sfx"), ref resourcePack);
 
         // Load VFX if it exists
-        string vfxFramesPath = resourcePackPath.PlusFile("vfx/frames.tres");
+        string vfxFramesPath = resourcePackPath.PlusFile("hit_frames.tres");
         if (new File().FileExists(vfxFramesPath))
         {
           resourcePack.VFX = GD.Load<SpriteFrames>(vfxFramesPath);
@@ -137,12 +137,6 @@ namespace Winithm.Core.Managers
               break;
             case "colorBad":
               resourcePack.Config.JudgeColors[HitResultType.Bad] = StringToColor(val);
-              break;
-            case "particle":
-              resourcePack.Config.Particle = ParserUtils.TryParseIntBool(val, out bool ptc) ? ptc : true;
-              break;
-            case "vfxSpeed":
-              resourcePack.Config.VFXSpeed = ParserUtils.TryParseFloat(val, out float vfxS) ? vfxS : 1f;
               break;
             case "highlightColor":
               resourcePack.Config.HighlightColor = StringToColor(val);

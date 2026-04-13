@@ -36,17 +36,18 @@ namespace Winithm.Core.Managers
       public Dictionary<NoteData, Note> NoteVisuals = new Dictionary<NoteData, Note>();
       public Dictionary<NoteSide, int> SideCursors = new Dictionary<NoteSide, int>();
       public Dictionary<NoteSide, int> EvalCursors = new Dictionary<NoteSide, int>();
-      public HashSet<NoteData> ActiveNotesThisFrame = new HashSet<NoteData>();
       public HashSet<NoteData> ActiveHolds = new HashSet<NoteData>();
       public List<NoteData> KeysToRemove = new List<NoteData>();
       public SpeedCalculator.FrameCache SpeedCache = new SpeedCalculator.FrameCache();
+      public int AutoFireSessionToken = 0;
+      public int FrameSessionToken = 0;
       public float LastBeat = float.MinValue;
     }
 
     private Dictionary<string, WindowNoteState> _windowStates = new Dictionary<string, WindowNoteState>();
     private NodePool<Note> _notePool;
 
-    public static readonly float NOTE_SPEED_IN_PIXEL_PER_SEC = 720f;
+    public static readonly float NOTE_SPEED_IN_PIXEL_PER_SEC = 72f;
 
     public void Initialize(TimeManager timeManager, bool autoplay = false)
     {
@@ -78,6 +79,7 @@ namespace Winithm.Core.Managers
     public void UnregisterWindow(string windowId)
     {
       if (!_windowStates.TryGetValue(windowId, out var state)) return;
+      state.AutoFireSessionToken++;
       foreach (var visual in state.NoteVisuals.Values)
         ReturnToPool(visual);
       _windowStates.Remove(windowId);
@@ -115,15 +117,20 @@ namespace Winithm.Core.Managers
     public void ForceUpdate(float currentBeat, bool _force = true)
     {
       foreach (var pair in _windowStates)
-        ProcessWindow(pair.Key, pair.Value, currentBeat);
+        ProcessWindow(pair.Key, pair.Value, currentBeat, _force);
     }
 
-    private void ProcessWindow(string windowId, WindowNoteState state, float currentBeat)
+    private void ProcessWindow(
+      string windowId,
+      WindowNoteState state,
+      float currentBeat,
+      bool force
+    )
     {
       if (state.Visual == null) return;
-      if (currentBeat == state.LastBeat) return;
+      if (currentBeat == state.LastBeat && !force) return;
 
-      bool isRewind = currentBeat < state.LastBeat;
+      bool isBackward = currentBeat < state.LastBeat;
 
       ProcessActiveHoldNotes(windowId, state, currentBeat);
 
@@ -133,8 +140,6 @@ namespace Winithm.Core.Managers
 
       float noteH = PlayerNoteSize * Mathf.Min(playerAreaSize.x, playerAreaSize.y) * Note.NOTE_HEAD_HEIGHT_RATIO;
       float limitPx = noteH * 3f;
-
-      state.ActiveNotesThisFrame.Clear();
 
       foreach (var sideNotes in state.Data.Notes)
       {
@@ -156,10 +161,26 @@ namespace Winithm.Core.Managers
         state.Data.MaxEndBeats.TryGetValue(side, out float[] maxEndBeats);
         while (cursor > 0 && maxEndBeats != null)
         {
-          float maxEnd = maxEndBeats[cursor - 1];
-          float distPx = SpeedCalculator.GetVisualOffset(state.SpeedCache, state.Data.SpeedSteps, currentBeat, maxEnd) * basePixelsPerBeat * scale;
-          if (distPx >= -limitPx) cursor--;
-          else break;
+          int lo = 0, hi = cursor - 1, newCursor = cursor;
+          while (lo <= hi)
+          {
+            int mid = (lo + hi) / 2;
+            float distPx = SpeedCalculator.GetVisualOffset(
+                state.SpeedCache, state.Data.SpeedSteps,
+                currentBeat, maxEndBeats[mid]
+            ) * basePixelsPerBeat * scale;
+
+            if (distPx >= -limitPx)
+            {
+              newCursor = mid;
+              hi = mid - 1;
+            }
+            else
+            {
+              lo = mid + 1;
+            }
+          }
+          cursor = newCursor;
         }
 
         // FORWARD SYNC: Advance past notes whose EndBeat left the screen
@@ -174,17 +195,23 @@ namespace Winithm.Core.Managers
         state.SideCursors[side] = cursor;
 
         // LIFECYCLE: Drag auto-fire + Miss evaluation
-        EvaluateNoteLifecycle(windowId, state, side, currentBeat, isRewind);
+        EvaluateNoteLifecycle(windowId, state, side, currentBeat, isBackward);
 
         // RENDER
         for (int i = cursor; i < notes.Count; i++)
         {
           NoteData data = notes[i];
 
-          if (data.IsEvaluated && !data.IsHittable)
+          if (
+            Autoplay
+            || data.IsEvaluated 
+            || !data.IsHittable
+          )
           {
-            if (data.Type == NoteType.Hold && currentBeat > data.StartBeat.AbsoluteValue + data.Length)
-            continue;
+            if (
+              data.Type == NoteType.Hold
+              && currentBeat > data.StartBeat.AbsoluteValue + data.Length
+            ) continue;
 
             if (currentBeat > data.StartBeat.AbsoluteValue) continue;
           }
@@ -196,13 +223,6 @@ namespace Winithm.Core.Managers
 
           float endBeat = data.StartBeat.AbsoluteValue + data.Length;
 
-          // Missed/dropped Hold notes stay visible but dimmed until EndBeat passes
-          bool isMissedHold =
-            data.IsEvaluated &&
-            !isRewind &&
-            data.Type == NoteType.Hold &&
-            currentBeat < endBeat;
-
           float endDistPx =
             endBeat == data.StartBeat.AbsoluteValue
             ? headDistPx
@@ -211,13 +231,13 @@ namespace Winithm.Core.Managers
           if (!state.NoteVisuals.TryGetValue(data, out Note visual))
             visual = SpawnNote(windowId, state, data);
 
-          // Dim missed holds, reset pool reuse artifacts otherwise
-          visual.Modulate = isMissedHold
+          // Dim evaluated notes, reset pool reuse artifacts otherwise
+          visual.Modulate = data.IsEvaluated
             ? new Color(0.5f, 0.5f, 0.5f, 0.5f)
             : new Color(1f, 1f, 1f, 1f);
 
           UpdateNoteVisual(data, visual, headDistPx, endDistPx, state.Visual);
-          state.ActiveNotesThisFrame.Add(data);
+          data.LastSeenFrameSessionToken = state.FrameSessionToken;
         }
       }
 
@@ -225,7 +245,7 @@ namespace Winithm.Core.Managers
       state.KeysToRemove.Clear();
       foreach (var key in state.NoteVisuals.Keys)
       {
-        if (!state.ActiveNotesThisFrame.Contains(key))
+        if (key.LastSeenFrameSessionToken != state.FrameSessionToken)
           state.KeysToRemove.Add(key);
       }
 
@@ -235,6 +255,7 @@ namespace Winithm.Core.Managers
         state.NoteVisuals.Remove(key);
       }
 
+      state.FrameSessionToken++;
       state.LastBeat = currentBeat;
     }
 
@@ -371,10 +392,11 @@ namespace Winithm.Core.Managers
       WindowNoteState state,
       NoteSide side,
       float currentBeat,
-      bool isRewind)
+      bool isBackward)
     {
-      if (isRewind)
+      if (isBackward)
       {
+        state.AutoFireSessionToken++;
         state.EvalCursors[side] = Math.Min(state.EvalCursors[side], state.SideCursors[side]);
         return;
       }
@@ -398,19 +420,22 @@ namespace Winithm.Core.Managers
         );
 
         // LOUD GHOST: Auto-hit exactly on perfect timing
-        if (currData.IsLoudGhost
-            && passedMs >= 0f
-            && state.NoteVisuals.ContainsKey(currData)
+        if (
+          (Autoplay || currData.IsLoudGhost)
+          && passedMs >= 0f
+          && currData.AutoFiredSessionToken != state.AutoFireSessionToken
         )
         {
           if (currData.Type == NoteType.Hold)
-          {
+          { 
+            currData.AutoFiredSessionToken = state.AutoFireSessionToken;
             currData.IsHoldActive = true;
-            state.ActiveHolds.Add(currData); // Push to ActiveHolds for ticks
-            OnAutoHit?.Invoke(windowId, currData); // Fire initial head hit
+            state.ActiveHolds.Add(currData);
+            OnAutoHit?.Invoke(windowId, currData);
           }
           else
           {
+            currData.AutoFiredSessionToken = state.AutoFireSessionToken;
             OnAutoHit?.Invoke(windowId, currData);
           }
 
@@ -437,8 +462,6 @@ namespace Winithm.Core.Managers
           if (currData.IsHittable) OnNoteMiss?.Invoke(windowId, currData);
           evalCursor++;
         }
-        
-        if (passedMs <= 0) break;
       }
 
       state.EvalCursors[side] = evalCursor;
@@ -454,7 +477,7 @@ namespace Winithm.Core.Managers
         if
         (
         currentBeat < data.StartBeat.AbsoluteValue
-        && data.HoldStartOffsetMs != float.NaN
+        && data.HoldStartOffsetMs == float.NaN
         )
         {
           data.IsHoldActive = false;
@@ -464,14 +487,14 @@ namespace Winithm.Core.Managers
 
         // 2. Hold tail reached: end the active phase and let the caller finalize scoring.
         if (
-          !data.IsEvaluated &&
           currentBeat >= data.StartBeat.AbsoluteValue + data.Length
         )
         {
-          if (data.IsHittable)
+          if (data.IsHittable && !data.IsEvaluated)
           {
             OnActiveHoldEnded?.Invoke(windowId, data);
           }
+
           data.IsHoldActive = false;
           state.KeysToRemove.Add(data);
           continue;
