@@ -13,11 +13,11 @@ namespace Winithm.Core.Managers
   /// </summary>
   public class NoteManager : Node
   {
-    public event Action<string, NoteData> OnNoteHit;
     public event Action<string, NoteData> OnNoteMiss;
     public event Action<string, NoteData, float> OnDragReady;
     public event Action<string, NoteData> OnActiveHoldEnded;
     public event Action<string, NoteData> OnActiveHoldTick;
+
     public event Action<string, NoteData> OnAutoHit;
 
     [Export] public float PlayerNoteSize = 1f;
@@ -421,7 +421,11 @@ namespace Winithm.Core.Managers
 
         // LOUD GHOST: Auto-hit exactly on perfect timing
         if (
-          (Autoplay || currData.IsLoudGhost)
+          (
+            (Autoplay && !currData.IsMutedGhost)
+            ||
+            (currData.IsLoudGhost)
+          )
           && passedMs >= 0f
           && currData.AutoFiredSessionToken != state.AutoFireSessionToken
         )
