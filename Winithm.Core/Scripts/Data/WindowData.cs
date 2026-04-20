@@ -204,8 +204,6 @@ namespace Winithm.Core.Data
         StartBeat = BeatTime.Zero;
         EndBeat = BeatTime.Zero;
         OnLifeCycleChanged?.Invoke(this);
-
-        return;
       }
 
       if (
@@ -213,8 +211,13 @@ namespace Winithm.Core.Data
         SpeedSteps.GetLast().StartBeat != EndBeat
       )
       {
+        StartBeat = SpeedSteps.GetFirst().StartBeat;
+        EndBeat = SpeedSteps.GetLast().StartBeat;
+
         OnLifeCycleChanged?.Invoke(this);
-      } else OnDataChanged?.Invoke(this);
+      }
+      
+      OnDataChanged?.Invoke(this);
     }
     private void BubbleNote(Note n) => OnDataChanged?.Invoke(this);
   }
