@@ -35,10 +35,10 @@ namespace Winithm.Core.Common
 
   public static class EasingFunctions
   {
-    private const float PI = (float)Math.PI;
-    private const float HALF_PI = PI / 2f;
+    private const double PI = Math.PI;
+    private const double HALF_PI = PI / 2f;
 
-    public static float Evaluate(EasingType type, float t)
+    public static double Evaluate(EasingType type, double t)
     {
       t = Math.Max(0f, Math.Min(1f, t));
 
@@ -73,73 +73,73 @@ namespace Winithm.Core.Common
       }
     }
 
-    private static float SineIn(float t) => 1f - (float)Math.Cos(t * HALF_PI);
-    private static float SineOut(float t) => (float)Math.Sin(t * HALF_PI);
-    private static float SineInOut(float t) => -(float)(Math.Cos(PI * t) - 1f) / 2f;
-    private static float CubicIn(float t) => t * t * t;
-    private static float CubicOut(float t) { float u = 1f - t; return 1f - u * u * u; }
-    private static float CubicInOut(float t) => t < 0.5f ? 4f * t * t * t : 1f - (float)Math.Pow(-2f * t + 2f, 3) / 2f;
-    private static float QuadIn(float t) => t * t;
-    private static float QuadOut(float t) => t * (2f - t);
-    private static float QuadInOut(float t) => t < 0.5f ? 2f * t * t : -1f + (4f - 2f * t) * t;
+    private static double SineIn(double t) => 1f - Math.Cos(t * HALF_PI);
+    private static double SineOut(double t) => Math.Sin(t * HALF_PI);
+    private static double SineInOut(double t) => -(Math.Cos(PI * t) - 1f) / 2f;
+    private static double CubicIn(double t) => t * t * t;
+    private static double CubicOut(double t) { double u = 1f - t; return 1f - u * u * u; }
+    private static double CubicInOut(double t) => t < 0.5f ? 4f * t * t * t : 1f - Math.Pow(-2f * t + 2f, 3) / 2f;
+    private static double QuadIn(double t) => t * t;
+    private static double QuadOut(double t) => t * (2f - t);
+    private static double QuadInOut(double t) => t < 0.5f ? 2f * t * t : -1f + (4f - 2f * t) * t;
 
-    private static float ExpoIn(float t) => t == 0f ? 0f : (float)Math.Pow(2f, 10f * (t - 1f));
-    private static float ExpoOut(float t) => t == 1f ? 1f : 1f - (float)Math.Pow(2f, -10f * t);
-    private static float ExpoInOut(float t)
+    private static double ExpoIn(double t) => t == 0f ? 0f : Math.Pow(2f, 10f * (t - 1f));
+    private static double ExpoOut(double t) => t == 1f ? 1f : 1f - Math.Pow(2f, -10f * t);
+    private static double ExpoInOut(double t)
     {
       if (t == 0f) return 0f;
       if (t == 1f) return 1f;
       return t < 0.5f
-          ? (float)Math.Pow(2f, 20f * t - 10f) / 2f
-          : (2f - (float)Math.Pow(2f, -20f * t + 10f)) / 2f;
+          ? Math.Pow(2f, 20f * t - 10f) / 2f
+          : (2f - Math.Pow(2f, -20f * t + 10f)) / 2f;
     }
 
-    private static float CircIn(float t) => 1f - (float)Math.Sqrt(1f - t * t);
-    private static float CircOut(float t) { float u = t - 1f; return (float)Math.Sqrt(1f - u * u); }
-    private static float CircInOut(float t) => t < 0.5f
-            ? (1f - (float)Math.Sqrt(1f - 4f * t * t)) / 2f
-            : ((float)Math.Sqrt(1f - (float)Math.Pow(-2f * t + 2f, 2)) + 1f) / 2f;
+    private static double CircIn(double t) => 1f - Math.Sqrt(1f - t * t);
+    private static double CircOut(double t) { double u = t - 1f; return Math.Sqrt(1f - u * u); }
+    private static double CircInOut(double t) => t < 0.5f
+            ? (1f - Math.Sqrt(1f - 4f * t * t)) / 2f
+            : (Math.Sqrt(1f - Math.Pow(-2f * t + 2f, 2)) + 1f) / 2f;
 
-    private static float BackIn(float t) { const float c1 = 1.70158f; return (c1 + 1f) * t * t * t - c1 * t * t; }
-    private static float BackOut(float t) { const float c1 = 1.70158f; float u = t - 1f; return 1f + (c1 + 1f) * u * u * u + c1 * u * u; }
-    private static float BackInOut(float t)
+    private static double BackIn(double t) { const double c1 = 1.70158f; return (c1 + 1f) * t * t * t - c1 * t * t; }
+    private static double BackOut(double t) { const double c1 = 1.70158f; double u = t - 1f; return 1f + (c1 + 1f) * u * u * u + c1 * u * u; }
+    private static double BackInOut(double t)
     {
-      const float c2 = 1.70158f * 1.525f;
+      const double c2 = 1.70158f * 1.525f;
       return t < 0.5f
-          ? (float)(Math.Pow(2f * t, 2) * ((c2 + 1f) * 2f * t - c2)) / 2f
-          : (float)(Math.Pow(2f * t - 2f, 2) * ((c2 + 1f) * (t * 2f - 2f) + c2) + 2f) / 2f;
+          ? Math.Pow(2f * t, 2) * ((c2 + 1f) * 2f * t - c2) / 2f
+          : (Math.Pow(2f * t - 2f, 2) * ((c2 + 1f) * (t * 2f - 2f) + c2) + 2f) / 2f;
     }
 
-    private static float ElasticIn(float t)
+    private static double ElasticIn(double t)
     {
       if (t == 0f) return 0f;
       if (t == 1f) return 1f;
-      return -(float)Math.Pow(2f, 10f * t - 10f) * (float)Math.Sin((t * 10f - 10.75f) * (2f * PI / 3f));
+      return -Math.Pow(2f, 10f * t - 10f) * Math.Sin((t * 10f - 10.75f) * (2f * PI / 3f));
     }
 
-    private static float ElasticOut(float t)
+    private static double ElasticOut(double t)
     {
       if (t == 0f) return 0f;
       if (t == 1f) return 1f;
-      return (float)Math.Pow(2f, -10f * t) * (float)Math.Sin((t * 10f - 0.75f) * (2f * PI / 3f)) + 1f;
+      return Math.Pow(2f, -10f * t) * Math.Sin((t * 10f - 0.75f) * (2f * PI / 3f)) + 1f;
     }
 
-    private static float ElasticInOut(float t)
+    private static double ElasticInOut(double t)
     {
       if (t == 0f) return 0f;
       if (t == 1f) return 1f;
-      const float c5 = (2f * PI) / 4.5f;
+      const double c5 = 2f * PI / 4.5f;
       return t < 0.5f
-        ? -(float)(Math.Pow(2f, 20f * t - 10f) * Math.Sin((20f * t - 11.125f) * c5)) / 2f
-        : (float)(Math.Pow(2f, -20f * t + 10f) * Math.Sin((20f * t - 11.125f) * c5)) / 2f + 1f;
+        ? -(Math.Pow(2f, 20f * t - 10f) * Math.Sin((20f * t - 11.125f) * c5)) / 2f
+        : Math.Pow(2f, -20f * t + 10f) * Math.Sin((20f * t - 11.125f) * c5) / 2f + 1f;
     }
 
-    private static float BounceIn(float t) => 1f - BounceOut(1f - t);
+    private static double BounceIn(double t) => 1f - BounceOut(1f - t);
 
-    private static float BounceOut(float t)
+    private static double BounceOut(double t)
     {
-      const float n1 = 7.5625f;
-      const float d1 = 2.75f;
+      const double n1 = 7.5625f;
+      const double d1 = 2.75f;
 
       if (t < 1f / d1) return n1 * t * t;
       if (t < 2f / d1) { t -= 1.5f / d1; return n1 * t * t + 0.75f; }
@@ -148,32 +148,32 @@ namespace Winithm.Core.Common
       return n1 * t * t + 0.984375f;
     }
 
-    private static float BounceInOut(float t)
+    private static double BounceInOut(double t)
     {
       return t < 0.5f
         ? (1f - BounceOut(1f - 2f * t)) / 2f
         : (1f + BounceOut(2f * t - 1f)) / 2f;
     }
 
-    public static float EvaluateBezier(AnyValue bezier, float t)
+    public static double EvaluateBezier(AnyValue bezier, double t)
     {
       if (t <= 0f) return 0f;
       if (t >= 1f) return 1f;
 
-      float p1x = Math.Max(0f, Math.Min(1f, bezier.X));
-      float p1y = bezier.Y;
-      float p2x = Math.Max(0f, Math.Min(1f, bezier.Z));
-      float p2y = bezier.W;
+      double p1x = Math.Max(0f, Math.Min(1f, bezier.X));
+      double p1y = bezier.Y;
+      double p2x = Math.Max(0f, Math.Min(1f, bezier.Z));
+      double p2y = bezier.W;
 
       // Binary search to find u parameter where X(u) is close to target t
-      float u = t;
-      float minU = 0f;
-      float maxU = 1f;
+      double u = t;
+      double minU = 0f;
+      double maxU = 1f;
 
       for (int i = 0; i < 12; i++)
       {
-        float ou = 1f - u;
-        float x = 3f * ou * ou * u * p1x + 3f * ou * u * u * p2x + u * u * u;
+        double ou = 1f - u;
+        double x = 3f * ou * ou * u * p1x + 3f * ou * u * u * p2x + u * u * u;
 
         if (Math.Abs(x - t) < 0.0005f) break;
 
@@ -183,7 +183,7 @@ namespace Winithm.Core.Common
         u = (minU + maxU) / 2f;
       }
 
-      float finalOu = 1f - u;
+      double finalOu = 1f - u;
       return 3f * finalOu * finalOu * u * p1y + 3f * finalOu * u * u * p2y + u * u * u;
     }
 

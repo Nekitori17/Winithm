@@ -38,7 +38,6 @@ namespace Winithm.Core.Behaviors
     [Export] public float BodyHeight = 0f;
     [Export] public ResourcePack ResourcePack = NoteResourceManager.Instance.GetActiveResourcePack();
 
-    public static readonly float HEAD_PADDING = 0.001f;
     public static readonly float BODY_TO_HEAD_RATIO = 0.9f;
     public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.025f;
     public static readonly float NOTE_OVERLAY_RATIO = 1.2f;
@@ -127,7 +126,7 @@ namespace Winithm.Core.Behaviors
     public void UpdateVisual()
     {
       float headH = NoteSize * Math.Min(PlayerAreaSize.x, PlayerAreaSize.y) * NOTE_HEAD_HEIGHT_RATIO;
-      float headW = Width * (1f - HEAD_PADDING * 2f);
+      float headW = Width;
       float headCW = headW - headH * 2f;
 
       bool headDirty =

@@ -16,7 +16,7 @@ namespace Winithm.Core.Data
     /// <summary>Weight: 1.0 (Perfect), 0.65 (Good), 0.1 (Bad), 0.0 (Miss).</summary>
     public float Weight;
     /// <summary>Timing offset in milliseconds (negative = early, positive = late).</summary>
-    public float OffsetMs;
+    public double OffsetMs;
     /// <summary>The type of hit result.</summary>
     public HitResultType Type;
 
@@ -34,9 +34,9 @@ namespace Winithm.Core.Data
         Type = HitResultType.Miss
       };
 
-    public static HitResult FromOffset(NoteData note, float offsetMs)
+    public static HitResult FromOffset(NoteData note, double offsetMs)
     {
-      float absMs = System.Math.Abs(offsetMs);
+      double absMs = System.Math.Abs(offsetMs);
       float weight;
       HitResultType type;
 
@@ -65,9 +65,9 @@ namespace Winithm.Core.Data
     }
 
     /// <summary>Drag notes: within 160ms = auto 1.0.</summary>
-    public static HitResult DragHit(NoteData note, float offsetMs)
+    public static HitResult DragHit(NoteData note, double offsetMs)
     {
-      float absMs = System.Math.Abs(offsetMs);
+      double absMs = System.Math.Abs(offsetMs);
       float weight =
         absMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Good] ?
         Constants.HitResult.ResultWeight[HitResultType.Perfect]

@@ -91,7 +91,6 @@ namespace Winithm.Core.Common
 
       data.Metadata.NextIDSeed++;
       PostProcess(data);
-      ParserUtils.ResolveInheritance(data);
     }
 
     /// <summary>

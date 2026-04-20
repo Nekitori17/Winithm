@@ -1,5 +1,7 @@
-using System.Collections.Generic;
+using System;
+using Winithm.Core.Common;
 using Winithm.Core.Interfaces;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
 {
@@ -7,18 +9,81 @@ namespace Winithm.Core.Data
   /// Hierarchical transform node from [GROUPS].
   /// Format: + <ID> <initX> <initY> <initScale> <initScaleX> <initScaleY> <initRotation>
   /// </summary>
-  public class GroupData : IStoryboardTarget<StoryboardProperty>
+  public class GroupData : IStoryboardable<StoryboardProperty>, IDeepCloneable<GroupData>
   {
+    public event Action<GroupData> OnDataChanged;
+
     public string ID;
-    public string Name;
-    public string ParentGroupID;
+    private string _name;
+    public string Name { get => _name; set { if (_name == value) return; _name = value; OnDataChanged?.Invoke(this); } }
 
-    public float InitX = 0f;
-    public float InitY = 0f;
-    public float InitScaleX = 1f;
-    public float InitScaleY = 1f;
-    public float InitRotation = 0f;
+    private string _parentGroupID;
+    public string ParentGroupID { get => _parentGroupID; set { if (_parentGroupID == value) return; _parentGroupID = value; OnDataChanged?.Invoke(this); } }
 
-    public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
+    private float _initX = 0f;
+    public float InitX { get => _initX; set { if (_initX == value) return; _initX = value; OnDataChanged?.Invoke(this); } }
+
+    private float _initY = 0f;
+    public float InitY { get => _initY; set { if (_initY == value) return; _initY = value; OnDataChanged?.Invoke(this); } }
+
+    private float _initScaleX = 1f;
+    public float InitScaleX { get => _initScaleX; set { if (_initScaleX == value) return; _initScaleX = value; OnDataChanged?.Invoke(this); } }
+
+    private float _initScaleY = 1f;
+    public float InitScaleY { get => _initScaleY; set { if (_initScaleY == value) return; _initScaleY = value; OnDataChanged?.Invoke(this); } }
+
+    private float _initRotation = 0f;
+    public float InitRotation { get => _initRotation; set { if (_initRotation == value) return; _initRotation = value; OnDataChanged?.Invoke(this); } }
+
+    public Storyboard<StoryboardProperty> StoryboardEvents { get; set; } = new Storyboard<StoryboardProperty>();
+
+    public GroupData()
+    {
+      StoryboardEvents.OnStoryboardChanged += BubbleStoryboard;
+    }
+
+    public GroupData DeepClone(BeatTime? offset)
+    {
+      var cloned = new GroupData();
+
+      // Detach bubbling from the default StoryboardEvents created by constructor
+      cloned.StoryboardEvents.OnStoryboardChanged -= cloned.BubbleStoryboard;
+
+      cloned.ID = ID;
+      cloned.Name = Name;
+      cloned.ParentGroupID = ParentGroupID;
+      cloned.InitX = InitX;
+      cloned.InitY = InitY;
+      cloned.InitScaleX = InitScaleX;
+      cloned.InitScaleY = InitScaleY;
+      cloned.InitRotation = InitRotation;
+      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(offset);
+
+      // Re-wire bubbling to the cloned StoryboardEvents
+      cloned.StoryboardEvents.OnStoryboardChanged += cloned.BubbleStoryboard;
+
+      return cloned;
+    }
+
+    public static GroupData Parse(string text)
+    {
+      var current = new GroupData();
+
+      string[] parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+      if (parts.Length >= 1) current.ID = parts[0];
+      if (parts.Length >= 2) current.InitX = ParserUtils.ParseFloat(parts[1]);
+      if (parts.Length >= 3) current.InitY = ParserUtils.ParseFloat(parts[2]);
+      if (parts.Length >= 4) current.InitScaleX = ParserUtils.ParseFloat(parts[3]);
+      if (parts.Length >= 5) current.InitScaleY = ParserUtils.ParseFloat(parts[4]);
+      if (parts.Length >= 6) current.InitRotation = ParserUtils.ParseFloat(parts[5]);
+
+      return current;
+    }
+
+    public override string ToString() 
+      => $"{ID} {InitX} {InitY} {InitScaleX} {InitScaleY} {InitRotation}";
+
+    // Named delegate for clean subscribe/unsubscribe in DeepClone
+    private void BubbleStoryboard(Storyboard<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
   }
 }

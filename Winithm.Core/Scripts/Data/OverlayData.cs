@@ -8,7 +8,7 @@ namespace Winithm.Core.Data
   /// Post-processing shader overlay from [OVERLAYS].
   /// Format: + <ID> <initParam1> <initParam2> ...
   /// </summary>
-  public class OverlayData : IStoryboardTarget<string>
+  public class OverlayData : IStoryboardable<string>
   {
     public string ID;
     public string Name;
@@ -23,7 +23,7 @@ namespace Winithm.Core.Data
 
     public Dictionary<string, AnyValue> InitParams = new Dictionary<string, AnyValue>();
 
-    public Dictionary<string, List<StoryboardEvent>> StoryboardEvents { get; set; }
+    public Storyboard<string> StoryboardEvents { get; set; }
 
   }
 }

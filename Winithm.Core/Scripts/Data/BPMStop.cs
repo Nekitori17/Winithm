@@ -1,50 +1,113 @@
+using System;
 using Winithm.Core.Common;
+using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// BPM stop defining tempo at a given time.
-  /// Format: + <StartTimeSeconds> <BPM> <TimeSignature>
+  /// Represents a tempo change at a specific beat.
   /// </summary>
-  public class BPMStop
+  public class BPMStop : IDeepCloneable<BPMStop>
   {
-    public BeatTime StartBeat;
-    public float BPM;
-    public int TimeSignature;
-    public float FloatStartBeat;
+    public event Action<BPMStop> OnStartBeatChanged;
+    public event Action<BPMStop> OnBPMChanged;
+    public event Action<BPMStop> OnDataChanged;
 
-    /// <summary>Pre-calculated execution time in seconds. Engine computes this based on BaseOffset.</summary>
-    public float StartTimeSeconds;
+    private BeatTime _startBeat;
+    public BeatTime StartBeat { get => _startBeat; set { if (_startBeat != value) { _startBeat = value; OnStartBeatChanged?.Invoke(this); } } }
+
+    private float _bpm;
+    public float BPM { get => _bpm; set { if (_bpm != value) { _bpm = value; OnBPMChanged?.Invoke(this); } } }
+
+    private int _timeSignature;
+    public int TimeSignature { get => _timeSignature; set { if (_timeSignature != value) { _timeSignature = value; OnDataChanged?.Invoke(this); } } }
+
+    public double StartTimeSeconds;
+
+    public float BeatsPerSecond => BPM / 60f;
 
     public BPMStop(BeatTime startBeat, float bpm, int timeSignature)
     {
-      StartBeat = startBeat;
-      BPM = bpm;
-      TimeSignature = timeSignature;
-      FloatStartBeat = startBeat.Beat + startBeat.Numerator / startBeat.Denominator;
-      StartTimeSeconds = 0f;
+      _startBeat = startBeat;
+      _bpm = bpm;
+      _timeSignature = timeSignature;
+      StartTimeSeconds = 0.0;
     }
 
-    public float BeatsPerSecond => BPM / 60f;
+    public static readonly BPMStop NaN = new BPMStop(BeatTime.NaN, 0, 0);
+    public static readonly BPMStop Max = new BPMStop(BeatTime.Max, 0, 0);
+
+    public BPMStop DeepClone(BeatTime? offset)
+    {
+      return new BPMStop(_startBeat + (offset ?? BeatTime.Zero), _bpm, _timeSignature)
+      {
+        StartTimeSeconds = StartTimeSeconds
+      };
+    }
+
+    public static BPMStop Parse(string text)
+    {
+      var current = new BPMStop(BeatTime.Zero, 0, 0);
+
+      var parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+      if (parts.Length >= 1) current.StartBeat =
+        BeatTime.TryParse(parts[0], out BeatTime startBeat) ? startBeat : BeatTime.Zero;
+      if (parts.Length >= 2) current.BPM =
+        ParserUtils.TryParseFloat(parts[1], out float bpm) ? bpm : 120f;
+      if (parts.Length >= 3) current.TimeSignature =
+        int.TryParse(parts[2], out int signature) ? signature : 4;
+
+      return current;
+    }
+
+    public override string ToString() => $"{StartBeat} {BPM} {TimeSignature}";
   }
 
   /// <summary>
-  /// Defines the global offset for Beat 0:0/0.
-  /// Used by the Engine to align the entire beat grid to the audio.
+  /// The global timing foundation for the beat grid.
   /// </summary>
   public class BaseBPM
   {
-    public float BaseOffsetSeconds;
-    public float InitialBPM;
-    public int TimeSignature;
+    public event Action<BaseBPM> OnBeatChanged;
+    public event Action<BaseBPM> OnDataChanged;
 
-    public BaseBPM(float offsetSeconds, float bpm, int timeSignature)
-    {
-      BaseOffsetSeconds = offsetSeconds;
-      InitialBPM = bpm;
-      TimeSignature = timeSignature;
-    }
+    private double _baseOffsetSeconds;
+    public double BaseOffsetSeconds { get => _baseOffsetSeconds; set { if (_baseOffsetSeconds != value) { _baseOffsetSeconds = value; OnBeatChanged?.Invoke(this); } } }
+
+    private float _initialBPM;
+    public float InitialBPM { get => _initialBPM; set { if (_initialBPM != value) { _initialBPM = value; OnBeatChanged?.Invoke(this); } } }
+
+    private int _timeSignature;
+    public int TimeSignature { get => _timeSignature; set { if (_timeSignature != value) { _timeSignature = value; OnDataChanged?.Invoke(this); } } }
 
     public float BeatsPerSecond => InitialBPM / 60f;
+
+    public BaseBPM(double offsetSeconds, float bpm, int timeSignature)
+    {
+      _baseOffsetSeconds = offsetSeconds;
+      _initialBPM = bpm;
+      _timeSignature = timeSignature;
+    }
+
+    public static readonly BaseBPM NaN = new BaseBPM(0, 0, 0);
+
+    public static BaseBPM Parse(string text)
+    {
+      var current = new BaseBPM(0, 0, 0);
+
+      var parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+      if (parts.Length >= 1) current.BaseOffsetSeconds =
+        ParserUtils.TryParseDouble(parts[0], out double offset) ? offset : 0.0;
+      if (parts.Length >= 2) current.InitialBPM =
+        ParserUtils.TryParseFloat(parts[1], out float bpm) ? bpm : 0f;
+      if (parts.Length >= 3) current.TimeSignature =
+        int.TryParse(parts[2], out int signature) ? signature : 0;
+
+      return current;
+    }
+
+    public override string ToString() => $"{BaseOffsetSeconds} {InitialBPM} {TimeSignature}";
   }
 }

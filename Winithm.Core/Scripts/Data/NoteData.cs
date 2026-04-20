@@ -1,6 +1,8 @@
-using System.Diagnostics;
+using System;
 using Winithm.Core.Common;
 using Winithm.Core.Managers;
+
+using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Data
 {
@@ -24,16 +26,37 @@ namespace Winithm.Core.Data
     Right
   }
 
-  public class NoteData
-  { 
+  public class NoteData : IDeepCloneable<NoteData>
+  {
+    /// <summary>Fired when StartBeat changes; Manager uses this to re-sort.</summary>
+    public event Action<NoteData> OnStartBeatChanged;
+    /// <summary>Fired when Side changes; Manager uses this to migrate lanes.</summary>
+    public event Action<NoteData> OnSideChanged;
+    /// <summary>Fired on any non-structural property change.</summary>
+    public event Action<NoteData> OnDataChanged;
+
     public string ID;
-    public NoteType Type = NoteType.Tap;
-    public BeatTime StartBeat;
-    public float Length = 0;
-    public float X = 0;
-    public float Width = 1;
-    public NoteSide Side = NoteSide.Bottom;
-    public int FakeType = 0;
+
+    private NoteType _type = NoteType.Tap;
+    public NoteType Type { get => _type; set { if (_type == value) return; _type = value; OnDataChanged?.Invoke(this); } }
+
+    private BeatTime _startBeat = BeatTime.NaN;
+    public BeatTime StartBeat { get => _startBeat; set { if (_startBeat == value) return; _startBeat = value; OnStartBeatChanged?.Invoke(this); } }
+
+    private double _length = 0;
+    public double Length { get => _length; set { if (_length == value) return; _length = value; OnDataChanged?.Invoke(this); } }
+
+    private float _x = 0;
+    public float X { get => _x; set { if (_x == value) return; _x = value; OnDataChanged?.Invoke(this); } }
+
+    private float _width = 1;
+    public float Width { get => _width; set { if (_width == value) return; _width = value; OnDataChanged?.Invoke(this); } }
+
+    private NoteSide _side = NoteSide.Bottom;
+    public NoteSide Side { get => _side; set { if (_side == value) return; _side = value; OnSideChanged?.Invoke(this); } }
+
+    private int _fakeType = 0;
+    public int FakeType { get => _fakeType; set { if (_fakeType == value) return; _fakeType = value; OnDataChanged?.Invoke(this); } }
 
     public bool IsHittable => FakeType == 0;
     public bool IsMutedGhost => FakeType == 1;
@@ -58,33 +81,47 @@ namespace Winithm.Core.Data
     // Resource Pack
     public ResourcePack? ResourcePack;
 
-    public static NoteType ParseNoteType(string text)
+    public NoteData DeepClone(BeatTime? offset)
     {
-      switch (text.Trim())
+      return new NoteData()
       {
-        case "Tap": return NoteType.Tap;
-        case "Hold": return NoteType.Hold;
-        case "Drag": return NoteType.Drag;
-        case "Focus": return NoteType.Focus;
-        case "Close": return NoteType.Close;
-        default:
-          Trace.TraceWarning($"[WinithmParser] Unknown note type: '{text}', defaulting to Tap.");
-          return NoteType.Tap;
-      }
+        ID = ID,
+        Type = Type,
+        StartBeat = StartBeat + (offset ?? BeatTime.Zero),
+        Length = Length,
+        X = X,
+        Width = Width,
+        Side = Side,
+        FakeType = FakeType,
+        ResourcePack = ResourcePack
+      };
     }
 
-    public static NoteSide ParseSide(string text)
+    public static NoteData Parse(string text)
     {
-      switch (text.Trim())
-      {
-        case "Top": return NoteSide.Top;
-        case "Bottom": return NoteSide.Bottom;
-        case "Left": return NoteSide.Left;
-        case "Right": return NoteSide.Right;
-        default:
-          Trace.TraceWarning($"[WinithmParser] Unknown side: '{text}', defaulting to Bottom.");
-          return NoteSide.Bottom;
-      }
+      var current = new NoteData();
+
+      string[] parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+      if (parts.Length >= 1) current.ID = parts[0];
+      if (parts.Length >= 2) current.Type = 
+        Enum.TryParse<NoteType>(parts[1], true, out var t) ? t : NoteType.Tap;
+      if (parts.Length >= 3) current.StartBeat =
+        BeatTime.TryParse(parts[2], out var sb) ? sb : BeatTime.Zero;
+      if (parts.Length >= 4) current.Length =
+        ParserUtils.TryParseDouble(parts[3], out double l) ? l : 0.0;
+      if (parts.Length >= 5) current.X =
+        ParserUtils.TryParseFloat(parts[4], out float x) ? x : 0.0f;
+      if (parts.Length >= 6) current.Width =
+        ParserUtils.TryParseFloat(parts[5], out float w) ? w : 1.0f;
+      if (parts.Length >= 7) current.Side =
+        Enum.TryParse<NoteSide>(parts[6], true, out var s) ? s : NoteSide.Bottom;
+      if (parts.Length >= 8) current.FakeType =
+        int.TryParse(parts[7], out int f) ? f : 0;
+
+      return current;
     }
+
+    public override string ToString() 
+      => $"{ID} {Type} {StartBeat} {Length} {Side} {FakeType}";
   }
 }

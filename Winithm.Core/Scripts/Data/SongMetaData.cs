@@ -11,8 +11,8 @@ namespace Winithm.Core.Data
     public string Artist = "Noname";
     public string ArtistAlt;
     public string Tags = "Genreless";
-    public float PreviewStart = 0;
-    public float PreviewEnd = 15;
+    public double PreviewStart = 0;
+    public double PreviewEnd = 15;
 
     public ResourceData Resources = new ResourceData();
     public List<ChartReference> Charts = new List<ChartReference>();

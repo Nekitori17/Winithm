@@ -2,6 +2,7 @@ using Godot;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Winithm.Core.Interfaces;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
 {
@@ -17,17 +18,15 @@ namespace Winithm.Core.Data
   /// HUD component definition from [COMPONENTS].
   /// Format: * <Type> <initX> <initY> <initScale> <initAlpha> <anchorX> <anchorY>
   /// </summary>
-  public class ComponentData : IStoryboardTarget<StoryboardProperty>
+  public class ComponentData : IStoryboardable<StoryboardProperty>
   {
-    public ComponentType Type;
+    public ComponentType Type = ComponentType.Info;
 
     public float InitX = 0f;
     public float InitY = 0f;
     public float InitScale = 1f;
     public float InitAlpha = 1f;
-    public Vector2 Anchor;
-
-    public Dictionary<StoryboardProperty, List<StoryboardEvent>> StoryboardEvents { get; set; }
+    public Storyboard<StoryboardProperty> StoryboardEvents { get; set; }
 
     public static ComponentType ParseType(string text)
     {

@@ -4,9 +4,7 @@ using System.Numerics;
 namespace Winithm.Core.Common
 {
   /// <summary>
-  /// Deterministic timing format: B:N/D
-  /// where B = base beat, N = numerator, D = denominator.
-  /// Example: "0:1/2" = 0.5 beats, "1:3/4" = 1.75 beats
+  /// Deterministic timing format: B:N/D (Base beat + Numerator/Denominator).
   /// </summary>
   public struct BeatTime : IComparable, IComparable<BeatTime>, IEquatable<BeatTime>
   {
@@ -15,8 +13,7 @@ namespace Winithm.Core.Common
     public int Denominator { get; private set; }
 
     /// <summary>
-    /// Pre-computed absolute beat value (e.g., 0:1/2 → 0.5).
-    /// Uses double instead of float to avoid precision loss at large beat values.
+    /// Pre-computed absolute beat value (double avoids precision loss at large values).
     /// </summary>
     public double AbsoluteValue { get; private set; }
 
@@ -44,20 +41,14 @@ namespace Winithm.Core.Common
 
     public static readonly BeatTime Zero = new BeatTime(0, 0, 0);
     public static readonly BeatTime NaN = new BeatTime(0, 0, 0);
-
-    /// <summary>
-    /// A large sentinel value. Note: BeatTime values with a fractional part
-    /// can exceed this — use only as a practical upper bound, not a true maximum.
-    /// </summary>
-    public static readonly BeatTime Sentinel = new BeatTime(int.MaxValue, 0, 0);
+    public static readonly BeatTime Max = new BeatTime(int.MaxValue, 1, 1);
 
     // ==========================================
     // Parsing
     // ==========================================
 
     /// <summary>
-    /// Parses a BeatTime string in the format "B" or "B:N/D".
-    /// Throws <see cref="FormatException"/> if the input is invalid.
+    /// Parses a BeatTime string ("B" or "B:N/D"). Throws FormatException if invalid.
     /// </summary>
     public static BeatTime Parse(string text)
     {
@@ -69,8 +60,7 @@ namespace Winithm.Core.Common
     }
 
     /// <summary>
-    /// Tries to parse a BeatTime string in the format "B" or "B:N/D".
-    /// Returns false without throwing if the input is invalid.
+    /// Try parsing a BeatTime string ("B" or "B:N/D"). Returns false if invalid.
     /// </summary>
     public static bool TryParse(string text, out BeatTime result)
     {
@@ -160,7 +150,7 @@ namespace Winithm.Core.Common
       return NormalizeAndCreate(n1 * n2, d1 * d2);
     }
 
-    /// <summary>Divides a by b. Throws <see cref="DivideByZeroException"/> if b is zero.</summary>
+    /// <summary>Divides a by b. Throws DivideByZeroException if b is zero.</summary>
     public static BeatTime operator /(BeatTime a, BeatTime b)
     {
       if (b == Zero)
@@ -214,9 +204,7 @@ namespace Winithm.Core.Common
     // ==========================================
 
     /// <summary>
-    /// Converts a BeatTime to its fully reduced improper fraction (n/d, d > 0).
-    /// The stored Beat/Numerator/Denominator are already normalized by the constructor,
-    /// so this is a cheap reassembly — no GCD computation needed here.
+    /// Converts BeatTime to a fully reduced improper fraction (n/d).
     /// </summary>
     private static void ToReducedFraction(BeatTime bt, out BigInteger numerator, out BigInteger denominator)
     {
@@ -240,9 +228,7 @@ namespace Winithm.Core.Common
     }
 
     /// <summary>
-    /// Takes an arbitrary improper fraction n/d produced by arithmetic,
-    /// reduces it to lowest terms, then splits into the canonical
-    /// Beat + (Numerator/Denominator) mixed-number form.
+    /// Reduces an improper fraction (n/d) to lowest terms and canonical form.
     /// </summary>
     private static BeatTime NormalizeAndCreate(BigInteger n, BigInteger d)
     {

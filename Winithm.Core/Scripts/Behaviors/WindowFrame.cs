@@ -19,7 +19,7 @@ namespace Winithm.Core.Behaviors
       Color color = _parent.TitleBarColor;
       color.a = 0.5f;
 
-      float lineWidth = Mathf.Max(1f, _parent.TitleBarHeight * 0.05f);
+      float lineWidth = Mathf.Max(1f, _parent.TitleBarHeight * 0.025f);
       DrawRect(new Rect2(Vector2.Zero, RectSize), color, false, lineWidth, true);
     }
   }

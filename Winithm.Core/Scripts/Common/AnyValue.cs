@@ -8,20 +8,14 @@ namespace Winithm.Core.Common
   /// </summary>
   public enum AnyValueType
   {
-    Float,
-    Vec2,
-    Vec3,
-    Vec4,
-    Bool,
-    String,
-    Inherited
+    Float, Vec2, Vec3, Vec4, Bool, String, Inherited
   }
 
   /// <summary>
-  /// Represents a universal value that can be a float, a vector up to 4D, an int, a string, or an inherited placeholder.
-  /// Formats: "0.5|0.3|1" (Vec3), "0.5" (Float), "-" (Inherited), "Hello" (String).
+  /// Universal value for float, vector (up to 4D), string, or inherited placeholder.
+  /// Formats: "1|2|3" (Vec3), "1" (Float), "-" (Inherited), "string".
   /// </summary>
-  public struct AnyValue
+  public struct AnyValue : IComparable, IComparable<AnyValue>, IEquatable<AnyValue>
   {
     public float X;
     public float Y;
@@ -73,9 +67,9 @@ namespace Winithm.Core.Common
       Type = AnyValueType.Bool;
     }
 
-    /// <summary>
-    /// Returns the number of float components for a given type.
-    /// </summary>
+    public static AnyValue NaN = new AnyValue(0);
+
+    /// <summary>Number of float components.</summary>
     public static int ComponentCount(AnyValueType type)
     {
       switch (type)
@@ -89,10 +83,7 @@ namespace Winithm.Core.Common
       }
     }
 
-    /// <summary>
-    /// Parses a string into the most appropriate AnyValue representation.
-    /// Uses | as the vector delimiter.
-    /// </summary>
+    /// <summary>Parses string to AnyValue. Vector delimiter is '|'.</summary>
     public static AnyValue Parse(string text)
     {
       if (string.IsNullOrWhiteSpace(text)) return new AnyValue("");
@@ -134,11 +125,8 @@ namespace Winithm.Core.Common
       return new AnyValue(text.Trim('\"'));
     }
 
-    /// <summary>
-    /// Linearly interpolate between two numeric/vector AnyValues.
-    /// Non-interpolatable types (String, Inherited, Bool) snap at t >= 1.
-    /// </summary>
-    public static AnyValue Lerp(AnyValue from, AnyValue to, float t)
+    /// <summary>Linearly interpolates numeric types. Non-numeric types snap at t >= 1.</summary>
+    public static AnyValue Lerp(AnyValue from, AnyValue to, double t)
     {
       if (
         from.Type == AnyValueType.String ||
@@ -167,10 +155,10 @@ namespace Winithm.Core.Common
         default: result.Type = AnyValueType.Float; break;
       }
 
-      if (maxSize >= 1) result.X = from.X + (to.X - from.X) * t;
-      if (maxSize >= 2) result.Y = from.Y + (to.Y - from.Y) * t;
-      if (maxSize >= 3) result.Z = from.Z + (to.Z - from.Z) * t;
-      if (maxSize >= 4) result.W = from.W + (to.W - from.W) * t;
+      if (maxSize >= 1) result.X = (float)(from.X + (to.X - from.X) * t);
+      if (maxSize >= 2) result.Y = (float)(from.Y + (to.Y - from.Y) * t);
+      if (maxSize >= 3) result.Z = (float)(from.Z + (to.Z - from.Z) * t);
+      if (maxSize >= 4) result.W = (float)(from.W + (to.W - from.W) * t);
 
       return result;
     }
@@ -199,6 +187,219 @@ namespace Winithm.Core.Common
         case AnyValueType.Vec4: return $"{ParserUtils.FormatFloat(X)}|{ParserUtils.FormatFloat(Y)}|{ParserUtils.FormatFloat(Z)}|{ParserUtils.FormatFloat(W)}";
         default: return "";
       }
+    }
+
+    // ==========================================
+    // IComparable / IEquatable
+    // ==========================================
+
+    /// <summary>
+    /// Compares by squared magnitude for Vec types, by X for scalar types.
+    /// String and Inherited are not orderable — throws InvalidOperationException.
+    /// </summary>
+    public int CompareTo(AnyValue other)
+    {
+      AssertNumeric(this);
+      AssertNumeric(other);
+      return SquaredMagnitude(this).CompareTo(SquaredMagnitude(other));
+    }
+
+    public int CompareTo(object obj)
+    {
+      if (obj == null) return 1;
+      if (obj is AnyValue other) return CompareTo(other);
+      throw new ArgumentException("Object must be of type AnyValue.", nameof(obj));
+    }
+
+    public bool Equals(AnyValue other)
+    {
+      if (Type != other.Type) return false;
+
+      switch (Type)
+      {
+        case AnyValueType.String: return StringValue == other.StringValue;
+        case AnyValueType.Inherited: return true;
+        default:
+          return X == other.X && Y == other.Y && Z == other.Z && W == other.W;
+      }
+    }
+
+    public override bool Equals(object obj)
+    {
+      if (obj is AnyValue other) return Equals(other);
+      return false;
+    }
+
+    public override int GetHashCode()
+    {
+      switch (Type)
+      {
+        case AnyValueType.String:
+          return (StringValue ?? "").GetHashCode();
+        case AnyValueType.Inherited:
+          return Type.GetHashCode();
+        default:
+          unchecked
+          {
+            int hash = Type.GetHashCode();
+            hash = (hash * 397) ^ X.GetHashCode();
+            hash = (hash * 397) ^ Y.GetHashCode();
+            hash = (hash * 397) ^ Z.GetHashCode();
+            hash = (hash * 397) ^ W.GetHashCode();
+            return hash;
+          }
+      }
+    }
+
+    // ==========================================
+    // Comparison Operators
+    // ==========================================
+
+    public static bool operator ==(AnyValue a, AnyValue b) => a.Equals(b);
+    public static bool operator !=(AnyValue a, AnyValue b) => !a.Equals(b);
+    public static bool operator <(AnyValue a, AnyValue b) => a.CompareTo(b) < 0;
+    public static bool operator >(AnyValue a, AnyValue b) => a.CompareTo(b) > 0;
+    public static bool operator <=(AnyValue a, AnyValue b) => a.CompareTo(b) <= 0;
+    public static bool operator >=(AnyValue a, AnyValue b) => a.CompareTo(b) >= 0;
+
+    // ==========================================
+    // Arithmetic Operators
+    // ==========================================
+
+    /// <summary>Component-wise addition. Result type = widest of the two operands.</summary>
+    public static AnyValue operator +(AnyValue a, AnyValue b)
+    {
+      AssertNumeric(a); AssertNumeric(b);
+      AnyValue r = MakeResultShell(a, b);
+      int n = ComponentCount(r.Type);
+      if (n >= 1) r.X = a.X + b.X;
+      if (n >= 2) r.Y = a.Y + b.Y;
+      if (n >= 3) r.Z = a.Z + b.Z;
+      if (n >= 4) r.W = a.W + b.W;
+      return r;
+    }
+
+    /// <summary>Component-wise subtraction. Result type = widest of the two operands.</summary>
+    public static AnyValue operator -(AnyValue a, AnyValue b)
+    {
+      AssertNumeric(a); AssertNumeric(b);
+      AnyValue r = MakeResultShell(a, b);
+      int n = ComponentCount(r.Type);
+      if (n >= 1) r.X = a.X - b.X;
+      if (n >= 2) r.Y = a.Y - b.Y;
+      if (n >= 3) r.Z = a.Z - b.Z;
+      if (n >= 4) r.W = a.W - b.W;
+      return r;
+    }
+
+    public static AnyValue operator *(AnyValue a, AnyValue b)
+    {
+      AssertNumeric(a); AssertNumeric(b);
+
+      if (ComponentCount(a.Type) == 1 && ComponentCount(b.Type) > 1)
+      {
+        AnyValue r = b;
+        int n = ComponentCount(b.Type);
+        if (n >= 1) r.X = b.X * a.X;
+        if (n >= 2) r.Y = b.Y * a.X;
+        if (n >= 3) r.Z = b.Z * a.X;
+        if (n >= 4) r.W = b.W * a.X;
+        return r;
+      }
+      if (ComponentCount(b.Type) == 1 && ComponentCount(a.Type) > 1)
+      {
+        AnyValue r = a;
+        int n = ComponentCount(a.Type);
+        if (n >= 1) r.X = a.X * b.X;
+        if (n >= 2) r.Y = a.Y * b.X;
+        if (n >= 3) r.Z = a.Z * b.X;
+        if (n >= 4) r.W = a.W * b.X;
+        return r;
+      }
+
+      AnyValue shell = MakeResultShell(a, b);
+      int count = ComponentCount(shell.Type);
+      if (count >= 1) shell.X = a.X * b.X;
+      if (count >= 2) shell.Y = a.Y * b.Y;
+      if (count >= 3) shell.Z = a.Z * b.Z;
+      if (count >= 4) shell.W = a.W * b.W;
+      return shell;
+    }
+
+    public static AnyValue operator /(AnyValue a, AnyValue b)
+    {
+      AssertNumeric(a); AssertNumeric(b);
+
+      if (ComponentCount(b.Type) == 1)
+      {
+        if (b.X == 0f) throw new DivideByZeroException("[AnyValue] Cannot divide by zero scalar.");
+        AnyValue r = a;
+        int count = ComponentCount(a.Type);
+        if (count >= 1) r.X = a.X / b.X;
+        if (count >= 2) r.Y = a.Y / b.X;
+        if (count >= 3) r.Z = a.Z / b.X;
+        if (count >= 4) r.W = a.W / b.X;
+        return r;
+      }
+
+      AnyValue shell = MakeResultShell(a, b);
+      int n = ComponentCount(shell.Type);
+      if (n >= 1) { if (b.X == 0f) throw new DivideByZeroException("[AnyValue] Division by zero in X component."); shell.X = a.X / b.X; }
+      if (n >= 2) { if (b.Y == 0f) throw new DivideByZeroException("[AnyValue] Division by zero in Y component."); shell.Y = a.Y / b.Y; }
+      if (n >= 3) { if (b.Z == 0f) throw new DivideByZeroException("[AnyValue] Division by zero in Z component."); shell.Z = a.Z / b.Z; }
+      if (n >= 4) { if (b.W == 0f) throw new DivideByZeroException("[AnyValue] Division by zero in W component."); shell.W = a.W / b.W; }
+      return shell;
+    }
+
+    /// <summary>Negation (unary minus). Flips all numeric components.</summary>
+    public static AnyValue operator -(AnyValue a)
+    {
+      AssertNumeric(a);
+      AnyValue r = a;
+      r.X = -a.X; r.Y = -a.Y; r.Z = -a.Z; r.W = -a.W;
+      return r;
+    }
+
+    // ==========================================
+    // Private Helpers
+    // ==========================================
+
+    private static void AssertNumeric(AnyValue v)
+    {
+      if (v.Type == AnyValueType.String || v.Type == AnyValueType.Inherited)
+        throw new InvalidOperationException(
+          $"[AnyValue] Operator not supported for type {v.Type}.");
+    }
+
+    /// <summary>
+    /// Creates a zeroed result shell whose Type matches the wider of the two operands
+    /// (same logic used by Lerp).
+    /// </summary>
+    private static AnyValue MakeResultShell(AnyValue a, AnyValue b)
+    {
+      int maxSize = Math.Max(ComponentCount(a.Type), ComponentCount(b.Type));
+      AnyValue r = new AnyValue();
+      switch (maxSize)
+      {
+        case 1: r.Type = AnyValueType.Float; break;
+        case 2: r.Type = AnyValueType.Vec2; break;
+        case 3: r.Type = AnyValueType.Vec3; break;
+        case 4: r.Type = AnyValueType.Vec4; break;
+        default: r.Type = AnyValueType.Float; break;
+      }
+      return r;
+    }
+
+
+
+    /// <summary>
+    /// Returns the squared magnitude (dot product with itself) for ordering purposes.
+    /// For Bool/Float this is simply X².
+    /// </summary>
+    private static double SquaredMagnitude(AnyValue v)
+    {
+      double x = v.X, y = v.Y, z = v.Z, w = v.W;
+      return x * x + y * y + z * z + w * w;
     }
   }
 }

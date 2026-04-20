@@ -16,8 +16,6 @@ namespace Winithm.Core.Managers
 
   public struct ResourcePackConfig
   {
-    public Dictionary<HitResultType, Color> JudgeColors;
-    public float VFXSpeed;
     public bool Particle;
     public Color HighlightColor;
   }
@@ -79,9 +77,8 @@ namespace Winithm.Core.Managers
           VFX = new SpriteFrames(),
           Config = new ResourcePackConfig
           {
-            JudgeColors = new Dictionary<HitResultType, Color>(),
-            VFXSpeed = 1f,
-            Particle = true
+            Particle = true,
+            HighlightColor = Colors.Yellow,
           }
         };
 
@@ -90,12 +87,12 @@ namespace Winithm.Core.Managers
         LoadTexture(resourcePackPath.PlusFile("tex"), ref resourcePack);
         LoadSoundEffect(resourcePackPath.PlusFile("sfx"), ref resourcePack);
 
-        // Load VFX if it exists
-        string vfxFramesPath = resourcePackPath.PlusFile("hit_frames.tres");
-        if (new File().FileExists(vfxFramesPath))
-        {
-          resourcePack.VFX = GD.Load<SpriteFrames>(vfxFramesPath);
-        }
+        // // Load VFX if it exists
+        // string vfxFramesPath = resourcePackPath.PlusFile("hit_frames.tres");
+        // if (new File().FileExists(vfxFramesPath))
+        // {
+        //   resourcePack.VFX = GD.Load<SpriteFrames>(vfxFramesPath);
+        // }
 
         _resourcePacks[resourcePackName] = resourcePack;
       }
@@ -129,14 +126,8 @@ namespace Winithm.Core.Managers
 
           switch (key)
           {
-            case "colorPerfect":
-              resourcePack.Config.JudgeColors[HitResultType.Perfect] = StringToColor(val);
-              break;
-            case "colorGood":
-              resourcePack.Config.JudgeColors[HitResultType.Good] = StringToColor(val);
-              break;
-            case "colorBad":
-              resourcePack.Config.JudgeColors[HitResultType.Bad] = StringToColor(val);
+            case "particle":
+              resourcePack.Config.Particle = bool.Parse(val);
               break;
             case "highlightColor":
               resourcePack.Config.HighlightColor = StringToColor(val);
