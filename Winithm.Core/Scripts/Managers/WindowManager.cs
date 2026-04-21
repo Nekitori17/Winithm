@@ -82,15 +82,15 @@ namespace Winithm.Core.Managers
       windowData.OnLifeCycleChanged -= HandleLifeCycleChanged;
       windowData.OnLifeCycleChanged += HandleLifeCycleChanged;
 
-      windowData.OnLifeCycleChanged -= HandleUnFocusChanged;
-      windowData.OnLifeCycleChanged += HandleUnFocusChanged;
+      windowData.OnUnFocusChanged -= HandleUnFocusChanged;
+      windowData.OnUnFocusChanged += HandleUnFocusChanged;
     }
 
     private void UnsubscribeChangeEvent(WindowData windowData)
     {
       windowData.OnDataChanged -= HandleDataChanged;
       windowData.OnLifeCycleChanged -= HandleLifeCycleChanged;
-      windowData.OnLifeCycleChanged -= HandleUnFocusChanged;
+      windowData.OnUnFocusChanged -= HandleUnFocusChanged;
     }
 
     /// <summary>
