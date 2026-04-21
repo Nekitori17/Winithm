@@ -11,9 +11,9 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages Note segments, boundaries, spatial extents, and rendering lifetimes.
   /// </summary>
-  public class Note : IDeepCloneable<Note>
+  public class NoteManager : IDeepCloneable<NoteManager>
   {
-    public event Action<Note> OnNoteChanged;
+    public event Action<NoteManager> OnNoteChanged;
 
     public WindowData WindowData { get; private set; } = new WindowData();
 
@@ -26,9 +26,9 @@ namespace Winithm.Core.Managers
 
     private int _updateLockCount = 0;
 
-    public Note DeepClone(BeatTime? offset)
+    public NoteManager DeepClone(BeatTime? offset)
     {
-      var cloned = new Note();
+      var cloned = new NoteManager();
       cloned.SetWindowData(this.WindowData);
 
       cloned.BeginUpdate();

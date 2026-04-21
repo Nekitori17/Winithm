@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Winithm.Core.Common;
 using Winithm.Core.Interfaces;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
 {
@@ -23,7 +24,7 @@ namespace Winithm.Core.Data
 
     public Dictionary<string, AnyValue> InitParams = new Dictionary<string, AnyValue>();
 
-    public Storyboard<string> StoryboardEvents { get; set; }
+    public StoryboardManager<string> StoryboardEvents { get; set; } = new StoryboardManager<string>();
 
   }
 }

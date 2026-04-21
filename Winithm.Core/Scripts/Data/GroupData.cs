@@ -35,7 +35,7 @@ namespace Winithm.Core.Data
     private float _initRotation = 0f;
     public float InitRotation { get => _initRotation; set { if (_initRotation == value) return; _initRotation = value; OnDataChanged?.Invoke(this); } }
 
-    public Storyboard<StoryboardProperty> StoryboardEvents { get; set; } = new Storyboard<StoryboardProperty>();
+    public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; } = new StoryboardManager<StoryboardProperty>();
 
     public GroupData()
     {
@@ -84,6 +84,6 @@ namespace Winithm.Core.Data
       => $"{ID} {InitX} {InitY} {InitScaleX} {InitScaleY} {InitRotation}";
 
     // Named delegate for clean subscribe/unsubscribe in DeepClone
-    private void BubbleStoryboard(Storyboard<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
+    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
   }
 }

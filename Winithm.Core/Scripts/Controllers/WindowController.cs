@@ -5,10 +5,10 @@ using Winithm.Core.Common;
 using Winithm.Core.Data;
 using Winithm.Core.Logic;
 
-namespace Winithm.Core.Managers
+namespace Winithm.Core.Controllers
 {
   [Tool]
-  public class WindowManager : Node
+  public class WindowController : Node
   {
 
     protected TimeManager _timeManager;

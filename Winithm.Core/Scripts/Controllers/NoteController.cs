@@ -5,13 +5,13 @@ using Winithm.Core.Behaviors;
 using Winithm.Core.Data;
 using Winithm.Core.Logic;
 
-namespace Winithm.Core.Managers
+namespace Winithm.Core.Controllers
 {
   /// <summary>
   /// Manages note spawning, rendering, and lifecycle for all windows.
   /// Single instance with shared object pool.
   /// </summary>
-  public class NoteManager : Node
+  public class NoteController : Node
   {
     public event Action<string, NoteData> OnNoteMiss;
     public event Action<string, NoteData, float> OnDragReady;

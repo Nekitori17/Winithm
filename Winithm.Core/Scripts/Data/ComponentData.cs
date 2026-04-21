@@ -26,7 +26,7 @@ namespace Winithm.Core.Data
     public float InitY = 0f;
     public float InitScale = 1f;
     public float InitAlpha = 1f;
-    public Storyboard<StoryboardProperty> StoryboardEvents { get; set; }
+    public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; }
 
     public static ComponentType ParseType(string text)
     {

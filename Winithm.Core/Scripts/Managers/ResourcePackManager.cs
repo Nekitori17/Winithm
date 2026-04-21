@@ -28,9 +28,9 @@ namespace Winithm.Core.Managers
     public ResourcePackConfig Config;
   }
 
-  public class NoteResourceManager : Node
+  public class ResourcePackManager : Node
   {
-    public static NoteResourceManager Instance { get; private set; }
+    public static ResourcePackManager Instance { get; private set; }
 
     private Dictionary<string, ResourcePack> _resourcePacks;
     

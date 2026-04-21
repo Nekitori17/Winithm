@@ -20,9 +20,9 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Tracks timeline events for generic properties, parsing and computing values at exact points.
   /// </summary>
-  public class Storyboard<TProp> : IDeepCloneable<Storyboard<TProp>>
+  public class StoryboardManager<TProp> : IDeepCloneable<StoryboardManager<TProp>>
   {
-    public event Action<Storyboard<TProp>> OnStoryboardChanged;
+    public event Action<StoryboardManager<TProp>> OnStoryboardChanged;
 
     private int _updateLockCount = 0;
 
@@ -50,9 +50,9 @@ namespace Winithm.Core.Managers
 
     private readonly Dictionary<EventData, TProp> _eventKeyMap = new Dictionary<EventData, TProp>();
 
-    public Storyboard<TProp> DeepClone(BeatTime? offset)
+    public StoryboardManager<TProp> DeepClone(BeatTime? offset)
     {
-      var newStoryboard = new Storyboard<TProp>();
+      var newStoryboard = new StoryboardManager<TProp>();
 
       newStoryboard.BeginUpdate();
 

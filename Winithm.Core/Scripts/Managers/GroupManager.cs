@@ -11,9 +11,9 @@ namespace Winithm.Core.Managers
   /// Manages GroupData configurations and tracks underlying data changes.
   /// Storyboard changes are already bubbled through GroupData.OnDataChanged.
   /// </summary>
-  public class Group : IDeepCloneable<Group>
+  public class GroupManager : IDeepCloneable<GroupManager>
   {
-    public event Action<Group> OnGroupChanged;
+    public event Action<GroupManager> OnGroupChanged;
 
     public Dictionary<string, GroupData> GroupCollection { get; private set; } = new Dictionary<string, GroupData>();
 
@@ -32,9 +32,9 @@ namespace Winithm.Core.Managers
       if (_updateLockCount == 0) OnGroupChanged?.Invoke(this);
     }
 
-    public Group DeepClone(BeatTime? offset)
+    public GroupManager DeepClone(BeatTime? offset)
     {
-      var cloned = new Group();
+      var cloned = new GroupManager();
 
       cloned.BeginUpdate();
       foreach (var group in GroupCollection.Values)

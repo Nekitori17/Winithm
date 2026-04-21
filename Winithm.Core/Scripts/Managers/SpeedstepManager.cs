@@ -19,7 +19,7 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages scroll speed segments and evaluates visual lane distances.
   /// </summary>
-  public class SpeedStep: IDeepCloneable<SpeedStep>
+  public class SpeedStepManager: IDeepCloneable<SpeedStepManager>
   {
     public event Action<SpeedStepData> OnSpeedStepChanged;
 
@@ -55,9 +55,9 @@ namespace Winithm.Core.Managers
     public List<SpeedStepData> SpeedStepCollection { get; private set; } = new List<SpeedStepData>();
     public FrameCache FrameCache { get; private set; } = new FrameCache();
 
-    public SpeedStep DeepClone(BeatTime? offset)
+    public SpeedStepManager DeepClone(BeatTime? offset)
     {
-      var newSpeedStep = new SpeedStep();
+      var newSpeedStep = new SpeedStepManager();
 
       newSpeedStep.BeginUpdate();
 

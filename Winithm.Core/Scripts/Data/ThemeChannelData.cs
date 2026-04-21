@@ -32,7 +32,7 @@ namespace Winithm.Core.Data
     private float _initNoteA = 1f;
     public float InitNoteA { get => _initNoteA; set { if (_initNoteA == value) return; _initNoteA = value; OnDataChanged?.Invoke(this); } }
 
-    public Storyboard<StoryboardProperty> StoryboardEvents { get; set; } = new Storyboard<StoryboardProperty>();
+    public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; } = new StoryboardManager<StoryboardProperty>();
 
     public ThemeChannelData()
     {
@@ -82,6 +82,6 @@ namespace Winithm.Core.Data
     }
 
     // Named delegate for clean subscribe/unsubscribe in DeepClone
-    private void BubbleStoryboard(Storyboard<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
+    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
   }
 }

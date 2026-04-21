@@ -21,7 +21,7 @@ namespace Winithm.Core.Data
     private float _multiplier = 1f;
     public float Multiplier { get => _multiplier; set { if (_multiplier != value) { _multiplier = value; OnDataChanged?.Invoke(this); } } }
 
-    public Storyboard<StoryboardProperty> StoryboardEvents { get; set; } = new Storyboard<StoryboardProperty>();
+    public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; } = new StoryboardManager<StoryboardProperty>();
 
     public SpeedStepData()
     {
@@ -47,7 +47,7 @@ namespace Winithm.Core.Data
     }
 
     // Named delegate for clean subscribe/unsubscribe in DeepClone
-    private void BubbleStoryboard(Storyboard<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
+    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
 
     public static SpeedStepData Parse(string text)
     {

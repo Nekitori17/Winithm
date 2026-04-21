@@ -15,6 +15,7 @@ namespace Winithm.Core.Data
   {
     public event Action<WindowData> OnDataChanged;
     public event Action<WindowData> OnLifeCycleChanged;
+    public event Action<WindowData> OnUnFocusChanged;
 
     public string ID;
     private string _name;
@@ -40,7 +41,7 @@ namespace Winithm.Core.Data
     public bool Borderless { get => _borderless; set { if (_borderless == value) return; _borderless = value; OnDataChanged?.Invoke(this); } }
 
     private bool _unFocus = false;
-    public bool UnFocus { get => _unFocus; set { if (_unFocus == value) return; _unFocus = value; OnDataChanged?.Invoke(this); } }
+    public bool UnFocus { get => _unFocus; set { if (_unFocus == value) return; _unFocus = value; OnUnFocusChanged?.Invoke(this); } }
 
     // Transform init values
     private float _initX = 640f;
@@ -72,9 +73,9 @@ namespace Winithm.Core.Data
     public float InitNoteA { get => _initNoteA; set { if (_initNoteA == value) return; _initNoteA = value; OnDataChanged?.Invoke(this); } }
 
     // Sub-managers
-    public Storyboard<StoryboardProperty> StoryboardEvents { get; set; } = new Storyboard<StoryboardProperty>();
-    public SpeedStep SpeedSteps { get; set; } = new SpeedStep();
-    public Note Notes { get; set; } = new Note();
+    public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; } = new StoryboardManager<StoryboardProperty>();
+    public SpeedStepManager SpeedSteps { get; set; } = new SpeedStepManager();
+    public NoteManager Notes { get; set; } = new NoteManager();
 
     /// <summary>Window spawn beat (first SpeedStep's start)</summary>
     public BeatTime StartBeat = BeatTime.NaN;
@@ -180,9 +181,9 @@ namespace Winithm.Core.Data
       cloned.EndBeat = EndBeat + (offset ?? BeatTime.Zero);
 
       // Clone sub-managers
-      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(offset) ?? new Storyboard<StoryboardProperty>();
-      cloned.SpeedSteps = SpeedSteps?.DeepClone(offset) ?? new SpeedStep();
-      cloned.Notes = Notes?.DeepClone(offset) ?? new Note();
+      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(offset) ?? new StoryboardManager<StoryboardProperty>();
+      cloned.SpeedSteps = SpeedSteps?.DeepClone(offset) ?? new SpeedStepManager();
+      cloned.Notes = Notes?.DeepClone(offset) ?? new NoteManager();
 
       // Re-wire sub-manager bubbling to the new clone
       cloned.StoryboardEvents.OnStoryboardChanged += cloned.BubbleStoryboard;
@@ -196,7 +197,7 @@ namespace Winithm.Core.Data
     }
 
     // Named delegates for clean subscribe/unsubscribe in DeepClone
-    private void BubbleStoryboard(Storyboard<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
+    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
     private void BubbleSpeedStep(SpeedStepData sd)
     {
       if (SpeedSteps.SpeedStepCollection.Count == 0)
@@ -205,8 +206,10 @@ namespace Winithm.Core.Data
         EndBeat = BeatTime.Zero;
 
         OnLifeCycleChanged?.Invoke(this);
+        return;
       }
-      else if (
+      
+      if (
         SpeedSteps.GetFirst().StartBeat != StartBeat ||
         SpeedSteps.GetLast().StartBeat != EndBeat
       )
@@ -215,10 +218,11 @@ namespace Winithm.Core.Data
         EndBeat = SpeedSteps.GetLast().StartBeat;
 
         OnLifeCycleChanged?.Invoke(this);
+        return;
       }
       
       OnDataChanged?.Invoke(this);
     }
-    private void BubbleNote(Note n) => OnDataChanged?.Invoke(this);
+    private void BubbleNote(NoteManager n) => OnDataChanged?.Invoke(this);
   }
 }

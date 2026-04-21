@@ -4,10 +4,10 @@ using Winithm.Core.Data;
 using Winithm.Core.Logic;
 using Winithm.Core.Common;
 
-namespace Winithm.Core.Managers
+namespace Winithm.Core.Controllers
 {
   [Tool]
-  public class ThemeChannelManager : Node
+  public class ThemeChannelController : Node
   {
     private Dictionary<string, ThemeChannelData> _themeChannels = new Dictionary<string, ThemeChannelData>();
     private Dictionary<string, (float LastBeat, Color Color, float NoteAlpha)> _lastStates = new Dictionary<string, (float, Color, float)>();

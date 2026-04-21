@@ -13,6 +13,6 @@ namespace Winithm.Core.Interfaces
     /// The mapped event sequences per property. Null by default to save memory.
     /// Lists must be sorted by StartBeat.
     /// </summary>
-    Storyboard<TProp> StoryboardEvents { get; set; }
+    StoryboardManager<TProp> StoryboardEvents { get; set; }
   }
 }

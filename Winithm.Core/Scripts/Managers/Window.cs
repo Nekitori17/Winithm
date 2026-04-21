@@ -10,9 +10,9 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages WindowData collections and monitors nested sub-manager (SpeedStep, Note, Storyboard) changes.
   /// </summary>
-  public class Window : IDeepCloneable<Window>
+  public class WindowManager : IDeepCloneable<WindowManager>
   {
-    public event Action<Window> OnWindowChanged;
+    public event Action<WindowManager> OnWindowChanged;
 
     public Metronome Metronome { get; private set; }
     public Dictionary<string, WindowData> WindowCollection { get; private set; } = new Dictionary<string, WindowData>();
@@ -32,9 +32,9 @@ namespace Winithm.Core.Managers
       if (_updateLockCount == 0) OnWindowChanged?.Invoke(this);
     }
 
-    public Window DeepClone(BeatTime? offset)
+    public WindowManager DeepClone(BeatTime? offset)
     {
-      var cloned = new Window();
+      var cloned = new WindowManager();
       cloned.SetMetronome(Metronome);
 
       cloned.BeginUpdate();
@@ -81,12 +81,16 @@ namespace Winithm.Core.Managers
 
       windowData.OnLifeCycleChanged -= HandleLifeCycleChanged;
       windowData.OnLifeCycleChanged += HandleLifeCycleChanged;
+
+      windowData.OnLifeCycleChanged -= HandleUnFocusChanged;
+      windowData.OnLifeCycleChanged += HandleUnFocusChanged;
     }
 
     private void UnsubscribeChangeEvent(WindowData windowData)
     {
       windowData.OnDataChanged -= HandleDataChanged;
       windowData.OnLifeCycleChanged -= HandleLifeCycleChanged;
+      windowData.OnLifeCycleChanged -= HandleUnFocusChanged;
     }
 
     /// <summary>
@@ -94,9 +98,16 @@ namespace Winithm.Core.Managers
     /// A single subscription here captures all nested changes without redundant wiring.
     /// </summary>
     private void HandleDataChanged(WindowData windowData) => NotifyChanged();
+    private void HandleUnFocusChanged(WindowData windowData) {
+      windowData.Notes.Compute();
+
+      NotifyChanged();
+    }
     private void HandleLifeCycleChanged(WindowData windowData) {
       windowData.Notes.Compute();
       ComputeAnimations(windowData);
+
+      NotifyChanged();
     }
 
     // ==========================================

@@ -4,10 +4,10 @@ using Winithm.Core.Data;
 using Winithm.Core.Logic;
 using Winithm.Core.Common;
 
-namespace Winithm.Core.Managers
+namespace Winithm.Core.Controllers
 {
   [Tool]
-  public class GroupManager : Node
+  public class GroupController : Node
   {
     private Dictionary<string, GroupData> _groupDataMap = new Dictionary<string, GroupData>();
     private Dictionary<string, Node2D> _groupNodes = new Dictionary<string, Node2D>();
