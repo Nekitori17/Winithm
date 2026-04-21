@@ -203,10 +203,10 @@ namespace Winithm.Core.Data
       {
         StartBeat = BeatTime.Zero;
         EndBeat = BeatTime.Zero;
+
         OnLifeCycleChanged?.Invoke(this);
       }
-
-      if (
+      else if (
         SpeedSteps.GetFirst().StartBeat != StartBeat ||
         SpeedSteps.GetLast().StartBeat != EndBeat
       )
