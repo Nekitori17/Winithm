@@ -13,7 +13,7 @@ namespace Winithm.Core.Managers
   /// </summary>
   public class NoteManager : IDeepCloneable<NoteManager>
   {
-    public event Action<NoteManager> OnNoteChanged;
+    public event Action<NoteManager> OnUpdated;
 
     public WindowData WindowData { get; private set; } = new WindowData();
 
@@ -50,22 +50,22 @@ namespace Winithm.Core.Managers
     /// <summary>
     /// Resumes notifications and runs Compute() once if edits were made.
     /// </summary>
-    public void EndUpdate(bool success = true)
+    public void EndUpdate(bool success = true, bool needReCompute = true)
     {
       if (_updateLockCount > 0) _updateLockCount--;
       if (_updateLockCount == 0 && success)
       {
-        Compute();
-        OnNoteChanged?.Invoke(this);
+        if (needReCompute) Compute();
+        OnUpdated?.Invoke(this);
       }
     }
 
-    private void NotifyChanged()
+    private void NotifyChanged(bool needReCompute = true)
     {
       if (_updateLockCount == 0)
       {
-        Compute();
-        OnNoteChanged?.Invoke(this);
+        if (needReCompute) Compute();
+        OnUpdated?.Invoke(this);
       }
     }
 
@@ -175,8 +175,11 @@ namespace Winithm.Core.Managers
       note.OnSideChanged -= HandleSideChanged;
       note.OnSideChanged += HandleSideChanged;
 
-      note.OnDataChanged -= HandleDataChanged;
-      note.OnDataChanged += HandleDataChanged;
+      note.OnInvalidate -= HandleInvalidate;
+      note.OnInvalidate += HandleInvalidate;
+
+      note.OnUpdated -= HandleUpdated;
+      note.OnUpdated += HandleUpdated;
 
       _eventKeyMap[note] = side;
     }
@@ -185,7 +188,8 @@ namespace Winithm.Core.Managers
     {
       note.OnStartBeatChanged -= HandleStartBeatChanged;
       note.OnSideChanged -= HandleSideChanged;
-      note.OnDataChanged -= HandleDataChanged;
+      note.OnInvalidate -= HandleInvalidate;
+      note.OnUpdated -= HandleUpdated;
 
       _eventKeyMap.Remove(note);
     }
@@ -213,7 +217,8 @@ namespace Winithm.Core.Managers
       EndUpdate();
     }
 
-    private void HandleDataChanged(NoteData note) => NotifyChanged();
+    private void HandleInvalidate(NoteData note) => NotifyChanged();
+    private void HandleUpdated(NoteData note) => NotifyChanged(false);
 
     // ==========================================
     // Lifecycle Management

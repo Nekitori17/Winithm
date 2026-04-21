@@ -11,26 +11,26 @@ namespace Winithm.Core.Data
   /// </summary>
   public class ThemeChannelData : IStoryboardable<StoryboardProperty>, IDeepCloneable<ThemeChannelData>
   {
-    public event Action<ThemeChannelData> OnDataChanged;
+    public event Action<ThemeChannelData> OnUpdated;
 
     public string ID;
     private string _name;
-    public string Name { get => _name; set { if (_name == value) return; _name = value; OnDataChanged?.Invoke(this); } }
+    public string Name { get => _name; set { if (_name == value) return; _name = value; OnUpdated?.Invoke(this); } }
 
     private float _initR = 0f;
-    public float InitR { get => _initR; set { if (_initR == value) return; _initR = value; OnDataChanged?.Invoke(this); } }
+    public float InitR { get => _initR; set { if (_initR == value) return; _initR = value; OnUpdated?.Invoke(this); } }
 
     private float _initG = 0f;
-    public float InitG { get => _initG; set { if (_initG == value) return; _initG = value; OnDataChanged?.Invoke(this); } }
+    public float InitG { get => _initG; set { if (_initG == value) return; _initG = value; OnUpdated?.Invoke(this); } }
 
     private float _initB = 0f;
-    public float InitB { get => _initB; set { if (_initB == value) return; _initB = value; OnDataChanged?.Invoke(this); } }
+    public float InitB { get => _initB; set { if (_initB == value) return; _initB = value; OnUpdated?.Invoke(this); } }
 
     private float _initA = 1f;
-    public float InitA { get => _initA; set { if (_initA == value) return; _initA = value; OnDataChanged?.Invoke(this); } }
+    public float InitA { get => _initA; set { if (_initA == value) return; _initA = value; OnUpdated?.Invoke(this); } }
 
     private float _initNoteA = 1f;
-    public float InitNoteA { get => _initNoteA; set { if (_initNoteA == value) return; _initNoteA = value; OnDataChanged?.Invoke(this); } }
+    public float InitNoteA { get => _initNoteA; set { if (_initNoteA == value) return; _initNoteA = value; OnUpdated?.Invoke(this); } }
 
     public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; } = new StoryboardManager<StoryboardProperty>();
 
@@ -82,6 +82,6 @@ namespace Winithm.Core.Data
     }
 
     // Named delegate for clean subscribe/unsubscribe in DeepClone
-    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
+    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnUpdated?.Invoke(this);
   }
 }

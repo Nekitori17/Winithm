@@ -10,17 +10,17 @@ namespace Winithm.Core.Data
   public class BPMStop : IDeepCloneable<BPMStop>
   {
     public event Action<BPMStop> OnStartBeatChanged;
-    public event Action<BPMStop> OnBPMChanged;
-    public event Action<BPMStop> OnDataChanged;
+    public event Action<BPMStop> OnInvalidate;
+    public event Action<BPMStop> OnUpdated;
 
     private BeatTime _startBeat;
-    public BeatTime StartBeat { get => _startBeat; set { if (_startBeat != value) { _startBeat = value; OnStartBeatChanged?.Invoke(this); } } }
+    public BeatTime StartBeat { get => _startBeat; set { if (_startBeat != value) { _startBeat = value; OnStartBeatChanged?.Invoke(this); OnInvalidate?.Invoke(this); } } }
 
     private float _bpm;
-    public float BPM { get => _bpm; set { if (_bpm != value) { _bpm = value; OnBPMChanged?.Invoke(this); } } }
+    public float BPM { get => _bpm; set { if (_bpm != value) { _bpm = value; OnInvalidate?.Invoke(this); } } }
 
     private int _timeSignature;
-    public int TimeSignature { get => _timeSignature; set { if (_timeSignature != value) { _timeSignature = value; OnDataChanged?.Invoke(this); } } }
+    public int TimeSignature { get => _timeSignature; set { if (_timeSignature != value) { _timeSignature = value; OnUpdated?.Invoke(this); } } }
 
     public double StartTimeSeconds;
 
@@ -69,17 +69,17 @@ namespace Winithm.Core.Data
   /// </summary>
   public class BaseBPM
   {
-    public event Action<BaseBPM> OnBeatChanged;
-    public event Action<BaseBPM> OnDataChanged;
+    public event Action<BaseBPM> OnInvalidate;
+    public event Action<BaseBPM> OnUpdated;
 
     private double _baseOffsetSeconds;
-    public double BaseOffsetSeconds { get => _baseOffsetSeconds; set { if (_baseOffsetSeconds != value) { _baseOffsetSeconds = value; OnBeatChanged?.Invoke(this); } } }
+    public double BaseOffsetSeconds { get => _baseOffsetSeconds; set { if (_baseOffsetSeconds != value) { _baseOffsetSeconds = value; OnInvalidate?.Invoke(this); } } }
 
     private float _initialBPM;
-    public float InitialBPM { get => _initialBPM; set { if (_initialBPM != value) { _initialBPM = value; OnBeatChanged?.Invoke(this); } } }
+    public float InitialBPM { get => _initialBPM; set { if (_initialBPM != value) { _initialBPM = value; OnInvalidate?.Invoke(this); } } }
 
     private int _timeSignature;
-    public int TimeSignature { get => _timeSignature; set { if (_timeSignature != value) { _timeSignature = value; OnDataChanged?.Invoke(this); } } }
+    public int TimeSignature { get => _timeSignature; set { if (_timeSignature != value) { _timeSignature = value; OnUpdated?.Invoke(this); } } }
 
     public float BeatsPerSecond => InitialBPM / 60f;
 

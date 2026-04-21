@@ -21,7 +21,7 @@ namespace Winithm.Core.Managers
   /// </summary>
   public class SpeedStepManager: IDeepCloneable<SpeedStepManager>
   {
-    public event Action<SpeedStepData> OnSpeedStepChanged;
+    public event Action<SpeedStepManager> OnUpdated;
 
     private int _updateLockCount = 0;
 
@@ -39,16 +39,16 @@ namespace Winithm.Core.Managers
       if (_updateLockCount == 0 && success)
       {
         if (FrameCache != null) FrameCache.CachedBeat = double.NaN;
-        OnSpeedStepChanged?.Invoke(null);
+        OnUpdated?.Invoke(this);
       }
     }
 
-    private void NotifyChanged(SpeedStepData data = null)
+    private void NotifyChanged()
     {
       if (_updateLockCount == 0)
       {
         if (FrameCache != null) FrameCache.CachedBeat = double.NaN;
-        OnSpeedStepChanged?.Invoke(data);
+        OnUpdated?.Invoke(this);
       }
     }
 
@@ -74,14 +74,14 @@ namespace Winithm.Core.Managers
       speedStep.OnStartBeatChanged -= HandleStartBeatChanged;
       speedStep.OnStartBeatChanged += HandleStartBeatChanged;
 
-      speedStep.OnDataChanged -= HandleDataChanged;
-      speedStep.OnDataChanged += HandleDataChanged;
+      speedStep.OnUpdated -= HandleUpdated;
+      speedStep.OnUpdated += HandleUpdated;
     }
 
     private void UnSubscribeChangeSpeedSteps(SpeedStepData speedStep)
     {
       speedStep.OnStartBeatChanged -= HandleStartBeatChanged;
-      speedStep.OnDataChanged -= HandleDataChanged;
+      speedStep.OnUpdated -= HandleUpdated;
     }
 
     private void HandleStartBeatChanged(SpeedStepData speedStep)
@@ -90,9 +90,9 @@ namespace Winithm.Core.Managers
       AddSpeedStep(speedStep);
     }
 
-    private void HandleDataChanged(SpeedStepData speedStep)
+    private void HandleUpdated(SpeedStepData speedStep)
     {
-      NotifyChanged(speedStep);
+      NotifyChanged();
     }
 
     public int AddSpeedStep(SpeedStepData speedStep)
@@ -101,7 +101,7 @@ namespace Winithm.Core.Managers
       SpeedStepCollection.Insert(index, speedStep);
       SubscribeChangeSpeedSteps(speedStep);
 
-      NotifyChanged(speedStep);
+      NotifyChanged();
       return index;
     }
 
@@ -126,7 +126,7 @@ namespace Winithm.Core.Managers
       if (!SpeedStepCollection.Remove(speedStep)) return false;
       UnSubscribeChangeSpeedSteps(speedStep);
 
-      NotifyChanged(speedStep);
+      NotifyChanged();
       return true;
     }
 
@@ -154,7 +154,7 @@ namespace Winithm.Core.Managers
       foreach (var st in toRemove) UnSubscribeChangeSpeedSteps(st);
       SpeedStepCollection.RemoveAll(x => x.ID == id);
 
-      NotifyChanged(null);
+      NotifyChanged();
       return true;
     }
 

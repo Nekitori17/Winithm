@@ -13,64 +13,64 @@ namespace Winithm.Core.Data
   /// </summary>
   public class WindowData : IStoryboardable<StoryboardProperty>, IDeepCloneable<WindowData>
   {
-    public event Action<WindowData> OnDataChanged;
     public event Action<WindowData> OnLifeCycleChanged;
     public event Action<WindowData> OnUnFocusChanged;
+    public event Action<WindowData> OnUpdated;
 
     public string ID;
     private string _name;
-    public string Name { get => _name; set { if (_name == value) return; _name = value; OnDataChanged?.Invoke(this); } }
+    public string Name { get => _name; set { if (_name == value) return; _name = value; OnUpdated?.Invoke(this); } }
 
     private string _title;
-    public string Title { get => _title; set { if (_title == value) return; _title = value; OnDataChanged?.Invoke(this); } }
+    public string Title { get => _title; set { if (_title == value) return; _title = value; OnUpdated?.Invoke(this); } }
 
     private int _layer = 0;
-    public int Layer { get => _layer; set { if (_layer == value) return; _layer = value; OnDataChanged?.Invoke(this); } }
+    public int Layer { get => _layer; set { if (_layer == value) return; _layer = value; OnUpdated?.Invoke(this); } }
 
     private Vector2 _anchor = new Vector2(0.5f, 0.5f);
-    public Vector2 Anchor { get => _anchor; set { if (_anchor == value) return; _anchor = value; OnDataChanged?.Invoke(this); } }
+    public Vector2 Anchor { get => _anchor; set { if (_anchor == value) return; _anchor = value; OnUpdated?.Invoke(this); } }
 
     private string _groupID;
-    public string GroupID { get => _groupID; set { if (_groupID == value) return; _groupID = value; OnDataChanged?.Invoke(this); } }
+    public string GroupID { get => _groupID; set { if (_groupID == value) return; _groupID = value; OnUpdated?.Invoke(this); } }
 
     private string _themeChannelID;
-    public string ThemeChannelID { get => _themeChannelID; set { if (_themeChannelID == value) return; _themeChannelID = value; OnDataChanged?.Invoke(this); } }
+    public string ThemeChannelID { get => _themeChannelID; set { if (_themeChannelID == value) return; _themeChannelID = value; OnUpdated?.Invoke(this); } }
 
     // Window Flags
     private bool _borderless = false;
-    public bool Borderless { get => _borderless; set { if (_borderless == value) return; _borderless = value; OnDataChanged?.Invoke(this); } }
+    public bool Borderless { get => _borderless; set { if (_borderless == value) return; _borderless = value; OnUpdated?.Invoke(this); } }
 
     private bool _unFocus = false;
     public bool UnFocus { get => _unFocus; set { if (_unFocus == value) return; _unFocus = value; OnUnFocusChanged?.Invoke(this); } }
 
     // Transform init values
     private float _initX = 640f;
-    public float InitX { get => _initX; set { if (_initX == value) return; _initX = value; OnDataChanged?.Invoke(this); } }
+    public float InitX { get => _initX; set { if (_initX == value) return; _initX = value; OnUpdated?.Invoke(this); } }
 
     private float _initY = 360f;
-    public float InitY { get => _initY; set { if (_initY == value) return; _initY = value; OnDataChanged?.Invoke(this); } }
+    public float InitY { get => _initY; set { if (_initY == value) return; _initY = value; OnUpdated?.Invoke(this); } }
 
     private float _initScaleX = 300f;
-    public float InitScaleX { get => _initScaleX; set { if (_initScaleX == value) return; _initScaleX = value; OnDataChanged?.Invoke(this); } }
+    public float InitScaleX { get => _initScaleX; set { if (_initScaleX == value) return; _initScaleX = value; OnUpdated?.Invoke(this); } }
 
     private float _initScaleY = 500f;
-    public float InitScaleY { get => _initScaleY; set { if (_initScaleY == value) return; _initScaleY = value; OnDataChanged?.Invoke(this); } }
+    public float InitScaleY { get => _initScaleY; set { if (_initScaleY == value) return; _initScaleY = value; OnUpdated?.Invoke(this); } }
 
     // Color init values
     private float _initR = 0f;
-    public float InitR { get => _initR; set { if (_initR == value) return; _initR = value; OnDataChanged?.Invoke(this); } }
+    public float InitR { get => _initR; set { if (_initR == value) return; _initR = value; OnUpdated?.Invoke(this); } }
 
     private float _initG = 0f;
-    public float InitG { get => _initG; set { if (_initG == value) return; _initG = value; OnDataChanged?.Invoke(this); } }
+    public float InitG { get => _initG; set { if (_initG == value) return; _initG = value; OnUpdated?.Invoke(this); } }
 
     private float _initB = 0f;
-    public float InitB { get => _initB; set { if (_initB == value) return; _initB = value; OnDataChanged?.Invoke(this); } }
+    public float InitB { get => _initB; set { if (_initB == value) return; _initB = value; OnUpdated?.Invoke(this); } }
 
     private float _initA = 1f;
-    public float InitA { get => _initA; set { if (_initA == value) return; _initA = value; OnDataChanged?.Invoke(this); } }
+    public float InitA { get => _initA; set { if (_initA == value) return; _initA = value; OnUpdated?.Invoke(this); } }
 
     private float _initNoteA = 1f;
-    public float InitNoteA { get => _initNoteA; set { if (_initNoteA == value) return; _initNoteA = value; OnDataChanged?.Invoke(this); } }
+    public float InitNoteA { get => _initNoteA; set { if (_initNoteA == value) return; _initNoteA = value; OnUpdated?.Invoke(this); } }
 
     // Sub-managers
     public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; } = new StoryboardManager<StoryboardProperty>();
@@ -115,9 +115,9 @@ namespace Winithm.Core.Data
     public WindowData()
     {
       // Bubble sub-manager changes up to WindowData level
-      StoryboardEvents.OnStoryboardChanged += BubbleStoryboard;
-      SpeedSteps.OnSpeedStepChanged += BubbleSpeedStep;
-      Notes.OnNoteChanged += BubbleNote;
+      StoryboardEvents.OnUpdated += BubbleStoryboard;
+      SpeedSteps.OnUpdated += BubbleSpeedStep;
+      Notes.OnUpdated += BubbleNote;
 
       // Note requires reference to WindowData for Focus/Close boundary logic
       Notes.SetWindowData(this);
@@ -155,9 +155,9 @@ namespace Winithm.Core.Data
 
       // Unsubscribe default sub-manager bubbling created in constructor
       // before replacing with cloned sub-managers
-      cloned.StoryboardEvents.OnStoryboardChanged -= cloned.BubbleStoryboard;
-      cloned.SpeedSteps.OnSpeedStepChanged -= cloned.BubbleSpeedStep;
-      cloned.Notes.OnNoteChanged -= cloned.BubbleNote;
+      cloned.StoryboardEvents.OnUpdated -= cloned.BubbleStoryboard;
+      cloned.SpeedSteps.OnUpdated -= cloned.BubbleSpeedStep;
+      cloned.Notes.OnUpdated -= cloned.BubbleNote;
 
       cloned.ID = ID;
       cloned.Name = Name;
@@ -186,9 +186,9 @@ namespace Winithm.Core.Data
       cloned.Notes = Notes?.DeepClone(offset) ?? new NoteManager();
 
       // Re-wire sub-manager bubbling to the new clone
-      cloned.StoryboardEvents.OnStoryboardChanged += cloned.BubbleStoryboard;
-      cloned.SpeedSteps.OnSpeedStepChanged += cloned.BubbleSpeedStep;
-      cloned.Notes.OnNoteChanged += cloned.BubbleNote;
+      cloned.StoryboardEvents.OnUpdated += cloned.BubbleStoryboard;
+      cloned.SpeedSteps.OnUpdated += cloned.BubbleSpeedStep;
+      cloned.Notes.OnUpdated += cloned.BubbleNote;
 
       // Bind Note's WindowData reference to the new clone
       cloned.Notes.SetWindowData(cloned);
@@ -197,8 +197,8 @@ namespace Winithm.Core.Data
     }
 
     // Named delegates for clean subscribe/unsubscribe in DeepClone
-    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
-    private void BubbleSpeedStep(SpeedStepData sd)
+    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnUpdated?.Invoke(this);
+    private void BubbleSpeedStep(SpeedStepManager sd)
     {
       if (SpeedSteps.SpeedStepCollection.Count == 0)
       {
@@ -221,8 +221,8 @@ namespace Winithm.Core.Data
         return;
       }
       
-      OnDataChanged?.Invoke(this);
+      OnUpdated?.Invoke(this);
     }
-    private void BubbleNote(NoteManager n) => OnDataChanged?.Invoke(this);
+    private void BubbleNote(NoteManager n) => OnUpdated?.Invoke(this);
   }
 }

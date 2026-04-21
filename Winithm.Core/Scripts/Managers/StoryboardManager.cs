@@ -22,7 +22,7 @@ namespace Winithm.Core.Managers
   /// </summary>
   public class StoryboardManager<TProp> : IDeepCloneable<StoryboardManager<TProp>>
   {
-    public event Action<StoryboardManager<TProp>> OnStoryboardChanged;
+    public event Action<StoryboardManager<TProp>> OnUpdated;
 
     private int _updateLockCount = 0;
 
@@ -37,12 +37,12 @@ namespace Winithm.Core.Managers
     public void EndUpdate(bool success = true)
     {
       if (_updateLockCount > 0) _updateLockCount--;
-      if (_updateLockCount == 0 && success) OnStoryboardChanged?.Invoke(this);
+      if (_updateLockCount == 0 && success) OnUpdated?.Invoke(this);
     }
 
     private void NotifyChanged()
     {
-      if (_updateLockCount == 0) OnStoryboardChanged?.Invoke(this);
+      if (_updateLockCount == 0) OnUpdated?.Invoke(this);
     }
 
     public Dictionary<TProp, List<EventData>> EventCollection { get; private set; } = new Dictionary<TProp, List<EventData>>();
@@ -173,15 +173,15 @@ namespace Winithm.Core.Managers
     {
       evt.OnStartBeatChanged -= HandleStartBeatChanged;
       evt.OnStartBeatChanged += HandleStartBeatChanged;
-      evt.OnDataChanged -= HandleDataChanged;
-      evt.OnDataChanged += HandleDataChanged;
+      evt.OnUpdated -= HandleUpdated;
+      evt.OnUpdated += HandleUpdated;
       _eventKeyMap[evt] = prop;
     }
 
     private void UnSubscribeChangeEvent(EventData evt)
     {
       evt.OnStartBeatChanged -= HandleStartBeatChanged;
-      evt.OnDataChanged -= HandleDataChanged;
+      evt.OnUpdated -= HandleUpdated;
       _eventKeyMap.Remove(evt);
     }
 
@@ -190,7 +190,7 @@ namespace Winithm.Core.Managers
       if (_eventKeyMap.TryGetValue(evt, out var key)) OnEventStartBeatChanged(key, evt);
     }
 
-    private void HandleDataChanged(EventData evt)
+    private void HandleUpdated(EventData evt)
     {
       if (_eventKeyMap.ContainsKey(evt)) NotifyChanged();
     }

@@ -13,7 +13,7 @@ namespace Winithm.Core.Managers
   /// </summary>
   public class ThemeChannelManager : IDeepCloneable<ThemeChannelManager>
   {
-    public event Action<ThemeChannelManager> OnThemeChannelChanged;
+    public event Action<ThemeChannelManager> OnUpdated;
 
     public Dictionary<string, ThemeChannelData> ThemeChannelCollection { get; private set; } = new Dictionary<string, ThemeChannelData>();
 
@@ -24,12 +24,12 @@ namespace Winithm.Core.Managers
     public void EndUpdate(bool success = true)
     {
       if (_updateLockCount > 0) _updateLockCount--;
-      if (_updateLockCount == 0 && success) OnThemeChannelChanged?.Invoke(this);
+      if (_updateLockCount == 0 && success) OnUpdated?.Invoke(this);
     }
 
     private void NotifyChanged()
     {
-      if (_updateLockCount == 0) OnThemeChannelChanged?.Invoke(this);
+      if (_updateLockCount == 0) OnUpdated?.Invoke(this);
     }
 
     public ThemeChannelManager DeepClone(BeatTime? offset)
@@ -44,20 +44,18 @@ namespace Winithm.Core.Managers
       return cloned;
     }
 
-    // ThemeChannelData.OnDataChanged already aggregates StoryboardEvents changes.
-    // Single subscription avoids double-firing.
     private void SubscribeChangeEvent(ThemeChannelData themeChannelData)
     {
-      themeChannelData.OnDataChanged -= HandleDataChanged;
-      themeChannelData.OnDataChanged += HandleDataChanged;
+      themeChannelData.OnUpdated -= HandleUpdated;
+      themeChannelData.OnUpdated += HandleUpdated;
     }
 
     private void UnsubscribeChangeEvent(ThemeChannelData themeChannelData)
     {
-      themeChannelData.OnDataChanged -= HandleDataChanged;
+      themeChannelData.OnUpdated -= HandleUpdated;
     }
 
-    private void HandleDataChanged(ThemeChannelData themeChannelData) => NotifyChanged();
+    private void HandleUpdated(ThemeChannelData themeChannelData) => NotifyChanged();
 
     public void AddThemeChannel(ThemeChannelData themeChannelData)
     {

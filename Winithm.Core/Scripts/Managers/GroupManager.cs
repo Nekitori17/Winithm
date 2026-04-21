@@ -13,7 +13,7 @@ namespace Winithm.Core.Managers
   /// </summary>
   public class GroupManager : IDeepCloneable<GroupManager>
   {
-    public event Action<GroupManager> OnGroupChanged;
+    public event Action<GroupManager> OnUpdated;
 
     public Dictionary<string, GroupData> GroupCollection { get; private set; } = new Dictionary<string, GroupData>();
 
@@ -24,12 +24,12 @@ namespace Winithm.Core.Managers
     public void EndUpdate(bool success = true)
     {
       if (_updateLockCount > 0) _updateLockCount--;
-      if (_updateLockCount == 0 && success) OnGroupChanged?.Invoke(this);
+      if (_updateLockCount == 0 && success) OnUpdated?.Invoke(this);
     }
 
     private void NotifyChanged()
     {
-      if (_updateLockCount == 0) OnGroupChanged?.Invoke(this);
+      if (_updateLockCount == 0) OnUpdated?.Invoke(this);
     }
 
     public GroupManager DeepClone(BeatTime? offset)
@@ -44,20 +44,18 @@ namespace Winithm.Core.Managers
       return cloned;
     }
 
-    // GroupData.OnDataChanged already aggregates StoryboardEvents changes.
-    // Single subscription avoids double-firing.
     private void SubscribeChangeEvent(GroupData groupData)
     {
-      groupData.OnDataChanged -= HandleDataChanged;
-      groupData.OnDataChanged += HandleDataChanged;
+      groupData.OnUpdated -= HandleUpdated;
+      groupData.OnUpdated += HandleUpdated;
     }
 
     private void UnsubscribeChangeEvent(GroupData groupData)
     {
-      groupData.OnDataChanged -= HandleDataChanged;
+      groupData.OnUpdated -= HandleUpdated;
     }
 
-    private void HandleDataChanged(GroupData groupData) => NotifyChanged();
+    private void HandleUpdated(GroupData groupData) => NotifyChanged();
 
     public void AddGroup(GroupData groupData)
     {

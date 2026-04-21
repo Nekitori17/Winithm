@@ -76,8 +76,8 @@ namespace Winithm.Core.Managers
 
     private void SubscribeChangeEvent(WindowData windowData)
     {
-      windowData.OnDataChanged -= HandleDataChanged;
-      windowData.OnDataChanged += HandleDataChanged;
+      windowData.OnUpdated -= HandleUpdated;
+      windowData.OnUpdated += HandleUpdated;
 
       windowData.OnLifeCycleChanged -= HandleLifeCycleChanged;
       windowData.OnLifeCycleChanged += HandleLifeCycleChanged;
@@ -88,7 +88,7 @@ namespace Winithm.Core.Managers
 
     private void UnsubscribeChangeEvent(WindowData windowData)
     {
-      windowData.OnDataChanged -= HandleDataChanged;
+      windowData.OnUpdated -= HandleUpdated;
       windowData.OnLifeCycleChanged -= HandleLifeCycleChanged;
       windowData.OnUnFocusChanged -= HandleUnFocusChanged;
     }
@@ -97,7 +97,7 @@ namespace Winithm.Core.Managers
     /// WindowData.OnDataChanged already aggregates events from its inner SpeedStep, Note, and Storyboard.
     /// A single subscription here captures all nested changes without redundant wiring.
     /// </summary>
-    private void HandleDataChanged(WindowData windowData) => NotifyChanged();
+    private void HandleUpdated(WindowData windowData) => NotifyChanged();
     private void HandleUnFocusChanged(WindowData windowData) {
       windowData.Notes.Compute();
 

@@ -10,7 +10,7 @@ namespace Winithm.Core.Managers
   /// </summary>
   public class Metronome
   {
-    public event Action<Metronome> OnMetronomeChanged;
+    public event Action<Metronome> OnUpdated;
 
     private int _updateLockCount = 0;
     private int _minRecalculateIdx = int.MaxValue;
@@ -29,7 +29,7 @@ namespace Winithm.Core.Managers
       if (_updateLockCount == 0 && success)
       {
         CommitCalculations();
-        OnMetronomeChanged?.Invoke(this);
+        OnUpdated?.Invoke(this);
       }
     }
 
@@ -38,7 +38,7 @@ namespace Winithm.Core.Managers
       if (_updateLockCount == 0)
       {
         CommitCalculations();
-        OnMetronomeChanged?.Invoke(this);
+        OnUpdated?.Invoke(this);
       }
     }
 
@@ -66,8 +66,8 @@ namespace Winithm.Core.Managers
 
     public Metronome()
     {
-      BaseBPM.OnBeatChanged += (bb) => { RequestRecalculate(0); NotifyChanged(); };
-      BaseBPM.OnDataChanged += (bb) => NotifyChanged();
+      BaseBPM.OnInvalidate += (bb) => { RequestRecalculate(0); NotifyChanged(); };
+      BaseBPM.OnUpdated += (bb) => NotifyChanged();
     }
 
     /// <summary>
@@ -101,18 +101,18 @@ namespace Winithm.Core.Managers
       bPMStop.OnStartBeatChanged -= HandleStartBeatChanged;
       bPMStop.OnStartBeatChanged += HandleStartBeatChanged;
 
-      bPMStop.OnBPMChanged -= HandleBPMChanged;
-      bPMStop.OnBPMChanged += HandleBPMChanged;
+      bPMStop.OnInvalidate -= HandleInvalidate;
+      bPMStop.OnInvalidate += HandleInvalidate;
 
-      bPMStop.OnDataChanged -= HandleDataChanged;
-      bPMStop.OnDataChanged += HandleDataChanged;
+      bPMStop.OnUpdated -= HandleUpdated;
+      bPMStop.OnUpdated += HandleUpdated;
     }
 
     private void UnSubscribeChangeBPMStops(BPMStop bPMStop)
     {
       bPMStop.OnStartBeatChanged -= HandleStartBeatChanged;
-      bPMStop.OnBPMChanged -= HandleBPMChanged;
-      bPMStop.OnDataChanged -= HandleDataChanged;
+      bPMStop.OnInvalidate -= HandleInvalidate;
+      bPMStop.OnUpdated -= HandleUpdated;
     }
 
     public void SetBaseBPM(BaseBPM baseBPM)
@@ -223,7 +223,7 @@ namespace Winithm.Core.Managers
       AddBPMStop(bPMStop);
     }
 
-    private void HandleBPMChanged(BPMStop bPMStop)
+    private void HandleInvalidate(BPMStop bPMStop)
     {
       int idx = BPMStops.IndexOf(bPMStop);
       if (idx == -1) return;
@@ -232,7 +232,7 @@ namespace Winithm.Core.Managers
       NotifyChanged();
     }
 
-    private void HandleDataChanged(BPMStop bPMStop) => NotifyChanged();
+    private void HandleUpdated(BPMStop bPMStop) => NotifyChanged();
 
     public double ToSeconds(double beat)
     {

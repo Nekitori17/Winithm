@@ -11,7 +11,7 @@ namespace Winithm.Core.Data
   public class SpeedStepData : IStoryboardable<StoryboardProperty>, IDeepCloneable<SpeedStepData>
   {
     public event Action<SpeedStepData> OnStartBeatChanged;
-    public event Action<SpeedStepData> OnDataChanged;
+    public event Action<SpeedStepData> OnUpdated;
 
     public string ID;
 
@@ -19,13 +19,13 @@ namespace Winithm.Core.Data
     public BeatTime StartBeat { get => _startBeat; set { if (_startBeat != value) { _startBeat = value; OnStartBeatChanged?.Invoke(this); } } }
 
     private float _multiplier = 1f;
-    public float Multiplier { get => _multiplier; set { if (_multiplier != value) { _multiplier = value; OnDataChanged?.Invoke(this); } } }
+    public float Multiplier { get => _multiplier; set { if (_multiplier != value) { _multiplier = value; OnUpdated?.Invoke(this); } } }
 
     public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; } = new StoryboardManager<StoryboardProperty>();
 
     public SpeedStepData()
     {
-      StoryboardEvents.OnStoryboardChanged += BubbleStoryboard;
+      StoryboardEvents.OnUpdate += BubbleStoryboard;
     }
 
     public SpeedStepData DeepClone(BeatTime? offset)
@@ -33,7 +33,7 @@ namespace Winithm.Core.Data
       var cloned = new SpeedStepData();
 
       // Detach bubbling from the default StoryboardEvents created by constructor
-      cloned.StoryboardEvents.OnStoryboardChanged -= cloned.BubbleStoryboard;
+      cloned.StoryboardEvents.OnUpdate -= cloned.BubbleStoryboard;
 
       cloned.ID = ID;
       cloned.StartBeat = StartBeat + (offset ?? BeatTime.Zero);
@@ -41,13 +41,13 @@ namespace Winithm.Core.Data
       cloned.StoryboardEvents = StoryboardEvents?.DeepClone(offset);
 
       // Re-wire bubbling to the cloned StoryboardEvents
-      cloned.StoryboardEvents.OnStoryboardChanged += cloned.BubbleStoryboard;
+      cloned.StoryboardEvents.OnUpdate += cloned.BubbleStoryboard;
 
       return cloned;
     }
 
     // Named delegate for clean subscribe/unsubscribe in DeepClone
-    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnDataChanged?.Invoke(this);
+    private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnUpdated?.Invoke(this);
 
     public static SpeedStepData Parse(string text)
     {
