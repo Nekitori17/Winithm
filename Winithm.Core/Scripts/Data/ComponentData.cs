@@ -1,45 +1,30 @@
-using Godot;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System;
 using Winithm.Core.Interfaces;
 using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
 {
-  public enum ComponentType
-  {
-    Combo,
-    Score,
-    Info,
-    Difficulty
-  }
-
   /// <summary>
   /// HUD component definition from [COMPONENTS].
   /// Format: * <Type> <initX> <initY> <initScale> <initAlpha> <anchorX> <anchorY>
   /// </summary>
   public class ComponentData : IStoryboardable<StoryboardProperty>
   {
-    public ComponentType Type = ComponentType.Info;
+    public event Action<ComponentData> OnUpdated;
 
-    public float InitX = 0f;
-    public float InitY = 0f;
-    public float InitScale = 1f;
-    public float InitAlpha = 1f;
+    private float _initX = 0f;
+    public float InitX { get => _initX; set { if (_initX == value) return; _initX = value; OnUpdated?.Invoke(this); } }
+    private float _initY = 0f;
+    public float InitY { get => _initY; set { if (_initY == value) return; _initY = value; OnUpdated?.Invoke(this); } }
+    private float _initScale = 1f;
+    public float InitScale { get => _initScale; set { if (_initScale == value) return; _initScale = value; OnUpdated?.Invoke(this); } }
+    private float _initAlpha = 1f;
+    public float InitAlpha { get => _initAlpha; set { if (_initAlpha == value) return; _initAlpha = value; OnUpdated?.Invoke(this); } }
     public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; }
 
-    public static ComponentType ParseType(string text)
+    public ComponentData()
     {
-      switch (text.Trim())
-      {
-        case "Combo": return ComponentType.Combo;
-        case "Score": return ComponentType.Score;
-        case "Info": return ComponentType.Info;
-        case "Difficulty": return ComponentType.Difficulty;
-        default:
-          Trace.TraceWarning($"[WinithmParser] Unknown component type: '{text}', defaulting to Info.");
-          return ComponentType.Info;
-      }
+      StoryboardEvents.OnUpdated += (sb) => OnUpdated?.Invoke(this);
     }
   }
 }
