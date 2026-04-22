@@ -65,24 +65,6 @@ namespace Winithm.Core.Data
       return cloned;
     }
 
-    public static GroupData Parse(string text)
-    {
-      var current = new GroupData();
-
-      string[] parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-      if (parts.Length >= 1) current.ID = parts[0];
-      if (parts.Length >= 2) current.InitX = ParserUtils.ParseFloat(parts[1]);
-      if (parts.Length >= 3) current.InitY = ParserUtils.ParseFloat(parts[2]);
-      if (parts.Length >= 4) current.InitScaleX = ParserUtils.ParseFloat(parts[3]);
-      if (parts.Length >= 5) current.InitScaleY = ParserUtils.ParseFloat(parts[4]);
-      if (parts.Length >= 6) current.InitRotation = ParserUtils.ParseFloat(parts[5]);
-
-      return current;
-    }
-
-    public override string ToString()
-      => $"{ID} {InitX} {InitY} {InitScaleX} {InitScaleY} {InitRotation}";
-
     // Named delegate for clean subscribe/unsubscribe in DeepClone
     private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnUpdated?.Invoke(this);
   }

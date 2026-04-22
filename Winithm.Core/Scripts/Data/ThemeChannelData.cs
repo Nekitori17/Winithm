@@ -61,26 +61,6 @@ namespace Winithm.Core.Data
       return cloned;
     }
 
-    public static ThemeChannelData Parse(string text)
-    {
-      var current = new ThemeChannelData();
-
-      string[] parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-      if (parts.Length >= 1) current.ID = parts[0];
-      if (parts.Length >= 2) current.InitR =
-        ParserUtils.TryParseFloat(parts[1], out float r) ? r : 0f;
-      if (parts.Length >= 3) current.InitG =
-        ParserUtils.TryParseFloat(parts[2], out float g) ? g : 0f;
-      if (parts.Length >= 4) current.InitB =
-        ParserUtils.TryParseFloat(parts[3], out float b) ? b : 0f;
-      if (parts.Length >= 5) current.InitA =
-        ParserUtils.TryParseFloat(parts[4], out float a) ? a : 1f;
-      if (parts.Length >= 6) current.InitNoteA =
-        ParserUtils.TryParseFloat(parts[5], out float na) ? na : 1f;
-
-      return current;
-    }
-
     // Named delegate for clean subscribe/unsubscribe in DeepClone
     private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnUpdated?.Invoke(this);
   }
