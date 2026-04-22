@@ -7,8 +7,9 @@ namespace Winithm.Core.Data
   /// </summary>
   public class ChartMetadata
   {
-    public event Action<ChartMetadata> OnUpdated;
+    public float VERSION = 1.3f;
 
+    public event Action<ChartMetadata> OnUpdated;
     private int _index = 0;
     public int Index { get => _index; set { if (_index == value) return; _index = value; OnUpdated?.Invoke(this); } }
 

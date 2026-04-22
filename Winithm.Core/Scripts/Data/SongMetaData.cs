@@ -6,13 +6,12 @@ namespace Winithm.Core.Data
 {
   public class SongMetaData
   {
+    public float VERSION = 1f;
+
     public event Action<SongMetaData> OnMetronomeUpdated;
     public event Action<SongMetaData> OnAudioUpdated;
     public event Action<SongMetaData> OnIllustrationUpdated;
     public event Action<SongMetaData> OnUpdated;
-
-    private float _version = 1f;
-    public float Version { get => _version; set { if (_version == value) return; _version = value; OnUpdated?.Invoke(this); } }
 
     public string _id = "prototype.test";
     public string ID { get => _id; set { if (_id == value) return; _id = value; OnUpdated?.Invoke(this); } }
