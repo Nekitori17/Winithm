@@ -36,27 +36,27 @@ namespace Winithm.Core.Data
 
     public ThemeChannelData()
     {
-      StoryboardEvents.OnStoryboardChanged += BubbleStoryboard;
+      StoryboardEvents.OnUpdated += BubbleStoryboard;
     }
 
-    public ThemeChannelData DeepClone(BeatTime? offset)
+    public ThemeChannelData DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       var cloned = new ThemeChannelData();
 
       // Detach bubbling from the default StoryboardEvents created by constructor
-      cloned.StoryboardEvents.OnStoryboardChanged -= cloned.BubbleStoryboard;
+      cloned.StoryboardEvents.OnUpdated -= cloned.BubbleStoryboard;
 
-      cloned.ID = ID;
+      cloned.ID = objectFactory.GenerateUID();
       cloned.Name = Name;
       cloned.InitR = InitR;
       cloned.InitG = InitG;
       cloned.InitB = InitB;
       cloned.InitA = InitA;
       cloned.InitNoteA = InitNoteA;
-      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(offset);
+      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(objectFactory, offset);
 
       // Re-wire bubbling to the cloned StoryboardEvents
-      cloned.StoryboardEvents.OnStoryboardChanged += cloned.BubbleStoryboard;
+      cloned.StoryboardEvents.OnUpdated += cloned.BubbleStoryboard;
 
       return cloned;
     }

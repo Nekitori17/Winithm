@@ -19,7 +19,7 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages scroll speed segments and evaluates visual lane distances.
   /// </summary>
-  public class SpeedStepManager: IDeepCloneable<SpeedStepManager>
+  public class SpeedStepManager : IDeepCloneable<SpeedStepManager>
   {
     public event Action<SpeedStepManager> OnUpdated;
 
@@ -55,14 +55,14 @@ namespace Winithm.Core.Managers
     public List<SpeedStepData> SpeedStepCollection { get; private set; } = new List<SpeedStepData>();
     public FrameCache FrameCache { get; private set; } = new FrameCache();
 
-    public SpeedStepManager DeepClone(BeatTime? offset)
+    public SpeedStepManager DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       var newSpeedStep = new SpeedStepManager();
 
       newSpeedStep.BeginUpdate();
 
       foreach (var speedStep in SpeedStepCollection)
-        newSpeedStep.AddSpeedStep(speedStep.DeepClone(offset));
+        newSpeedStep.AddSpeedStep(speedStep.DeepClone(objectFactory, offset));
 
       newSpeedStep.EndUpdate();
 
@@ -112,7 +112,8 @@ namespace Winithm.Core.Managers
       BeginUpdate();
 
       int[] indices = new int[speedSteps.Count];
-      for (int i = 0; i < speedSteps.Count; i++) {
+      for (int i = 0; i < speedSteps.Count; i++)
+      {
         indices[i] = AddSpeedStep(speedSteps[i]);
       }
 
@@ -183,7 +184,7 @@ namespace Winithm.Core.Managers
     public List<SpeedStepData> GetSpeedSteps(List<SpeedStepData> speedSteps)
     {
       var result = new List<SpeedStepData>();
-      
+
       foreach (var st in speedSteps)
         if (SpeedStepCollection.Contains(st)) result.Add(st);
 
@@ -193,10 +194,10 @@ namespace Winithm.Core.Managers
     public List<SpeedStepData> GetSpeedStep(string id)
     {
       if (string.IsNullOrEmpty(id)) return null;
-      
+
       var speedStep = SpeedStepCollection.FindAll(st => st.ID == id);
 
-      if (speedStep.Count == 0) 
+      if (speedStep.Count == 0)
         throw new ArgumentException($"SpeedStep {id} not found in collection.");
 
       return speedStep;
@@ -205,7 +206,7 @@ namespace Winithm.Core.Managers
     public List<SpeedStepData> GetSpeedSteps(List<string> ids)
     {
       var result = new List<SpeedStepData>();
-      
+
       foreach (var id in ids)
         try { result.AddRange(GetSpeedStep(id)); }
         catch (ArgumentException) { continue; }
@@ -224,7 +225,7 @@ namespace Winithm.Core.Managers
       if (SpeedStepCollection.Count == 0) return null;
       return SpeedStepCollection[SpeedStepCollection.Count - 1];
     }
-    
+
     /// <summary>
     /// Rebuilds the distance cache for the current beat.
     /// </summary>
@@ -249,7 +250,7 @@ namespace Winithm.Core.Managers
         double segStart = SpeedStepCollection[i - 1].StartBeat.AbsoluteValue;
         double segEnd = SpeedStepCollection[i].StartBeat.AbsoluteValue;
         double segLen = segEnd - segStart;
-        
+
         float speed = EvaluateSpeed(SpeedStepCollection[i - 1], currentBeat);
         FrameCache.PrefixDistance[i] = FrameCache.PrefixDistance[i - 1] + speed * (float)segLen;
       }

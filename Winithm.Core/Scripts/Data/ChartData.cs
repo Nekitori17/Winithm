@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
 {
@@ -10,14 +10,12 @@ namespace Winithm.Core.Data
     // From .wnm
     public SongMetaData SongMetaData = new SongMetaData();
     public ChartMetadata Metadata = new ChartMetadata();
-    public ResourceData Resources = new ResourceData();
-    public List<ChartReference> ChartReferences = new List<ChartReference>();
 
     // From .wnc
-    public List<ComponentData> Components = new List<ComponentData>();
-    public List<ThemeChannelData> ThemeChannels = new List<ThemeChannelData>();
-    public List<GroupData> Groups = new List<GroupData>();
-    public List<WindowData> Windows = new List<WindowData>();
-    public List<OverlayData> Overlays = new List<OverlayData>();
+    // public List<ComponentData> Components = new List<ComponentData>();
+    // public List<OverlayData> Overlays = new List<OverlayData>();
+    public ThemeChannelManager ThemeChannels = new ThemeChannelManager();
+    public GroupManager Groups = new GroupManager();
+    public WindowManager Windows = new WindowManager();
   }
 }

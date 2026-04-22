@@ -83,11 +83,11 @@ namespace Winithm.Core.Data
     /// <summary>Timing offset (ms) captured during Phase 1 for Phase 2 scoring.</summary>
     public float HoldStartOffsetMs = float.NaN;
 
-    public NoteData DeepClone(BeatTime? offset)
+    public NoteData DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       return new NoteData()
       {
-        ID = ID,
+        ID = objectFactory.GenerateUID(),
         Type = Type,
         StartBeat = StartBeat + (offset ?? BeatTime.Zero),
         Length = Length,
@@ -105,7 +105,7 @@ namespace Winithm.Core.Data
 
       string[] parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
       if (parts.Length >= 1) current.ID = parts[0];
-      if (parts.Length >= 2) current.Type = 
+      if (parts.Length >= 2) current.Type =
         Enum.TryParse<NoteType>(parts[1], true, out var t) ? t : NoteType.Tap;
       if (parts.Length >= 3) current.StartBeat =
         BeatTime.TryParse(parts[2], out var sb) ? sb : BeatTime.Zero;
@@ -123,7 +123,7 @@ namespace Winithm.Core.Data
       return current;
     }
 
-    public override string ToString() 
+    public override string ToString()
       => $"{ID} {Type} {StartBeat} {Length} {Side} {FakeType}";
   }
 }

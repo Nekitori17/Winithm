@@ -11,7 +11,7 @@ namespace Winithm.Core.Managers
   /// Manages ThemeChannelData configurations and monitors inner data changes.
   /// Storyboard changes are already bubbled through ThemeChannelData.OnDataChanged.
   /// </summary>
-  public class ThemeChannelManager : IDeepCloneable<ThemeChannelManager>
+  public class ThemeChannelManager
   {
     public event Action<ThemeChannelManager> OnUpdated;
 
@@ -30,18 +30,6 @@ namespace Winithm.Core.Managers
     private void NotifyChanged()
     {
       if (_updateLockCount == 0) OnUpdated?.Invoke(this);
-    }
-
-    public ThemeChannelManager DeepClone(BeatTime? offset)
-    {
-      var cloned = new ThemeChannelManager();
-
-      cloned.BeginUpdate();
-      foreach (var theme in ThemeChannelCollection.Values)
-        cloned.AddThemeChannel(theme.DeepClone(offset));
-      cloned.EndUpdate();
-
-      return cloned;
     }
 
     private void SubscribeChangeEvent(ThemeChannelData themeChannelData)

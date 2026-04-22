@@ -39,17 +39,17 @@ namespace Winithm.Core.Data
 
     public GroupData()
     {
-      StoryboardEvents.OnUpdate += BubbleStoryboard;
+      StoryboardEvents.OnUpdated += BubbleStoryboard;
     }
 
-    public GroupData DeepClone(BeatTime? offset)
+    public GroupData DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       var cloned = new GroupData();
 
       // Detach bubbling from the default StoryboardEvents created by constructor
-      cloned.StoryboardEvents.OnUpdate -= cloned.BubbleStoryboard;
+      cloned.StoryboardEvents.OnUpdated -= cloned.BubbleStoryboard;
 
-      cloned.ID = ID;
+      cloned.ID = objectFactory.GenerateUID();
       cloned.Name = Name;
       cloned.ParentGroupID = ParentGroupID;
       cloned.InitX = InitX;
@@ -57,10 +57,10 @@ namespace Winithm.Core.Data
       cloned.InitScaleX = InitScaleX;
       cloned.InitScaleY = InitScaleY;
       cloned.InitRotation = InitRotation;
-      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(offset);
+      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(objectFactory, offset);
 
       // Re-wire bubbling to the cloned StoryboardEvents
-      cloned.StoryboardEvents.OnUpdate += cloned.BubbleStoryboard;
+      cloned.StoryboardEvents.OnUpdated += cloned.BubbleStoryboard;
 
       return cloned;
     }
@@ -80,7 +80,7 @@ namespace Winithm.Core.Data
       return current;
     }
 
-    public override string ToString() 
+    public override string ToString()
       => $"{ID} {InitX} {InitY} {InitScaleX} {InitScaleY} {InitRotation}";
 
     // Named delegate for clean subscribe/unsubscribe in DeepClone

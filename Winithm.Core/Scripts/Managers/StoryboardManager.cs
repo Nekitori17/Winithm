@@ -50,7 +50,7 @@ namespace Winithm.Core.Managers
 
     private readonly Dictionary<EventData, TProp> _eventKeyMap = new Dictionary<EventData, TProp>();
 
-    public StoryboardManager<TProp> DeepClone(BeatTime? offset)
+    public StoryboardManager<TProp> DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       var newStoryboard = new StoryboardManager<TProp>();
 
@@ -59,7 +59,7 @@ namespace Winithm.Core.Managers
       foreach (var events in EventCollection)
       {
         foreach (var evt in events.Value)
-          newStoryboard.AddEvent(events.Key, evt.DeepClone(offset));
+          newStoryboard.AddEvent(events.Key, evt.DeepClone(objectFactory, offset));
       }
 
       newStoryboard.EndUpdate();
@@ -250,13 +250,13 @@ namespace Winithm.Core.Managers
     public int RemoveEvents(TProp prop, List<EventData> evts)
     {
       if (evts.Count == 0) return 0;
-      
+
       BeginUpdate();
 
       int success = evts.Count(evt => RemoveEvent(prop, evt));
 
       EndUpdate(success > 0);
-      
+
       return success;
     }
 
@@ -272,13 +272,13 @@ namespace Winithm.Core.Managers
     public int RemoveEvents(List<EventData> evts)
     {
       if (evts.Count == 0) return 0;
-      
+
       BeginUpdate();
 
       int success = evts.Count(evt => RemoveEvent(evt));
 
       EndUpdate(success > 0);
-      
+
       return success;
     }
 
@@ -329,20 +329,20 @@ namespace Winithm.Core.Managers
       }
 
       EndUpdate(anySuccess);
-      
+
       return anySuccess;
     }
 
     public int RemoveEvents(List<string> ids)
     {
       if (ids.Count == 0) return 0;
-      
+
       BeginUpdate();
 
       int success = ids.Count(id => RemoveEvent(id));
 
       EndUpdate(success > 0);
-      
+
       return success;
     }
 
@@ -456,7 +456,7 @@ namespace Winithm.Core.Managers
     public void SortPropEvents(TProp key)
     {
       if (!EventCollection.TryGetValue(key, out var events) || events.Count <= 1) return;
-      
+
       events.Sort((a, b) => a.StartBeat.CompareTo(b.StartBeat));
       PropertyCursors[key].Reset();
       NotifyChanged();

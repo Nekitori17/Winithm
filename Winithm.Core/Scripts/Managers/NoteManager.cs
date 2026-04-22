@@ -19,14 +19,14 @@ namespace Winithm.Core.Managers
 
     public Dictionary<NoteSide, List<NoteData>> NoteCollection { get; private set; } = new Dictionary<NoteSide, List<NoteData>>();
     public Dictionary<NoteSide, double[]> MaxEndBeats { get; private set; } = new Dictionary<NoteSide, double[]>();
-      
+
     public BeatTime ExpectedStartFocusBeat { get; private set; } = BeatTime.Max;
     public BeatTime ExpectedEndCloseBeat { get; private set; } = BeatTime.Max;
     public int TotalHittableNoteCount { get; private set; } = 0;
 
     private int _updateLockCount = 0;
 
-    public NoteManager DeepClone(BeatTime? offset)
+    public NoteManager DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       var cloned = new NoteManager();
       cloned.SetWindowData(this.WindowData);
@@ -35,7 +35,7 @@ namespace Winithm.Core.Managers
       foreach (var sideNotes in NoteCollection)
       {
         foreach (var note in sideNotes.Value)
-          cloned.AddNote(sideNotes.Key, note.DeepClone(offset));
+          cloned.AddNote(sideNotes.Key, note.DeepClone(objectFactory, offset));
       }
       cloned.EndUpdate();
 
@@ -109,7 +109,7 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void Compute()
     {
-      ExpectedStartFocusBeat = WindowData.UnFocus 
+      ExpectedStartFocusBeat = WindowData.UnFocus
         ? WindowData.StartBeat
         : BeatTime.Max;
       ExpectedEndCloseBeat = WindowData.EndBeat;
@@ -128,7 +128,7 @@ namespace Winithm.Core.Managers
           {
             if (note.StartBeat < ExpectedEndCloseBeat)
               ExpectedEndCloseBeat = note.StartBeat;
-            break; 
+            break;
           }
         }
       }
@@ -261,21 +261,21 @@ namespace Winithm.Core.Managers
       if (!list.Remove(note)) return false;
 
       UnsubscribeChangeEvent(note);
-      
+
       if (list.Count == 0) NoteCollection.Remove(side);
       NotifyChanged();
-      
+
       return true;
     }
 
     public int RemoveNotes(NoteSide side, List<NoteData> notes)
     {
       if (notes.Count == 0) return 0;
-      
+
       BeginUpdate();
       int success = notes.Count(n => RemoveNote(side, n));
       EndUpdate(success > 0);
-      
+
       return success;
     }
 
@@ -289,11 +289,11 @@ namespace Winithm.Core.Managers
     public int RemoveNotes(List<NoteData> notes)
     {
       if (notes.Count == 0) return 0;
-      
+
       BeginUpdate();
       int success = notes.Count(n => RemoveNote(n));
       EndUpdate(success > 0);
-      
+
       return success;
     }
 
@@ -335,18 +335,18 @@ namespace Winithm.Core.Managers
         if (RemoveNote(side, id)) anySuccess = true;
       }
       EndUpdate(anySuccess);
-      
+
       return anySuccess;
     }
 
     public int RemoveNotes(List<string> ids)
     {
       if (ids.Count == 0) return 0;
-      
+
       BeginUpdate();
       int success = ids.Count(id => RemoveNote(id));
       EndUpdate(success > 0);
-      
+
       return success;
     }
 
@@ -375,7 +375,7 @@ namespace Winithm.Core.Managers
     public List<NoteData> GetSideNotes(NoteSide side)
     {
       if (NoteCollection.TryGetValue(side, out var notes)) return notes;
-      
+
       NoteCollection[side] = new List<NoteData>();
       return NoteCollection[side];
     }

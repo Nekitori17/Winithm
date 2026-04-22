@@ -1,13 +1,14 @@
 using System;
 using Winithm.Core.Common;
 using Winithm.Core.Interfaces;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
 {
   /// <summary>
   /// Represents a single animation state or transition for a generic property.
   /// </summary>
-  public class EventData: IDeepCloneable<EventData>
+  public class EventData : IDeepCloneable<EventData>
   {
     public event Action<EventData> OnStartBeatChanged;
     public event Action<EventData> OnUpdated;
@@ -19,7 +20,7 @@ namespace Winithm.Core.Data
 
     private double _length = 0;
     public double Length { get => _length; set { if (_length != value) { _length = value; OnUpdated?.Invoke(this); } } }
-    
+
     private AnyValue _from = new AnyValue(0f);
     public AnyValue From { get => _from; set { if (_from != value) { _from = value; OnUpdated?.Invoke(this); } } }
 
@@ -32,11 +33,11 @@ namespace Winithm.Core.Data
     private AnyValue _easingBezier = new AnyValue(0f, 0f, 1f, 1f);
     public AnyValue EasingBezier { get => _easingBezier; set { if (_easingBezier != value) { _easingBezier = value; OnUpdated?.Invoke(this); } } }
 
-    public EventData DeepClone(BeatTime? offset)
+    public EventData DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       return new EventData
       {
-        ID = ID,
+        ID = objectFactory.GenerateUID(),
         StartBeat = _startBeat + (offset ?? BeatTime.Zero),
         Length = _length,
         From = _from,

@@ -1,6 +1,7 @@
 using System;
 using Winithm.Core.Common;
 using Winithm.Core.Interfaces;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
 {
@@ -37,7 +38,7 @@ namespace Winithm.Core.Data
     public static readonly BPMStop NaN = new BPMStop(BeatTime.NaN, 0, 0);
     public static readonly BPMStop Max = new BPMStop(BeatTime.Max, 0, 0);
 
-    public BPMStop DeepClone(BeatTime? offset)
+    public BPMStop DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       return new BPMStop(_startBeat + (offset ?? BeatTime.Zero), _bpm, _timeSignature)
       {

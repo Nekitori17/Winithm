@@ -25,23 +25,23 @@ namespace Winithm.Core.Data
 
     public SpeedStepData()
     {
-      StoryboardEvents.OnUpdate += BubbleStoryboard;
+      StoryboardEvents.OnUpdated += BubbleStoryboard;
     }
 
-    public SpeedStepData DeepClone(BeatTime? offset)
+    public SpeedStepData DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       var cloned = new SpeedStepData();
 
       // Detach bubbling from the default StoryboardEvents created by constructor
-      cloned.StoryboardEvents.OnUpdate -= cloned.BubbleStoryboard;
+      cloned.StoryboardEvents.OnUpdated -= cloned.BubbleStoryboard;
 
-      cloned.ID = ID;
+      cloned.ID = objectFactory.GenerateUID();
       cloned.StartBeat = StartBeat + (offset ?? BeatTime.Zero);
       cloned.Multiplier = Multiplier;
-      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(offset);
+      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(objectFactory, offset);
 
       // Re-wire bubbling to the cloned StoryboardEvents
-      cloned.StoryboardEvents.OnUpdate += cloned.BubbleStoryboard;
+      cloned.StoryboardEvents.OnUpdated += cloned.BubbleStoryboard;
 
       return cloned;
     }

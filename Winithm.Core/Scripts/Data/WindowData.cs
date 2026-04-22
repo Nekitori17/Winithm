@@ -149,7 +149,7 @@ namespace Winithm.Core.Data
       EndBeatEndOut = metronome.ToBeat(endBeatInSecs + 1.2);
     }
 
-    public WindowData DeepClone(BeatTime? offset)
+    public WindowData DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       var cloned = new WindowData();
 
@@ -159,7 +159,7 @@ namespace Winithm.Core.Data
       cloned.SpeedSteps.OnUpdated -= cloned.BubbleSpeedStep;
       cloned.Notes.OnUpdated -= cloned.BubbleNote;
 
-      cloned.ID = ID;
+      cloned.ID = objectFactory.GenerateUID();
       cloned.Name = Name;
       cloned.Title = Title;
       cloned.Layer = Layer;
@@ -181,9 +181,9 @@ namespace Winithm.Core.Data
       cloned.EndBeat = EndBeat + (offset ?? BeatTime.Zero);
 
       // Clone sub-managers
-      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(offset) ?? new StoryboardManager<StoryboardProperty>();
-      cloned.SpeedSteps = SpeedSteps?.DeepClone(offset) ?? new SpeedStepManager();
-      cloned.Notes = Notes?.DeepClone(offset) ?? new NoteManager();
+      cloned.StoryboardEvents = StoryboardEvents?.DeepClone(objectFactory, offset) ?? new StoryboardManager<StoryboardProperty>();
+      cloned.SpeedSteps = SpeedSteps?.DeepClone(objectFactory, offset) ?? new SpeedStepManager();
+      cloned.Notes = Notes?.DeepClone(objectFactory, offset) ?? new NoteManager();
 
       // Re-wire sub-manager bubbling to the new clone
       cloned.StoryboardEvents.OnUpdated += cloned.BubbleStoryboard;
@@ -208,7 +208,7 @@ namespace Winithm.Core.Data
         OnLifeCycleChanged?.Invoke(this);
         return;
       }
-      
+
       if (
         SpeedSteps.GetFirst().StartBeat != StartBeat ||
         SpeedSteps.GetLast().StartBeat != EndBeat
@@ -220,7 +220,7 @@ namespace Winithm.Core.Data
         OnLifeCycleChanged?.Invoke(this);
         return;
       }
-      
+
       OnUpdated?.Invoke(this);
     }
     private void BubbleNote(NoteManager n) => OnUpdated?.Invoke(this);

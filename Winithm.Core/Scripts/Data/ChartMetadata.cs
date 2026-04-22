@@ -1,3 +1,5 @@
+using System;
+
 namespace Winithm.Core.Data
 {
   /// <summary>
@@ -5,15 +7,24 @@ namespace Winithm.Core.Data
   /// </summary>
   public class ChartMetadata
   {
-    public SongMetaData SongMetaData = new SongMetaData();
+    public event Action<ChartMetadata> OnUpdated;
 
-    // From .wnc [METADATA] or .wnm [CHARTS]
-    public int Index = 0;
-    public string ChartID = "unnamed";
-    public string ChartName = "Unamed";
-    public string Charter = "Noname";
-    public string Level = "1";
-    public float Constant = 1f;
-    public long NextIDSeed = 0;
+    private int _index = 0;
+    public int Index { get => _index; set { if (_index == value) return; _index = value; OnUpdated?.Invoke(this); } }
+
+    private string _chartId = "test";
+    public string ChartID { get => _chartId; set { if (_chartId == value) return; _chartId = value; OnUpdated?.Invoke(this); } }
+
+    private string _chartName = "Unamed";
+    public string ChartName { get => _chartName; set { if (_chartName == value) return; _chartName = value; OnUpdated?.Invoke(this); } }
+
+    private string _charter = "Noname";
+    public string Charter { get => _charter; set { if (_charter == value) return; _charter = value; OnUpdated?.Invoke(this); } }
+
+    private string _level = "1";
+    public string Level { get => _level; set { if (_level == value) return; _level = value; OnUpdated?.Invoke(this); } }
+
+    private float _constant = 1f;
+    public float Constant { get => _constant; set { if (_constant == value) return; _constant = value; OnUpdated?.Invoke(this); } }
   }
 }

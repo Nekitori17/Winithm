@@ -10,7 +10,7 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages WindowData collections and monitors nested sub-manager (SpeedStep, Note, Storyboard) changes.
   /// </summary>
-  public class WindowManager : IDeepCloneable<WindowManager>
+  public class WindowManager
   {
     public event Action<WindowManager> OnWindowChanged;
 
@@ -30,19 +30,6 @@ namespace Winithm.Core.Managers
     private void NotifyChanged()
     {
       if (_updateLockCount == 0) OnWindowChanged?.Invoke(this);
-    }
-
-    public WindowManager DeepClone(BeatTime? offset)
-    {
-      var cloned = new WindowManager();
-      cloned.SetMetronome(Metronome);
-
-      cloned.BeginUpdate();
-      foreach (var window in WindowCollection.Values)
-        cloned.AddWindow(window.DeepClone(offset));
-      cloned.EndUpdate();
-
-      return cloned;
     }
 
     public void SetMetronome(Metronome metronome)
@@ -98,12 +85,14 @@ namespace Winithm.Core.Managers
     /// A single subscription here captures all nested changes without redundant wiring.
     /// </summary>
     private void HandleUpdated(WindowData windowData) => NotifyChanged();
-    private void HandleUnFocusChanged(WindowData windowData) {
+    private void HandleUnFocusChanged(WindowData windowData)
+    {
       windowData.Notes.Compute();
 
       NotifyChanged();
     }
-    private void HandleLifeCycleChanged(WindowData windowData) {
+    private void HandleLifeCycleChanged(WindowData windowData)
+    {
       windowData.Notes.Compute();
       ComputeAnimations(windowData);
 
