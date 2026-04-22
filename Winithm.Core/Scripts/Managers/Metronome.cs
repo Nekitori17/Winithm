@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Winithm.Core.Data;
 using Winithm.Core.Common;
 using System;
-using Godot;
 
 namespace Winithm.Core.Managers
 {

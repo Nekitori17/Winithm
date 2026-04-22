@@ -13,9 +13,10 @@ namespace Winithm.Core.Managers
   /// </summary>
   public class NoteManager : IDeepCloneable<NoteManager>
   {
+    public event Action<NoteManager> OnLifeCycleChanged;
     public event Action<NoteManager> OnUpdated;
 
-    public WindowData WindowData { get; private set; } = new WindowData();
+    public WindowData WindowData { get; private set; }
 
     public Dictionary<NoteSide, List<NoteData>> NoteCollection { get; private set; } = new Dictionary<NoteSide, List<NoteData>>();
     public Dictionary<NoteSide, double[]> MaxEndBeats { get; private set; } = new Dictionary<NoteSide, double[]>();
@@ -109,6 +110,18 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void Compute()
     {
+      if (WindowData == null)
+      {
+        ExpectedStartFocusBeat = BeatTime.Max;
+        ExpectedEndCloseBeat = BeatTime.Max;
+        TotalHittableNoteCount = 0;
+        MaxEndBeats.Clear();
+        return;
+      }
+
+      BeatTime prevExpectedEndCloseBeat = ExpectedEndCloseBeat;
+      BeatTime prevWindowEndBeat = WindowData.EndBeat;
+
       ExpectedStartFocusBeat = WindowData.UnFocus
         ? WindowData.StartBeat
         : BeatTime.Max;
@@ -158,6 +171,14 @@ namespace Winithm.Core.Managers
           maxEnds[i] = runningMax;
         }
         MaxEndBeats[sideNotes.Key] = maxEnds;
+      }
+
+      if (
+        prevExpectedEndCloseBeat != ExpectedEndCloseBeat ||
+        prevWindowEndBeat != WindowData.EndBeat
+      )
+      {
+        OnLifeCycleChanged?.Invoke(this);
       }
     }
 

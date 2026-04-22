@@ -36,7 +36,7 @@ namespace Winithm.Core.Behaviors
     [Export] public NoteType Type;
     [Export] public float NoteSize = 1f;
     [Export] public float BodyHeight = 0f;
-    [Export] public ResourcePack ResourcePack = NoteResourceManager.Instance.GetActiveResourcePack();
+    [Export] public ResourcePack ResourcePack = ResourcePackManager.Instance.GetActiveResourcePack();
 
     public static readonly float BODY_TO_HEAD_RATIO = 0.9f;
     public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.025f;

@@ -71,6 +71,9 @@ namespace Winithm.Core.Managers
 
       windowData.OnUnFocusChanged -= HandleUnFocusChanged;
       windowData.OnUnFocusChanged += HandleUnFocusChanged;
+
+      windowData.OnUnResponsiveChanged -= HandleUnResponsiveChanged;
+      windowData.OnUnResponsiveChanged += HandleUnResponsiveChanged;
     }
 
     private void UnsubscribeChangeEvent(WindowData windowData)
@@ -78,6 +81,7 @@ namespace Winithm.Core.Managers
       windowData.OnUpdated -= HandleUpdated;
       windowData.OnLifeCycleChanged -= HandleLifeCycleChanged;
       windowData.OnUnFocusChanged -= HandleUnFocusChanged;
+      windowData.OnUnResponsiveChanged -= HandleUnResponsiveChanged;
     }
 
     /// <summary>
@@ -88,6 +92,12 @@ namespace Winithm.Core.Managers
     private void HandleUnFocusChanged(WindowData windowData)
     {
       windowData.Notes.Compute();
+
+      NotifyChanged();
+    }
+    private void HandleUnResponsiveChanged(WindowData windowData)
+    {
+      ComputeAnimations(windowData);
 
       NotifyChanged();
     }

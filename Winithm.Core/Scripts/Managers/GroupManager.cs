@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Winithm.Core.Common;
 using Winithm.Core.Data;
-using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Managers
 {

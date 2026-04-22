@@ -15,6 +15,7 @@ namespace Winithm.Core.Data
   {
     public event Action<WindowData> OnLifeCycleChanged;
     public event Action<WindowData> OnUnFocusChanged;
+    public event Action<WindowData> OnUnResponsiveChanged;
     public event Action<WindowData> OnUpdated;
 
     public string ID;
@@ -85,7 +86,8 @@ namespace Winithm.Core.Data
 
     // ---------- Unresponsive & Focusable ----------
     /// <summary>Whether the window will be unresponsive at end beat, triggerring a "Not Responding" visual state.</summary>
-    public bool Unresponsive = false;
+    private bool _unresponsive = false;
+    public bool Unresponsive { get => _unresponsive; set { if (_unresponsive == value) return; _unresponsive = value; OnUnResponsiveChanged?.Invoke(this); } }
 
     /// <summary>Whether the window is currently focusable, preventing player interaction and capable of processing player input.</summary>
     public bool Focusable = false;
@@ -117,6 +119,7 @@ namespace Winithm.Core.Data
       // Bubble sub-manager changes up to WindowData level
       StoryboardEvents.OnUpdated += BubbleStoryboard;
       SpeedSteps.OnUpdated += BubbleSpeedStep;
+      Notes.OnLifeCycleChanged += BubbleNoteLifeCycle;
       Notes.OnUpdated += BubbleNote;
 
       // Note requires reference to WindowData for Focus/Close boundary logic
@@ -157,6 +160,7 @@ namespace Winithm.Core.Data
       // before replacing with cloned sub-managers
       cloned.StoryboardEvents.OnUpdated -= cloned.BubbleStoryboard;
       cloned.SpeedSteps.OnUpdated -= cloned.BubbleSpeedStep;
+      cloned.Notes.OnLifeCycleChanged -= cloned.BubbleNoteLifeCycle;
       cloned.Notes.OnUpdated -= cloned.BubbleNote;
 
       cloned.ID = objectFactory.GenerateUID();
@@ -188,6 +192,7 @@ namespace Winithm.Core.Data
       // Re-wire sub-manager bubbling to the new clone
       cloned.StoryboardEvents.OnUpdated += cloned.BubbleStoryboard;
       cloned.SpeedSteps.OnUpdated += cloned.BubbleSpeedStep;
+      cloned.Notes.OnLifeCycleChanged += cloned.BubbleNoteLifeCycle;
       cloned.Notes.OnUpdated += cloned.BubbleNote;
 
       // Bind Note's WindowData reference to the new clone
@@ -224,5 +229,6 @@ namespace Winithm.Core.Data
       OnUpdated?.Invoke(this);
     }
     private void BubbleNote(NoteManager n) => OnUpdated?.Invoke(this);
+    private void BubbleNoteLifeCycle(NoteManager n) => OnLifeCycleChanged?.Invoke(this);
   }
 }
