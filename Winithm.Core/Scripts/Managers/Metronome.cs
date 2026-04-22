@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Winithm.Core.Data;
 using Winithm.Core.Common;
 using System;
+using Godot;
 
 namespace Winithm.Core.Managers
 {
@@ -63,6 +64,8 @@ namespace Winithm.Core.Managers
     public List<BPMStop> BPMStops { get; private set; } = new List<BPMStop>();
 
     public int StopCount => BPMStops.Count;
+    public float LowestBPM = float.MaxValue;
+    public float HightestBPM = float.MinValue;
 
     public Metronome()
     {
@@ -82,6 +85,7 @@ namespace Winithm.Core.Managers
       for (int i = index; i < BPMStops.Count; i++)
       {
         var curr = BPMStops[i];
+
         if (i == 0)
         {
           double beatDiff = curr.StartBeat.AbsoluteValue;
@@ -93,6 +97,24 @@ namespace Winithm.Core.Managers
           double beatDiff = curr.StartBeat.AbsoluteValue - prev.StartBeat.AbsoluteValue;
           curr.StartTimeSeconds = prev.StartTimeSeconds + (beatDiff / prev.BeatsPerSecond);
         }
+      }
+
+      RecalculateBPMRange();
+    }
+
+    /// <summary>
+    /// Recomputes LowestBPM and HightestBPM by scanning BaseBPM and all BPMStops.
+    /// </summary>
+    private void RecalculateBPMRange()
+    {
+      LowestBPM = BaseBPM.InitialBPM;
+      HightestBPM = BaseBPM.InitialBPM;
+
+      for (int i = 0; i < BPMStops.Count; i++)
+      {
+        float bpm = BPMStops[i].BPM;
+        if (bpm < LowestBPM) LowestBPM = bpm;
+        if (bpm > HightestBPM) HightestBPM = bpm;
       }
     }
 
