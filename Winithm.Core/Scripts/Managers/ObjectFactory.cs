@@ -25,5 +25,17 @@ namespace Winithm.Core.Managers
 
       NextIDSeed = Math.Max(NextIDSeed, seed);
     }
+
+    // ==========================================
+    // Factory Methods
+    // ==========================================
+
+    public Data.WindowData CreateWindowData() => new Data.WindowData { ID = GenerateUID() };
+    public Data.NoteData CreateNoteData() => new Data.NoteData { ID = GenerateUID() };
+    public Data.SpeedStepData CreateSpeedStepData() => new Data.SpeedStepData { ID = GenerateUID() };
+    public Data.ThemeChannelData CreateThemeChannelData() => new Data.ThemeChannelData { ID = GenerateUID() };
+    public Data.GroupData CreateGroupData() => new Data.GroupData { ID = GenerateUID() };
+    public Data.OverlayData CreateOverlayData() => new Data.OverlayData { ID = GenerateUID() };
+    public Data.EventData CreateEventData() => new Data.EventData { ID = GenerateUID() };
   }
 }
