@@ -26,6 +26,8 @@ namespace Winithm.Core.Managers
       NextIDSeed = Math.Max(NextIDSeed, seed);
     }
 
+    public void IncrementNextIDSeed() => NextIDSeed++;
+
     // ==========================================
     // Factory Methods
     // ==========================================
