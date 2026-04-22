@@ -20,7 +20,7 @@ namespace Winithm.Core.Data
     public float InitScale { get => _initScale; set { if (_initScale == value) return; _initScale = value; OnUpdated?.Invoke(this); } }
     private float _initAlpha = 1f;
     public float InitAlpha { get => _initAlpha; set { if (_initAlpha == value) return; _initAlpha = value; OnUpdated?.Invoke(this); } }
-    public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; }
+    public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; } = new StoryboardManager<StoryboardProperty>();
 
     public ComponentData()
     {
