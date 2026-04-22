@@ -12,8 +12,8 @@ namespace Winithm.Core.Data
     public ChartMetadata Metadata = new ChartMetadata();
 
     // From .wnc
+    public OverlayManager Overlays = new OverlayManager();
     public ComponentManager Components = new ComponentManager();
-    // public List<OverlayData> Overlays = new List<OverlayData>();
     public ThemeChannelManager ThemeChannels = new ThemeChannelManager();
     public GroupManager Groups = new GroupManager();
     public WindowManager Windows = new WindowManager();
