@@ -26,6 +26,7 @@ namespace Winithm.Core.Managers
     public int TotalHittableNoteCount { get; private set; } = 0;
 
     private int _updateLockCount = 0;
+    private bool _needsRecompute = false;
 
     public NoteManager DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
@@ -51,21 +52,35 @@ namespace Winithm.Core.Managers
     /// <summary>
     /// Resumes notifications and runs Compute() once if edits were made.
     /// </summary>
-    public void EndUpdate(bool success = true, bool needReCompute = true)
+    public void EndUpdate(bool success = true)
     {
       if (_updateLockCount > 0) _updateLockCount--;
       if (_updateLockCount == 0 && success)
       {
-        if (needReCompute) Compute();
+        CommitRecompute();
         OnUpdated?.Invoke(this);
       }
     }
 
-    private void NotifyChanged(bool needReCompute = true)
+    private void RequestRecompute()
+    {
+      _needsRecompute = true;
+    }
+
+    private void CommitRecompute()
+    {
+      if (_needsRecompute)
+      {
+        Compute();
+        _needsRecompute = false;
+      }
+    }
+
+    private void NotifyChanged()
     {
       if (_updateLockCount == 0)
       {
-        if (needReCompute) Compute();
+        CommitRecompute();
         OnUpdated?.Invoke(this);
       }
     }
@@ -73,6 +88,7 @@ namespace Winithm.Core.Managers
     public void SetWindowData(WindowData windowData)
     {
       WindowData = windowData;
+      RequestRecompute();
       NotifyChanged();
     }
 
@@ -224,13 +240,14 @@ namespace Winithm.Core.Managers
       int index = FindAddIndex(list, note);
       list.Insert(index, note);
 
+      RequestRecompute();
       NotifyChanged();
     }
 
     private void HandleSideChanged(NoteData note)
     {
       if (!_eventKeyMap.TryGetValue(note, out var currentSide)) return;
-      if (note.Side == currentSide) { NotifyChanged(); return; }
+      if (note.Side == currentSide) { RequestRecompute(); NotifyChanged(); return; }
 
       BeginUpdate();
       RemoveNote(currentSide, note);
@@ -238,8 +255,8 @@ namespace Winithm.Core.Managers
       EndUpdate();
     }
 
-    private void HandleInvalidate(NoteData note) => NotifyChanged();
-    private void HandleUpdated(NoteData note) => NotifyChanged(false);
+    private void HandleInvalidate(NoteData note) { RequestRecompute(); NotifyChanged(); }
+    private void HandleUpdated(NoteData note) => NotifyChanged();
 
     // ==========================================
     // Lifecycle Management
@@ -257,6 +274,7 @@ namespace Winithm.Core.Managers
       list.Insert(index, note);
 
       SubscribeChangeEvent(side, note);
+      RequestRecompute();
       NotifyChanged();
 
       return index;
@@ -284,6 +302,7 @@ namespace Winithm.Core.Managers
       UnsubscribeChangeEvent(note);
 
       if (list.Count == 0) NoteCollection.Remove(side);
+      RequestRecompute();
       NotifyChanged();
 
       return true;
@@ -329,6 +348,7 @@ namespace Winithm.Core.Managers
       list.RemoveAll(x => x.ID == id);
 
       if (list.Count == 0) NoteCollection.Remove(side);
+      RequestRecompute();
       NotifyChanged();
 
       return true;

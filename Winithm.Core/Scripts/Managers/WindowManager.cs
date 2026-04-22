@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Winithm.Core.Common;
 using Winithm.Core.Data;
-using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Managers
 {
@@ -17,19 +16,68 @@ namespace Winithm.Core.Managers
     public Metronome Metronome { get; private set; }
     public Dictionary<string, WindowData> WindowCollection { get; private set; } = new Dictionary<string, WindowData>();
 
+    /// <summary>Windows sorted by StartBeat for cursor-based culling.</summary>
+    public List<WindowData> SortedWindows { get; private set; } = new List<WindowData>();
+
+    /// <summary>Prefix-max of EndBeatEndOut over SortedWindows, for backward sync binary search.</summary>
+    public double[] MaxEndBeats { get; private set; } = Array.Empty<double>();
+
     private int _updateLockCount = 0;
+    private bool _needsRecompute = false;
 
     public void BeginUpdate() => _updateLockCount++;
 
     public void EndUpdate(bool success = true)
     {
       if (_updateLockCount > 0) _updateLockCount--;
-      if (_updateLockCount == 0 && success) OnWindowChanged?.Invoke(this);
+      if (_updateLockCount == 0 && success)
+      {
+        CommitRecompute();
+        OnWindowChanged?.Invoke(this);
+      }
     }
 
     private void NotifyChanged()
     {
-      if (_updateLockCount == 0) OnWindowChanged?.Invoke(this);
+      if (_updateLockCount == 0)
+      {
+        CommitRecompute();
+        OnWindowChanged?.Invoke(this);
+      }
+    }
+
+    private void RequestRecompute()
+    {
+      _needsRecompute = true;
+    }
+
+    private void CommitRecompute()
+    {
+      if (_needsRecompute)
+      {
+        Compute();
+        _needsRecompute = false;
+      }
+    }
+
+    /// <summary>
+    /// Full recompute: rebuilds SortedWindows and MaxEndBeats from scratch.
+    /// Cost is O(n log n) for sort + O(n) for prefix-max. Intended to be called
+    /// infrequently (on add/remove, lifecycle change, or unresponsive state change).
+    /// </summary>
+    public void Compute()
+    {
+      SortedWindows.Clear();
+      SortedWindows.AddRange(WindowCollection.Values);
+      SortedWindows.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
+
+      MaxEndBeats = new double[SortedWindows.Count];
+      double runningMax = double.MinValue;
+      for (int i = 0; i < SortedWindows.Count; i++)
+      {
+        runningMax = Math.Max(runningMax, SortedWindows[i].EndBeatEndOut);
+        MaxEndBeats[i] = runningMax;
+      }
     }
 
     public void SetMetronome(Metronome metronome)
@@ -55,6 +103,9 @@ namespace Winithm.Core.Managers
 
       foreach (var window in WindowCollection.Values)
         ComputeAnimations(window);
+
+      RequestRecompute();
+      CommitRecompute();
     }
 
     // ==========================================
@@ -99,6 +150,7 @@ namespace Winithm.Core.Managers
     {
       ComputeAnimations(windowData);
 
+      RequestRecompute();
       NotifyChanged();
     }
     private void HandleLifeCycleChanged(WindowData windowData)
@@ -106,6 +158,7 @@ namespace Winithm.Core.Managers
       windowData.Notes.Compute();
       ComputeAnimations(windowData);
 
+      RequestRecompute();
       NotifyChanged();
     }
 
@@ -124,6 +177,8 @@ namespace Winithm.Core.Managers
 
       WindowCollection[windowData.ID] = windowData;
       SubscribeChangeEvent(windowData);
+
+      RequestRecompute();
       NotifyChanged();
     }
 
@@ -142,6 +197,8 @@ namespace Winithm.Core.Managers
 
       UnsubscribeChangeEvent(windowData);
       WindowCollection.Remove(id);
+
+      RequestRecompute();
       NotifyChanged();
 
       return true;
