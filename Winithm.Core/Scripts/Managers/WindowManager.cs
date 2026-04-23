@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Winithm.Core.Common;
 using Winithm.Core.Data;
 
 namespace Winithm.Core.Managers
@@ -11,7 +10,7 @@ namespace Winithm.Core.Managers
   /// </summary>
   public class WindowManager
   {
-    public event Action<WindowManager> OnWindowChanged;
+    public event Action<WindowManager> OnUpdated;
 
     public Metronome Metronome { get; private set; }
     public Dictionary<string, WindowData> WindowCollection { get; private set; } = new Dictionary<string, WindowData>();
@@ -33,7 +32,7 @@ namespace Winithm.Core.Managers
       if (_updateLockCount == 0 && success)
       {
         CommitRecompute();
-        OnWindowChanged?.Invoke(this);
+        OnUpdated?.Invoke(this);
       }
     }
 
@@ -42,7 +41,7 @@ namespace Winithm.Core.Managers
       if (_updateLockCount == 0)
       {
         CommitRecompute();
-        OnWindowChanged?.Invoke(this);
+        OnUpdated?.Invoke(this);
       }
     }
 

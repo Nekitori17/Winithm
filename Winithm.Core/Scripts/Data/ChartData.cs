@@ -1,3 +1,4 @@
+using System;
 using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
@@ -7,11 +8,16 @@ namespace Winithm.Core.Data
   /// </summary>
   public class ChartData
   {
-    // From .wnm
-    public SongMetaData SongMetaData = new SongMetaData();
-    public ChartMetadata Metadata = new ChartMetadata();
+    public event Action<ChartData> OnSongMetaDataUpdated;
+    public event Action<ChartData> OnChartMetadataUpdated;
 
-    // From .wnc
+    public event Action<ChartData> OnChartUpdated;
+
+    // Metadata
+    public SongMetaData SongMetaData = new SongMetaData();
+    public ChartMetadata ChartMetadata = new ChartMetadata();
+
+    // Contents
     public OverlayManager Overlays = new OverlayManager();
     public ComponentManager Components = new ComponentManager();
     public ThemeChannelManager ThemeChannels = new ThemeChannelManager();
@@ -19,5 +25,17 @@ namespace Winithm.Core.Data
     public WindowManager Windows = new WindowManager();
 
     public ObjectFactory ObjectFactory = new ObjectFactory();
+
+    public ChartData()
+    {
+      SongMetaData.OnUpdated += (sm) => OnSongMetaDataUpdated?.Invoke(this);
+      ChartMetadata.OnUpdated += (cm) => OnChartMetadataUpdated?.Invoke(this);
+
+      Overlays.OnUpdated += (om) => OnChartUpdated?.Invoke(this);
+      Components.OnUpdated += (cmp) => OnChartUpdated?.Invoke(this);
+      ThemeChannels.OnUpdated += (tc) => OnChartUpdated?.Invoke(this);
+      Groups.OnUpdated += (g) => OnChartUpdated?.Invoke(this);
+      Windows.OnUpdated += (wm) => OnChartUpdated?.Invoke(this);
+    }
   }
 }
