@@ -23,7 +23,7 @@ namespace Winithm.Core.Managers
 
     public BeatTime ExpectedStartFocusBeat { get; private set; } = BeatTime.Max;
     public BeatTime ExpectedEndCloseBeat { get; private set; } = BeatTime.Max;
-    public int TotalHittableNoteCount { get; private set; } = 0;
+    public int TotalComboCount { get; private set; } = 0;
 
     private int _updateLockCount = 0;
     private bool _needsRecompute = false;
@@ -130,7 +130,7 @@ namespace Winithm.Core.Managers
       {
         ExpectedStartFocusBeat = BeatTime.Max;
         ExpectedEndCloseBeat = BeatTime.Max;
-        TotalHittableNoteCount = 0;
+        TotalComboCount = 0;
         MaxEndBeats.Clear();
         return;
       }
@@ -164,7 +164,7 @@ namespace Winithm.Core.Managers
 
       WindowData.EndBeat = ExpectedEndCloseBeat;
 
-      TotalHittableNoteCount = 0;
+      TotalComboCount = 0;
       MaxEndBeats.Clear();
 
       foreach (var sideNotes in NoteCollection)
@@ -180,7 +180,8 @@ namespace Winithm.Core.Managers
               && note.StartBeat <= ExpectedEndCloseBeat
               && note.IsHittable)
           {
-            TotalHittableNoteCount++;
+            if (note.Type == NoteType.Hold) TotalComboCount += 2;
+            else TotalComboCount++;
           }
 
           runningMax = Math.Max(runningMax, note.StartBeat.AbsoluteValue + note.Length);
