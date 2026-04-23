@@ -21,6 +21,12 @@ namespace Winithm.Core.Managers
     /// <summary>Prefix-max of EndBeatEndOut over SortedWindows, for backward sync binary search.</summary>
     public double[] MaxEndBeats { get; private set; } = Array.Empty<double>();
 
+    /// <summary>Prefix sum of TotalComboCount for windows in SortedWindows.</summary>
+    public int[] PrefixCombo { get; private set; } = Array.Empty<int>();
+
+    /// <summary>Total combo count across all windows.</summary>
+    public int TotalComboCount { get; private set; } = 0;
+
     private int _updateLockCount = 0;
     private bool _needsRecompute = false;
 
@@ -60,9 +66,7 @@ namespace Winithm.Core.Managers
     }
 
     /// <summary>
-    /// Full recompute: rebuilds SortedWindows and MaxEndBeats from scratch.
-    /// Cost is O(n log n) for sort + O(n) for prefix-max. Intended to be called
-    /// infrequently (on add/remove, lifecycle change, or unresponsive state change).
+    /// Full recompute: rebuilds SortedWindows, MaxEndBeats, and PrefixCombo.
     /// </summary>
     public void Compute()
     {
@@ -71,12 +75,20 @@ namespace Winithm.Core.Managers
       SortedWindows.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
 
       MaxEndBeats = new double[SortedWindows.Count];
+      PrefixCombo = new int[SortedWindows.Count];
       double runningMax = double.MinValue;
+      int runningCombo = 0;
+
       for (int i = 0; i < SortedWindows.Count; i++)
       {
         runningMax = Math.Max(runningMax, SortedWindows[i].EndBeatEndOut);
         MaxEndBeats[i] = runningMax;
+
+        runningCombo += SortedWindows[i].Notes.TotalComboCount;
+        PrefixCombo[i] = runningCombo;
       }
+
+      TotalComboCount = runningCombo;
     }
 
     public void SetMetronome(Metronome metronome)

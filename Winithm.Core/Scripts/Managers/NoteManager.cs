@@ -21,6 +21,11 @@ namespace Winithm.Core.Managers
     public Dictionary<NoteSide, List<NoteData>> NoteCollection { get; private set; } = new Dictionary<NoteSide, List<NoteData>>();
     public Dictionary<NoteSide, double[]> MaxEndBeats { get; private set; } = new Dictionary<NoteSide, double[]>();
 
+    /// <summary>Sorted beats where combo increments occur (Hold → end beat, others → start beat).</summary>
+    public double[] ComboEventBeats { get; private set; } = Array.Empty<double>();
+    /// <summary>Prefix-sum of combo values aligned with ComboEventBeats.</summary>
+    public int[] ComboPrefixSum { get; private set; } = Array.Empty<int>();
+
     public BeatTime ExpectedStartFocusBeat { get; private set; } = BeatTime.Max;
     public BeatTime ExpectedEndCloseBeat { get; private set; } = BeatTime.Max;
     public int TotalComboCount { get; private set; } = 0;
@@ -122,7 +127,7 @@ namespace Winithm.Core.Managers
     }
 
     /// <summary>
-    /// Re-evaluates note boundaries and tracks the trailing tails of hold notes.
+    /// Re-evaluates note boundaries, MaxEndBeats, and combo prefix-sum.
     /// </summary>
     public void Compute()
     {
@@ -132,6 +137,8 @@ namespace Winithm.Core.Managers
         ExpectedEndCloseBeat = BeatTime.Max;
         TotalComboCount = 0;
         MaxEndBeats.Clear();
+        ComboEventBeats = Array.Empty<double>();
+        ComboPrefixSum = Array.Empty<int>();
         return;
       }
 
@@ -167,6 +174,9 @@ namespace Winithm.Core.Managers
       TotalComboCount = 0;
       MaxEndBeats.Clear();
 
+      // Collect combo events and build MaxEndBeats in the same pass
+      var comboEvents = new List<(double beat, int combo)>();
+
       foreach (var sideNotes in NoteCollection)
       {
         var list = sideNotes.Value;
@@ -176,18 +186,40 @@ namespace Winithm.Core.Managers
         for (int i = 0; i < list.Count; i++)
         {
           var note = list[i];
+
           if (note.StartBeat >= ExpectedStartFocusBeat
               && note.StartBeat <= ExpectedEndCloseBeat
               && note.IsHittable)
           {
-            if (note.Type == NoteType.Hold) TotalComboCount += 2;
-            else TotalComboCount++;
+            if (note.Type == NoteType.Hold)
+            {
+              // Hold: 2 combo scored at END beat
+              comboEvents.Add((note.StartBeat.AbsoluteValue + note.Length, 2));
+              TotalComboCount += 2;
+            }
+            else
+            {
+              comboEvents.Add((note.StartBeat.AbsoluteValue, 1));
+              TotalComboCount++;
+            }
           }
 
           runningMax = Math.Max(runningMax, note.StartBeat.AbsoluteValue + note.Length);
           maxEnds[i] = runningMax;
         }
         MaxEndBeats[sideNotes.Key] = maxEnds;
+      }
+
+      // Sort combo events by beat and build prefix-sum
+      comboEvents.Sort((a, b) => a.beat.CompareTo(b.beat));
+      ComboEventBeats = new double[comboEvents.Count];
+      ComboPrefixSum = new int[comboEvents.Count];
+      int runningCombo = 0;
+      for (int i = 0; i < comboEvents.Count; i++)
+      {
+        runningCombo += comboEvents[i].combo;
+        ComboEventBeats[i] = comboEvents[i].beat;
+        ComboPrefixSum[i] = runningCombo;
       }
 
       if (

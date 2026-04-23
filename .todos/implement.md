@@ -65,3 +65,46 @@ Thay thế vòng lặp `foreach (_windowDataList)` hiện tại (O(n) mỗi fram
 - Giữ nguyên `_activeWindows` dictionary cho việc lookup theo ID (O(1)).
 - `_cursors` (Storyboard) vẫn cần track theo window ID, không bị ảnh hưởng bởi sort order.
 - Cần test cẩn thận trường hợp: tua ngược, window bật Unresponsive giữa chừng, window thêm/xóa runtime.
+
+---
+
+# ScoreController: Realtime Score Update
+
+## Đã triển khai (Data Layer)
+
+### NoteManager (per-window)
+- `ComboEventBeats[]`: sorted beats where combo increments occur.
+  - **Hold → end beat** (`StartBeat + Length`, 2 combo). Chỉ khi kết thúc mới cộng score.
+  - **Others → start beat** (1 combo).
+- `ComboPrefixSum[]`: prefix-sum aligned với `ComboEventBeats`.
+- `GetComboAtBeat(beat, hi)`: binary search O(log n). `hi` = upper bound index (exclusive), -1 = search all.
+- `GetScoreAtBeat(beat, hi)`: combo / TotalComboCount * 1,000,000.
+- Tự động recompute khi Add/Remove/Change note qua `RequestRecompute` → `Compute()`.
+
+### WindowManager (global)
+- `TotalComboCount`: tổng combo của tất cả windows. Được tính toán sẵn trong `Compute()`.
+- `PrefixCombo[]`: mảng lưu trữ prefix-sum của `TotalComboCount` tương ứng với từng window trong mảng `SortedWindows`.
+  - `PrefixCombo[i]` = tổng combo của tất cả windows từ `0` đến `i`.
+- Computed trong `WindowManager.Compute()` với chi phí O(N).
+
+## Các bước triển khai ScoreController & WindowController
+
+### 1. WindowController: Tính toán Global Combo
+- Trong quá trình scrubbing hoặc gameplay (khi `currentBeat` thay đổi):
+  - Tìm window đầu tiên trong `SortedWindows` đang alive (thường là dựa vào `_windowCursor`).
+  - Giả sử window sống thọ nhất đang active có index là `i`.
+  - Toàn bộ windows từ `0` đến `i-1` đã hoàn thành xong vòng đời → Combo lấy ngay từ `WindowManager.PrefixCombo[i-1]`.
+  - Từ window `i` trở đi (các window đang sống hoặc chưa sinh ra): Gọi `window.Notes.GetComboAtBeat(currentBeat)` để lấy combo hiện tại của window đó và cộng dồn.
+  - Tổng số combo tìm được = BaseCombo (từ Prefix) + Sum(Combo các window active).
+- Chi phí truy vấn cực nhanh: O(W_active × log N) thay vì phải tính lại từ đầu.
+
+### 2. Kết nối với ScoreHUD scene
+- Chờ `ScoreHUD.tscn` được xây dựng.
+- ScoreController kế thừa Control, lấy thông tin Combo và Score tính toán từ WindowController/WindowManager và update UI.
+
+### 3. Mode: Gameplay (tương lai)
+- Track actual hit results (Perfect/Good/Bad/Miss) thay vì all-Perfect assumption.
+- Cần thêm:
+  - `ActualScore` field tích lũy từ HitResult events.
+  - `ComboStreak` field reset khi Miss.
+  - Subscribe vào `NoteController.OnNoteMiss` / `OnAutoHit` events.
