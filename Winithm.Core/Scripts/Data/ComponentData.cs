@@ -10,6 +10,9 @@ namespace Winithm.Core.Data
   public class ComponentData : IStoryboardable<StoryboardProperty>
   {
     public event Action<ComponentData> OnUpdated;
+
+    private float _initX = 0f;
+    public float InitX { get => _initX; set { if (_initX == value) return; _initX = value; OnUpdated?.Invoke(this); } }
     private float _initY = 0f;
     public float InitY { get => _initY; set { if (_initY == value) return; _initY = value; OnUpdated?.Invoke(this); } }
     private float _initScale = 1f;
