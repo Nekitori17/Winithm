@@ -27,6 +27,8 @@ namespace Winithm.Core.Data
 
     public ChartData()
     {
+      Windows.SetMetronome(SongMetaData.Audio.Metronome);
+
       SongMetaData.OnUpdated += (sm) => OnMetaDataUpdated?.Invoke(this);
       ChartMetadata.OnUpdated += (cm) => OnMetaDataUpdated?.Invoke(this);
 

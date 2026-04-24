@@ -11,7 +11,7 @@ namespace Winithm.Core.Common
   /// </summary>
   public static class WNMGenerator
   {
-    public static readonly string METADATA_FORMAT_VERSION = "1.0";
+    public static readonly float METADATA_FORMAT_VERSION = 1f;
 
     public static void Generate(string filePath, SongMetaData data)
     {
@@ -20,7 +20,7 @@ namespace Winithm.Core.Common
       // [FORMAT]
       sb.AppendLine("[FORMAT]");
       sb.AppendLine("Type: Metadata");
-      sb.AppendLine($"Version: {METADATA_FORMAT_VERSION}");
+      sb.AppendLine($"Version: {data.VERSION}");
       sb.AppendLine();
 
       // [METADATA]
@@ -31,23 +31,23 @@ namespace Winithm.Core.Common
       sb.AppendLine($"Artist: {data.Artist}");
       sb.AppendLine($"Artist Alt: {data.ArtistAlt}");
       sb.AppendLine($"Tags: {data.Tags}");
-      sb.AppendLine($"Preview Range: {ParserUtils.FormatFloat(data.PreviewStart)} {ParserUtils.FormatFloat(data.PreviewEnd)}");
       sb.AppendLine();
 
       // [RESOURCES]
       sb.AppendLine("[RESOURCES]");
       sb.AppendLine("* Song");
-      sb.AppendLine($"  Path: {data.Resources.SongPath}");
-      sb.AppendLine($"  Base BPM: {ParserUtils.FormatFloat(data.Resources.BaseBPM.BaseOffsetSeconds)} {ParserUtils.FormatFloat(data.Resources.BaseBPM.InitialBPM)} {data.Resources.BaseBPM.TimeSignature}");
+      sb.AppendLine($"  Path: {data.Audio.SongPath}");
+      sb.AppendLine($"  Preview Range: {ParserUtils.FormatDouble(data.Audio.PreviewStart)} {ParserUtils.FormatDouble(data.Audio.PreviewEnd)}");
+      sb.AppendLine($"  Base BPM: {ParserUtils.FormatFloat((float)data.Audio.Metronome.BaseBPM.BaseOffsetSeconds)} {ParserUtils.FormatFloat(data.Audio.Metronome.BaseBPM.InitialBPM)} {data.Audio.Metronome.BaseBPM.TimeSignature}");
       sb.AppendLine("  BPM List:");
-      foreach (var bpm in data.Resources.BPMList)
+      foreach (var bpm in data.Audio.Metronome.BPMStops)
         sb.AppendLine($"  + {bpm.StartBeat} {ParserUtils.FormatFloat(bpm.BPM)} {bpm.TimeSignature}");
 
       sb.AppendLine("* Illustration");
-      sb.AppendLine($"  Illustrator: {data.Resources.Illustrator}");
-      sb.AppendLine($"  Path: {data.Resources.IllustrationPath}");
-      sb.AppendLine($"  Icon Center: {ParserUtils.FormatFloat(data.Resources.IconCenterX)} {ParserUtils.FormatFloat(data.Resources.IconCenterY)}");
-      sb.AppendLine($"  Icon Size: {ParserUtils.FormatFloat(data.Resources.IconSize)}");
+      sb.AppendLine($"  Illustrator: {data.Illustration.Illustrator}");
+      sb.AppendLine($"  Path: {data.Illustration.IllustrationPath}");
+      sb.AppendLine($"  Icon Center: {ParserUtils.FormatFloat(data.Illustration.IconCenterX)} {ParserUtils.FormatFloat(data.Illustration.IconCenterY)}");
+      sb.AppendLine($"  Icon Size: {ParserUtils.FormatFloat(data.Illustration.IconSize)}");
       sb.AppendLine();
 
       // [CHARTS]

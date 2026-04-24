@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using Winithm.Core.Data;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Common
 {
@@ -30,8 +31,13 @@ namespace Winithm.Core.Common
       GroupData currentGroup = null;
       WindowData currentWindow = null;
       OverlayData currentOverlay = null;
-      SpeedStep currentSpeedStep = null;
-      NoteData currentNote = null;
+      SpeedStepData currentSpeedStep = null;
+
+      data.Components.BeginUpdate();
+      data.ThemeChannels.BeginUpdate();
+      data.Groups.BeginUpdate();
+      data.Windows.BeginUpdate();
+      data.Overlays.BeginUpdate();
 
       try
       {
@@ -43,14 +49,21 @@ namespace Winithm.Core.Common
 
           if (line.StartsWith("[") && line.EndsWith("]"))
           {
+            currentComponent?.StoryboardEvents?.EndUpdate();
+            currentTheme?.StoryboardEvents?.EndUpdate();
+            currentGroup?.StoryboardEvents?.EndUpdate();
+            currentWindow?.StoryboardEvents?.EndUpdate();
+            currentWindow?.Notes?.EndUpdate();
+            currentWindow?.SpeedSteps?.EndUpdate();
+            currentSpeedStep?.StoryboardEvents?.EndUpdate();
+            currentOverlay?.StoryboardEvents?.EndUpdate();
+
             currentSection = line.Substring(1, line.Length - 2);
             currentComponent = null;
             currentTheme = null;
             currentGroup = null;
             currentWindow = null;
             currentOverlay = null;
-            currentSpeedStep = null;
-            currentNote = null;
             continue;
           }
 
@@ -60,118 +73,50 @@ namespace Winithm.Core.Common
           {
             case "FORMAT": break;
             case "METADATA":
-              ParseChartMetadataLine(trimmed, data.Metadata);
+              ParseChartMetadataLine(trimmed, data.ChartMetadata);
               break;
             case "OVERLAYS":
-              ParseOverlayLine(trimmed, data.Overlays, ref currentOverlay, ref data.Metadata);
+              ParseOverlayLine(trimmed, data.Overlays, currentOverlay, data.ObjectFactory);
               break;
             case "COMPONENTS":
-              ParseComponentLine(trimmed, data.Components, ref currentComponent, ref data.Metadata);
+              ParseComponentLine(trimmed, data.Components, currentComponent, data.ObjectFactory);
               break;
             case "THEME_CHANNELS":
-              ParseThemeChannelLine(trimmed, data.ThemeChannels, ref currentTheme, ref data.Metadata);
+              ParseThemeChannelLine(trimmed, data.ThemeChannels, currentTheme, data.ObjectFactory);
               break;
             case "GROUPS":
-              ParseGroupLine(trimmed, data.Groups, ref currentGroup, ref data.Metadata);
+              ParseGroupLine(trimmed, data.Groups, currentGroup, data.ObjectFactory);
               break;
             case "WINDOWS":
-              ParseWindowLine(trimmed, data.Windows, ref currentWindow,
-                              ref currentSpeedStep, ref currentNote, ref data.Metadata);
+              ParseWindowLine(trimmed, data.Windows, currentWindow, currentSpeedStep, data.ObjectFactory);
               break;
             default:
               GD.PushWarning($"Unknown section: {currentSection}");
               break;
           }
         }
+
+        // End updates for any lingering objects
+        currentComponent?.StoryboardEvents?.EndUpdate();
+        currentTheme?.StoryboardEvents?.EndUpdate();
+        currentGroup?.StoryboardEvents?.EndUpdate();
+        currentWindow?.StoryboardEvents?.EndUpdate();
+        currentWindow?.Notes?.EndUpdate();
+        currentWindow?.SpeedSteps?.EndUpdate();
+        currentSpeedStep?.StoryboardEvents?.EndUpdate();
+        currentOverlay?.StoryboardEvents?.EndUpdate();
+
+        data.Components.EndUpdate();
+        data.ThemeChannels.EndUpdate();
+        data.Groups.EndUpdate();
+        data.Windows.EndUpdate();
+        data.Overlays.EndUpdate();
       }
       finally
       {
         file.Close();
       }
 
-      data.Metadata.NextIDSeed++;
-      PostProcess(data);
-    }
-
-    /// <summary>
-    /// Sorts and precomputes all parsed data. Called once after parsing completes.
-    /// </summary>
-    private static void PostProcess(ChartData data)
-    {
-      // Overlays
-      foreach (OverlayData overlay in data.Overlays)
-      {
-        SortStoryboardEvents(overlay.StoryboardEvents);
-      }
-      data.Overlays.Sort((a, b) => a.ID.CompareTo(b.ID));
-
-      // Components
-      foreach (ComponentData component in data.Components)
-      {
-        SortStoryboardEvents(component.StoryboardEvents);
-      }
-      data.Components.Sort((a, b) => a.Type.CompareTo(b.Type));
-
-      // Theme Channels
-      foreach (ThemeChannelData theme in data.ThemeChannels)
-      {
-        SortStoryboardEvents(theme.StoryboardEvents);
-      }
-      data.ThemeChannels.Sort((a, b) => a.ID.CompareTo(b.ID));
-
-      // Groups
-      foreach (GroupData group in data.Groups)
-      {
-        SortStoryboardEvents(group.StoryboardEvents);
-      }
-      data.Groups.Sort((a, b) => a.ID.CompareTo(b.ID));
-
-      // Windows (Sort events, notes, then precompute lifecycle + MaxEndBeats)
-      foreach (WindowData window in data.Windows)
-      { 
-        if (window.SpeedSteps.Count <= 0) continue;
-        window.SpeedSteps.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-        
-        foreach (SpeedStep speedstep in window.SpeedSteps)
-        {
-          SortStoryboardEvents(speedstep.StoryboardEvents);
-        }
-
-        SortStoryboardEvents(window.StoryboardEvents);
-
-        if (window.Notes.Keys.Count >= 1)
-          foreach (List<NoteData> notes in window.Notes.Values) {
-            if (notes.Count <= 0) continue;
-
-            notes.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-          }
-
-        window.PreCompute();
-      }
-      data.Windows.Sort((a, b) => a.ID.CompareTo(b.ID));
-
-    }
-
-    private static void SortStoryboardEvents<TKey>(Dictionary<TKey, List<StoryboardEvent>> storyboardEvents)
-    {
-      if (storyboardEvents == null || storyboardEvents.Count == 0) return;
-
-      foreach (List<StoryboardEvent> events in storyboardEvents.Values)
-      {
-        if (events == null || events.Count <= 0) continue;
-
-        events.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-      }
-    }
-
-    public static void SyncMaxIDSeed(ref ChartMetadata meta, string ID)
-    {
-      if (string.IsNullOrEmpty(ID) || ID.Length != 6) return;
-
-      long seed = UniqueIDGenerator.Decode(ID);
-      if (seed <= 0) return;
-
-      meta.NextIDSeed = Math.Max(meta.NextIDSeed, seed);
     }
 
     // ── METADATA ──
@@ -192,12 +137,17 @@ namespace Winithm.Core.Common
 
     // ── OVERLAYS ──
 
-    private static void ParseOverlayLine(string trimmed, List<OverlayData> overlays, ref OverlayData current, ref ChartMetadata meta)
+    private static void ParseOverlayLine(
+      string trimmed, OverlayManager overlays, OverlayData current, ObjectFactory factory
+    )
     {
       if (trimmed.StartsWith("+ "))
       {
+        current?.StoryboardEvents.EndUpdate();
+
         current = new OverlayData();
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
         if (parts.Length >= 1)
           current.ID = parts[0];
         for (int j = 1; j < parts.Length; j++)
@@ -214,7 +164,7 @@ namespace Winithm.Core.Common
             if (endIdx > 0)
             {
               string hintStr = p.Substring(1, endIdx - 1);
-              if (Enum.TryParse<AnyValueType>(hintStr, true, out hintType))
+              if (Enum.TryParse(hintStr, true, out hintType))
               {
                 hasHint = true;
                 p = p.Substring(endIdx + 1);
@@ -237,9 +187,9 @@ namespace Winithm.Core.Common
           // Store metadata hint
           current.ShaderParams[key] = new ShaderParamDef(val.Type, val);
         }
-        overlays.Add(current);
+        overlays.AddOverlay(current);
 
-        SyncMaxIDSeed(ref meta, current.ID);
+        factory.SyncMaxIDSeed(current.ID);
         return;
       }
 
@@ -255,31 +205,40 @@ namespace Winithm.Core.Common
       { int.TryParse(layer, out int lyr); current.Layer = lyr; }
       else if (trimmed.StartsWith("/ "))
       {
-        var evt = ParserUtils.ParseStoryboardEvent(trimmed, out _, out var rawName);
-        SyncMaxIDSeed(ref meta, evt.ID);
-        ParserUtils.AddEventToTarget(current, rawName, evt);
+        var evt = StoryboardManager<string>.ParseEventLine(trimmed, out var type, out string rawType);
+        factory.SyncMaxIDSeed(evt.ID);
+        if (type == StoryboardProperty.Custom)
+          current.StoryboardEvents.AddEvent(rawType, evt);
       }
     }
 
     // ── COMPONENTS ──
 
     private static void ParseComponentLine(
-        string trimmed, List<ComponentData> components, ref ComponentData current, ref ChartMetadata meta)
+        string trimmed, ComponentManager components, ComponentData current, ObjectFactory factory)
     {
       if (trimmed.StartsWith("* "))
       {
+        current?.StoryboardEvents.EndUpdate();
+
         current = new ComponentData();
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 1) current.Type = ComponentData.ParseType(parts[0]);
-        if (parts.Length >= 2) current.InitX = ParserUtils.ParseFloat(parts[1]);
-        if (parts.Length >= 3) current.InitY = ParserUtils.ParseFloat(parts[2]);
-        if (parts.Length >= 4) current.InitScale = ParserUtils.ParseFloat(parts[3]);
-        if (parts.Length >= 5) current.InitAlpha = ParserUtils.ParseFloat(parts[4]);
-        if (parts.Length >= 7) current.Anchor = new Vector2(
-          ParserUtils.ParseFloat(parts[5]),
-          ParserUtils.ParseFloat(parts[6])
-        );
-        components.Add(current);
+
+        ComponentType type = ComponentType.Info;
+
+        if (parts.Length >= 1) type =
+          Enum.TryParse(parts[0], true, out ComponentType t) ? t : ComponentType.Info;
+        if (parts.Length >= 2) current.InitX =
+          ParserUtils.TryParseFloat(parts[1], out float x) ? x : 0f;
+        if (parts.Length >= 3) current.InitY =
+          ParserUtils.TryParseFloat(parts[2], out float y) ? y : 0f;
+        if (parts.Length >= 4) current.InitScale =
+          ParserUtils.TryParseFloat(parts[3], out float scale) ? scale : 1f;
+        if (parts.Length >= 5) current.InitAlpha =
+          ParserUtils.TryParseFloat(parts[4], out float alpha) ? alpha : 1f;
+
+
+        components.SetComponent(type, current);
         return;
       }
 
@@ -287,30 +246,39 @@ namespace Winithm.Core.Common
 
       if (trimmed.StartsWith("/ "))
       {
-        var evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
+        var evt = StoryboardManager<StoryboardProperty>.ParseEventLine(trimmed, out var type, out _);
+        factory.SyncMaxIDSeed(evt.ID);
         if (type != StoryboardProperty.Custom)
-          ParserUtils.AddEventToTarget(current, type, evt);
+          current.StoryboardEvents.AddEvent(type, evt);
       }
     }
 
     // ── THEME CHANNELS ──
 
     private static void ParseThemeChannelLine(
-        string trimmed, List<ThemeChannelData> themes, ref ThemeChannelData current, ref ChartMetadata meta)
+        string trimmed, ThemeChannelManager themes, ThemeChannelData current, ObjectFactory factory)
     {
       if (trimmed.StartsWith("+ "))
       {
+        current?.StoryboardEvents.EndUpdate();
+
         current = new ThemeChannelData();
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 1) current.ID = parts[0];
-        if (parts.Length >= 2) current.InitR = ParserUtils.ParseFloat(parts[1]);
-        if (parts.Length >= 3) current.InitG = ParserUtils.ParseFloat(parts[2]);
-        if (parts.Length >= 4) current.InitB = ParserUtils.ParseFloat(parts[3]);
-        if (parts.Length >= 5) current.InitA = ParserUtils.ParseFloat(parts[4]);
-        if (parts.Length >= 6) current.InitNoteA = ParserUtils.ParseFloat(parts[5]);
-        themes.Add(current);
+        if (parts.Length >= 2) current.InitR =
+          ParserUtils.TryParseFloat(parts[1], out float r) ? r : 0f;
+        if (parts.Length >= 3) current.InitG =
+          ParserUtils.TryParseFloat(parts[2], out float g) ? g : 0f;
+        if (parts.Length >= 4) current.InitB =
+          ParserUtils.TryParseFloat(parts[3], out float b) ? b : 0f;
+        if (parts.Length >= 5) current.InitA =
+          ParserUtils.TryParseFloat(parts[4], out float a) ? a : 1f;
+        if (parts.Length >= 6) current.InitNoteA =
+          ParserUtils.TryParseFloat(parts[5], out float noteA) ? noteA : 1f;
 
-        SyncMaxIDSeed(ref meta, current.ID);
+        factory.SyncMaxIDSeed(current.ID);
+        themes.AddThemeChannel(current);
+
         return;
       }
 
@@ -320,31 +288,38 @@ namespace Winithm.Core.Common
         current.Name = name;
       else if (trimmed.StartsWith("/ "))
       {
-        var evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
-        SyncMaxIDSeed(ref meta, evt.ID);
+        var evt = StoryboardManager<StoryboardProperty>.ParseEventLine(trimmed, out var type, out _);
+        factory.SyncMaxIDSeed(evt.ID);
         if (type != StoryboardProperty.Custom)
-          ParserUtils.AddEventToTarget(current, type, evt);
+          current.StoryboardEvents.AddEvent(type, evt);
       }
     }
 
     // ── GROUPS ──
 
-    private static void ParseGroupLine(
-        string trimmed, List<GroupData> groups, ref GroupData current, ref ChartMetadata meta)
+    private static void ParseGroupLine(string trimmed, GroupManager groups, GroupData current, ObjectFactory factory)
     {
       if (trimmed.StartsWith("+ "))
       {
+        current?.StoryboardEvents.EndUpdate();
+
         current = new GroupData();
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 1) current.ID = parts[0];
-        if (parts.Length >= 2) current.InitX = ParserUtils.ParseFloat(parts[1]);
-        if (parts.Length >= 3) current.InitY = ParserUtils.ParseFloat(parts[2]);
-        if (parts.Length >= 4) current.InitScaleX = ParserUtils.ParseFloat(parts[3]);
-        if (parts.Length >= 5) current.InitScaleY = ParserUtils.ParseFloat(parts[4]);
-        if (parts.Length >= 6) current.InitRotation = ParserUtils.ParseFloat(parts[5]);
-        groups.Add(current);
+        if (parts.Length >= 2) current.InitX =
+          ParserUtils.TryParseFloat(parts[1], out float x) ? x : 0f;
+        if (parts.Length >= 3) current.InitY =
+          ParserUtils.TryParseFloat(parts[2], out float y) ? y : 0f;
+        if (parts.Length >= 4) current.InitScaleX =
+          ParserUtils.TryParseFloat(parts[3], out float sx) ? sx : 1f;
+        if (parts.Length >= 5) current.InitScaleY =
+          ParserUtils.TryParseFloat(parts[4], out float sy) ? sy : 1f;
+        if (parts.Length >= 6) current.InitRotation =
+          ParserUtils.TryParseFloat(parts[5], out float r) ? r : 0f;
 
-        SyncMaxIDSeed(ref meta, current.ID);
+        factory.SyncMaxIDSeed(current.ID);
+        groups.AddGroup(current);
+
         return;
       }
 
@@ -356,38 +331,55 @@ namespace Winithm.Core.Common
         current.ParentGroupID = groupId;
       else if (trimmed.StartsWith("/ "))
       {
-        var evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
-        SyncMaxIDSeed(ref meta, evt.ID);
+        var evt = StoryboardManager<StoryboardProperty>.ParseEventLine(trimmed, out var type, out _);
+        factory.SyncMaxIDSeed(evt.ID);
         if (type != StoryboardProperty.Custom)
-          ParserUtils.AddEventToTarget(current, type, evt);
+          current.StoryboardEvents.AddEvent(type, evt);
       }
     }
 
     // ── WINDOWS ──
 
     private static void ParseWindowLine(
-        string trimmed, List<WindowData> windows,
-        ref WindowData current, ref SpeedStep currentSpeedStep, ref NoteData currentNote, ref ChartMetadata meta)
+        string trimmed,
+        WindowManager windows,
+        WindowData current,
+        SpeedStepData currentSpeedStep,
+        ObjectFactory factory
+    )
     {
       if (trimmed.StartsWith("+ "))
       {
+        current?.StoryboardEvents.EndUpdate();
+        current?.SpeedSteps?.EndUpdate();
+        currentSpeedStep?.StoryboardEvents.EndUpdate();
+        current?.Notes?.EndUpdate();
+
         current = new WindowData();
         currentSpeedStep = null;
-        currentNote = null;
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 1) current.ID = parts[0];
-        if (parts.Length >= 2) current.InitX = ParserUtils.ParseFloat(parts[1]);
-        if (parts.Length >= 3) current.InitY = ParserUtils.ParseFloat(parts[2]);
-        if (parts.Length >= 4) current.InitScaleX = Math.Abs(ParserUtils.ParseFloat(parts[3]));
-        if (parts.Length >= 5) current.InitScaleY = Math.Abs(ParserUtils.ParseFloat(parts[4]));
-        if (parts.Length >= 6) current.InitR = ParserUtils.ParseFloat(parts[5]);
-        if (parts.Length >= 7) current.InitG = ParserUtils.ParseFloat(parts[6]);
-        if (parts.Length >= 8) current.InitB = ParserUtils.ParseFloat(parts[7]);
-        if (parts.Length >= 9) current.InitA = ParserUtils.ParseFloat(parts[8]);
-        if (parts.Length >= 10) current.InitNoteA = ParserUtils.ParseFloat(parts[9]);
-        windows.Add(current);
+        if (parts.Length >= 2) current.InitX =
+          ParserUtils.TryParseFloat(parts[1], out float x) ? x : 0f;
+        if (parts.Length >= 3) current.InitY =
+          ParserUtils.TryParseFloat(parts[2], out float y) ? y : 0f;
+        if (parts.Length >= 4) current.InitScaleX =
+          ParserUtils.TryParseFloat(parts[3], out float sx) ? sx : 1f;
+        if (parts.Length >= 5) current.InitScaleY =
+          ParserUtils.TryParseFloat(parts[4], out float sy) ? sy : 1f;
+        if (parts.Length >= 6) current.InitR =
+          ParserUtils.TryParseFloat(parts[5], out float r) ? r : 0f;
+        if (parts.Length >= 7) current.InitG =
+          ParserUtils.TryParseFloat(parts[6], out float g) ? g : 0f;
+        if (parts.Length >= 8) current.InitB =
+          ParserUtils.TryParseFloat(parts[7], out float b) ? b : 0f;
+        if (parts.Length >= 9) current.InitA =
+          ParserUtils.TryParseFloat(parts[8], out float a) ? a : 1f;
+        if (parts.Length >= 10) current.InitNoteA =
+          ParserUtils.TryParseFloat(parts[9], out float na) ? na : 1f;
 
-        SyncMaxIDSeed(ref meta, current.ID);
+        factory.SyncMaxIDSeed(current.ID);
+        windows.AddWindow(current);
         return;
       }
 
@@ -400,8 +392,10 @@ namespace Winithm.Core.Common
       else if (ParserUtils.TryParseProperty(trimmed, "Flags:", out string flags))
       {
         string[] parts = flags.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 1) current.Borderless = ParserUtils.ParseIntBool(parts[0]);
-        if (parts.Length >= 2) current.UnFocus = ParserUtils.ParseIntBool(parts[1]);
+        if (parts.Length >= 1) current.Borderless =
+          ParserUtils.TryParseIntBool(parts[0], out bool bl) ? bl : false;
+        if (parts.Length >= 2) current.UnFocus =
+          ParserUtils.TryParseIntBool(parts[1], out bool uf) ? uf : false;
       }
       else if (ParserUtils.TryParseProperty(trimmed, "Layer:", out string layer))
       { int.TryParse(layer, out int lyr); current.Layer = lyr; }
@@ -422,53 +416,34 @@ namespace Winithm.Core.Common
         current.ThemeChannelID = themeId;
       else if (trimmed.StartsWith("| "))
       {
-        currentSpeedStep = new SpeedStep();
-        currentNote = null;
+        currentSpeedStep?.StoryboardEvents?.EndUpdate();
+
+        currentSpeedStep = new SpeedStepData();
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 1) currentSpeedStep.ID = parts[0];
-        if (parts.Length >= 2) currentSpeedStep.StartBeat = BeatTime.Parse(parts[1]);
-        if (parts.Length >= 3) currentSpeedStep.Multiplier = ParserUtils.ParseFloat(parts[2]);
-        current.SpeedSteps.Add(currentSpeedStep);
+        if (parts.Length >= 2) currentSpeedStep.StartBeat =
+          BeatTime.TryParse(parts[1], out var sb) ? sb : BeatTime.Zero;
+        if (parts.Length >= 3) currentSpeedStep.Multiplier =
+          ParserUtils.TryParseFloat(parts[2], out var m) ? m : 1.0f;
 
-        SyncMaxIDSeed(ref meta, currentSpeedStep.ID);
+        factory.SyncMaxIDSeed(currentSpeedStep.ID);
+        current.SpeedSteps.AddSpeedStep(currentSpeedStep);
       }
       else if (trimmed.StartsWith("# "))
       {
-        currentNote = new NoteData();
-        currentSpeedStep = null;
-        string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 1) currentNote.ID = parts[0];
-        if (parts.Length >= 2) currentNote.Type = NoteData.ParseNoteType(parts[1]);
-        if (parts.Length >= 3) currentNote.StartBeat = BeatTime.Parse(parts[2]);
-        if (parts.Length >= 4) currentNote.Length =
-          ParserUtils.TryParseFloat(parts[3], out float length) ? length : 0f;
-        if (parts.Length >= 5) currentNote.X = ParserUtils.ParseFloat(parts[4]);
-        if (parts.Length >= 6) currentNote.Width = ParserUtils.ParseFloat(parts[5]);
-        if (parts.Length >= 7) currentNote.Side = NoteData.ParseSide(parts[6]);
-        if (parts.Length >= 8) { int.TryParse(parts[7], out int fake); currentNote.FakeType = fake; }
-        if (!current.Notes.ContainsKey(currentNote.Side))
-          current.Notes[currentNote.Side] = new List<NoteData>();
-        current.Notes[currentNote.Side].Add(currentNote);
-
-        SyncMaxIDSeed(ref meta, currentNote.ID);
+        var currentNote = NoteManager.ParseNoteLine(trimmed, out var side);
+        factory.SyncMaxIDSeed(currentNote.ID);
+        current.Notes.AddNote(side, currentNote);
       }
       else if (trimmed.StartsWith("/ "))
       {
-        StoryboardEvent evt = ParserUtils.ParseStoryboardEvent(trimmed, out var type, out _);
-        SyncMaxIDSeed(ref meta, evt.ID);
-
-        // Enforce absolute scales on Windows to avoid clipping / title bar flipping
-        if (type == StoryboardProperty.ScaleX || type == StoryboardProperty.ScaleY)
-        {
-          evt.From.X = Math.Abs(evt.From.X);
-          evt.To.X = Math.Abs(evt.To.X);
-        }
+        var evt = StoryboardManager<StoryboardProperty>.ParseEventLine(trimmed, out var type, out _);
+        factory.SyncMaxIDSeed(evt.ID);
 
         if (currentSpeedStep != null)
-          ParserUtils.AddEventToTarget(currentSpeedStep, type, evt);
+          currentSpeedStep.StoryboardEvents.AddEvent(type, evt);
         else if (type != StoryboardProperty.Custom)
-          ParserUtils.AddEventToTarget(current, type, evt);
-        // Note-level events are no longer supported (NoteData has no StoryboardEvents)
+          current.StoryboardEvents.AddEvent(type, evt);
       }
     }
   }

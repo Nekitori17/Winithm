@@ -28,6 +28,8 @@ namespace Winithm.Core.Common
       string currentResource = "";
       ChartReference currentChart = null;
 
+      data.Audio.Metronome.BeginUpdate();
+
       try
       {
         string line;
@@ -44,12 +46,14 @@ namespace Winithm.Core.Common
 
           switch (currentSection)
           {
-            case "FORMAT": break;
+            case "FORMAT":
+              ParseFormatLine(line, data);
+              break;
             case "METADATA":
               ParseMetadataLine(line, data);
               break;
             case "RESOURCES":
-              ParseResourceLine(line, data.Resources, ref currentResource);
+              ParseResourceLine(line, data, ref currentResource);
               break;
             case "CHARTS":
               currentChart = ParseChartReferenceLine(line, data.Charts, currentChart);
@@ -61,30 +65,31 @@ namespace Winithm.Core.Common
       {
         file.Close();
       }
+
+      data.Audio.Metronome.EndUpdate();
       return data;
+    }
+
+    private static void ParseFormatLine(string line, SongMetaData meta)
+    {
+      string trimmed = line.TrimStart();
+      if (ParserUtils.TryParseProperty(trimmed, "Version:", out string version))
+        meta.VERSION = ParserUtils.TryParseFloat(version, out float v)
+          ? v : WNMGenerator.METADATA_FORMAT_VERSION;
     }
 
     private static void ParseMetadataLine(string line, SongMetaData meta)
     {
       string trimmed = line.TrimStart();
       if (ParserUtils.TryParseProperty(trimmed, "ID:", out string id)) meta.ID = id;
-      else if (ParserUtils.TryParseProperty(trimmed, "Name:", out string name)) meta.Name = name;
-      else if (ParserUtils.TryParseProperty(trimmed, "Name Alt:", out string nameAlt)) meta.NameAlt = nameAlt;
-      else if (ParserUtils.TryParseProperty(trimmed, "Artist:", out string artist)) meta.Artist = artist;
-      else if (ParserUtils.TryParseProperty(trimmed, "Artist Alt:", out string artistAlt)) meta.ArtistAlt = artistAlt;
-      else if (ParserUtils.TryParseProperty(trimmed, "Tags:", out string tags)) meta.Tags = tags;
-      else if (ParserUtils.TryParseProperty(trimmed, "Preview Range:", out string range))
-      {
-        string[] parts = range.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 2)
-        {
-          meta.PreviewStart = ParserUtils.ParseFloat(parts[0]);
-          meta.PreviewEnd = ParserUtils.ParseFloat(parts[1]);
-        }
-      }
+      if (ParserUtils.TryParseProperty(trimmed, "Name:", out string name)) meta.Name = name;
+      if (ParserUtils.TryParseProperty(trimmed, "Name Alt:", out string nameAlt)) meta.NameAlt = nameAlt;
+      if (ParserUtils.TryParseProperty(trimmed, "Artist:", out string artist)) meta.Artist = artist;
+      if (ParserUtils.TryParseProperty(trimmed, "Artist Alt:", out string artistAlt)) meta.ArtistAlt = artistAlt;
+      if (ParserUtils.TryParseProperty(trimmed, "Tags:", out string tags)) meta.Tags = tags;
     }
 
-    private static void ParseResourceLine(string line, ResourceData res, ref string currentResource)
+    private static void ParseResourceLine(string line, SongMetaData meta, ref string currentResource)
     {
       string trimmed = line.TrimStart();
 
@@ -97,16 +102,17 @@ namespace Winithm.Core.Common
       if (trimmed.StartsWith("+ ") && currentResource == "Song")
       {
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        var bPMStop = new BPMStop();
+
+        if (parts.Length >= 1)
+          bPMStop.StartBeat = BeatTime.TryParse(parts[0], out var sb) ? sb : BeatTime.Zero;
+        if (parts.Length >= 2)
+          bPMStop.BPM = ParserUtils.TryParseFloat(parts[1], out float b) ? b : 120f;
         if (parts.Length >= 3)
-        {
-          int.TryParse(parts[2], out int timeSig);
-          var stop = new BPMStop(
-              BeatTime.Parse(parts[0]),
-              ParserUtils.ParseFloat(parts[1]),
-              timeSig
-          );
-          res.BPMList.Add(stop);
-        }
+          bPMStop.TimeSignature = int.TryParse(parts[2], out int ts) ? ts : 4;
+
+        meta.Audio.Metronome.BPMStops.Add(bPMStop);
         return;
       }
 
@@ -114,39 +120,48 @@ namespace Winithm.Core.Common
       {
         case "Song":
           if (ParserUtils.TryParseProperty(trimmed, "Path:", out string songPath))
-            res.SongPath = songPath;
+            meta.Audio.SongPath = songPath;
+          if (ParserUtils.TryParseProperty(trimmed, "Preview Range:", out string previewRange))
+          {
+            string[] parts = previewRange.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+              meta.Audio.PreviewStart = ParserUtils.TryParseFloat(parts[0], out float start) ? start : 0f;
+              meta.Audio.PreviewEnd = ParserUtils.TryParseFloat(parts[1], out float end) ? end : 0f;
+            }
+          }
           if (ParserUtils.TryParseProperty(trimmed, "Base BPM:", out string bpmBase))
           {
             string[] parts = bpmBase.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            var baseBPM = new BaseBPM();
+            if (parts.Length >= 1)
+              baseBPM.BaseOffsetSeconds = ParserUtils.TryParseFloat(parts[0], out float s) ? s : 0f;
+            if (parts.Length >= 2)
+              baseBPM.InitialBPM = ParserUtils.TryParseFloat(parts[1], out float b) ? b : 120f;
             if (parts.Length >= 3)
-            {
-              int.TryParse(parts[2], out int timeSig);
-              var baseBPM = new BaseBPM(
-                  float.TryParse(parts[0], out float startTimeSeconds) ? startTimeSeconds : 0f,
-                  ParserUtils.ParseFloat(parts[1]),
-                  timeSig
-              );
-              res.BaseBPM = baseBPM;
-            }
+              baseBPM.TimeSignature = int.TryParse(parts[2], out int ts) ? ts : 4;
+
+            meta.Audio.Metronome.SetBaseBPM(baseBPM);
             return;
           }
           break;
         case "Illustration":
           if (ParserUtils.TryParseProperty(trimmed, "Illustrator:", out string illustrator))
-            res.Illustrator = illustrator;
+            meta.Illustration.Illustrator = illustrator;
           else if (ParserUtils.TryParseProperty(trimmed, "Path:", out string illPath))
-            res.IllustrationPath = illPath;
+            meta.Illustration.IllustrationPath = illPath;
           else if (ParserUtils.TryParseProperty(trimmed, "Icon Center:", out string center))
           {
             string[] parts = center.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
             {
-              res.IconCenterX = ParserUtils.ParseFloat(parts[0]);
-              res.IconCenterY = ParserUtils.ParseFloat(parts[1]);
+              meta.Illustration.IconCenterX = ParserUtils.ParseFloat(parts[0]);
+              meta.Illustration.IconCenterY = ParserUtils.ParseFloat(parts[1]);
             }
           }
           else if (ParserUtils.TryParseProperty(trimmed, "Icon Size:", out string size))
-            res.IconSize = ParserUtils.ParseFloat(size);
+            meta.Illustration.IconSize = ParserUtils.ParseFloat(size);
           break;
       }
     }
