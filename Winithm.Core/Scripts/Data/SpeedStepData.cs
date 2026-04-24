@@ -6,7 +6,7 @@ using Winithm.Core.Managers;
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// Defines scrolling velocity at a given beat and window lifecycle boundaries.
+  /// Scroll speed segment for a window.
   /// </summary>
   public class SpeedStepData : IStoryboardable<StoryboardProperty>, IDeepCloneable<SpeedStepData>
   {

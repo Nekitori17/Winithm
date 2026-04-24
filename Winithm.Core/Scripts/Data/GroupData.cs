@@ -6,8 +6,7 @@ using Winithm.Core.Managers;
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// Hierarchical transform node from [GROUPS].
-  /// Format: + <ID> <initX> <initY> <initScale> <initScaleX> <initScaleY> <initRotation>
+  /// Hierarchical transform node for grouping windows or other groups.
   /// </summary>
   public class GroupData : IStoryboardable<StoryboardProperty>, IDeepCloneable<GroupData>
   {

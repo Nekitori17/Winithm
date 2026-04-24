@@ -9,7 +9,7 @@ namespace Winithm.Core.Data
   }
 
   /// <summary>
-  /// Result of evaluating a note hit.
+  /// Detailed result of a hit interaction.
   /// </summary>
   public struct HitResult
   {

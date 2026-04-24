@@ -6,8 +6,7 @@ using Winithm.Core.Managers;
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// Shared color palette from [THEME_CHANNELS].
-  /// Format: + <ID> <initR> <initG> <initB> <initA> <initNoteA>
+  /// Shared color palette and opacity channel for themes.
   /// </summary>
   public class ThemeChannelData : IStoryboardable<StoryboardProperty>, IDeepCloneable<ThemeChannelData>
   {

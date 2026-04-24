@@ -6,7 +6,7 @@ using Winithm.Core.Managers;
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// Represents a single animation state or transition for a generic property.
+  /// Animation state or transition for a property.
   /// </summary>
   public class EventData : IDeepCloneable<EventData>
   {

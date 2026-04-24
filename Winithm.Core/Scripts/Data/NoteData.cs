@@ -7,7 +7,7 @@ using Winithm.Core.Interfaces;
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// Hit object data: # <NoteType> <Start> <Length> <Side> <FakeType>
+  /// Basic note data including timing, type, and spatial properties.
   /// </summary>
   public enum NoteType
   {
@@ -20,11 +20,8 @@ namespace Winithm.Core.Data
 
   public class NoteData : IDeepCloneable<NoteData>
   {
-    /// <summary>Fired when StartBeat changes; Manager uses this to re-sort.</summary>
     public event Action<NoteData> OnStartBeatChanged;
-    /// <summary>Fired when Side changes; Manager uses this to migrate lanes.</summary>
     public event Action<NoteData> OnInvalidate;
-    /// <summary>Fired on any non-structural property change.</summary>
     public event Action<NoteData> OnUpdated;
 
     public string ID;
@@ -54,20 +51,19 @@ namespace Winithm.Core.Data
     public bool IsMutedGhost => FakeType == 1;
     public bool IsLoudGhost => FakeType == 2;
 
-    // --- State for all Notes ---
-    /// <summary>True if the note has been fully processed (Hit or Miss).</summary>
+    /// <summary>Gets or sets whether the note has been evaluated.</summary>
     public bool IsEvaluated = false;
 
-    /// <summary>Session token for auto-fired notes.</summary>
+    /// <summary>Gets or sets the session token for auto-fired notes.</summary>
     public int AutoFiredSessionToken = -1;
 
+    /// <summary>Gets or sets the session token for the last processed frame.</summary>
     public int LastSeenFrameSessionToken = -1;
 
-    // --- State for Hold Notes ---
-    /// <summary>Hold Phase 1: Key pressed at StartBeat, waiting for Phase 2 at EndBeat.</summary>
+    /// <summary>Gets or sets whether the hold interaction is active.</summary>
     public bool IsHoldActive = false;
 
-    /// <summary>Timing offset (ms) captured during Phase 1 for Phase 2 scoring.</summary>
+    /// <summary>Gets or sets the timing offset at the start of a hold note.</summary>
     public float HoldStartOffsetMs = float.NaN;
 
     public NoteData DeepClone(ObjectFactory objectFactory, BeatTime? offset)

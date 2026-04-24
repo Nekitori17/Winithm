@@ -3,7 +3,7 @@ using System;
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// Combined metadata from both .wnm and .wnc files.
+  /// Merged metadata from chart and song definition files.
   /// </summary>
   public class ChartMetadata
   {

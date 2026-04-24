@@ -48,7 +48,7 @@ namespace Winithm.Core.Data
   }
 
   /// <summary>
-  /// The global timing foundation for the beat grid.
+  /// Global timing foundation for the beat grid.
   /// </summary>
   public class BaseBPM
   {

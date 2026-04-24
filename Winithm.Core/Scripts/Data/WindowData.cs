@@ -7,9 +7,7 @@ using Winithm.Core.Managers;
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// Rendering container (Lane) from [WINDOWS].
-  /// Format: + <ID> <initX> <initY> <initScale> <initScaleX> <initScaleY>
-  ///           <initR> <initG> <initB> <initA> <initNoteA>
+  /// Main rendering container (lane) data including transform and sub-managers.
   /// </summary>
   public class WindowData : IStoryboardable<StoryboardProperty>, IDeepCloneable<WindowData>
   {
@@ -73,50 +71,44 @@ namespace Winithm.Core.Data
     private float _initNoteA = 1f;
     public float InitNoteA { get => _initNoteA; set { if (_initNoteA == value) return; _initNoteA = value; OnUpdated?.Invoke(this); } }
 
-    // Sub-managers
     public StoryboardManager<StoryboardProperty> StoryboardEvents { get; set; } = new StoryboardManager<StoryboardProperty>();
     public SpeedStepManager SpeedSteps { get; set; } = new SpeedStepManager();
     public NoteManager Notes { get; set; } = new NoteManager();
 
-    /// <summary>Window spawn beat (first SpeedStep's start)</summary>
     public BeatTime StartBeat = BeatTime.NaN;
-
-    /// <summary>Window despawn beat (first Close note's start, or last SpeedStep's start)</summary>
     public BeatTime EndBeat = BeatTime.NaN;
 
-    // ---------- Unresponsive & Focusable ----------
-    /// <summary>Whether the window will be unresponsive at end beat, triggerring a "Not Responding" visual state.</summary>
+    /// <summary>
+    /// Gets or sets whether the window transitions to an unresponsive state.
+    /// </summary>
     private bool _unresponsive = false;
     public bool Unresponsive { get => _unresponsive; set { if (_unresponsive == value) return; _unresponsive = value; OnUnResponsiveChanged?.Invoke(this); } }
 
-    /// <summary>Whether the window is currently focusable, preventing player interaction and capable of processing player input.</summary>
+    /// <summary>
+    /// Gets or sets whether the window is currently focusable for player interaction.
+    /// </summary>
     public bool Focusable = false;
 
-    /// <summary>The beat when this window becomes focusable.</summary>
+    /// <summary>
+    /// The beat at which this window becomes focusable.
+    /// </summary>
     public double FocusableStartBeat = double.NaN;
 
-    /// <summary>The beat when this window becomes unresponsive.</summary>
+    /// <summary>
+    /// The beat at which this window stops being focusable.
+    /// </summary>
     public double FocusableEndBeat = double.NaN;
 
-    // --------- Pre-computed values ---------
-
-    /// <summary>The beat when this window finishes start animation.</summary>
-    public double EndBeatStartIn = double.NaN;
-    /// <summary>The beat when this window finishes close animation.</summary>
-    public double EndBeatEndOut = double.NaN;
-
     /// <summary>
-    /// The beat when this window starting close animation.
-    /// Compute and Re-compute EndBeatEndOutAnimation when window is unresponsive.
+    /// Pre-computed animation timestamps.
     /// </summary>
+    public double EndBeatStartIn = double.NaN;
+    public double EndBeatEndOut = double.NaN;
     public double StartBeatEndOut = double.NaN;
-
-    /// <summary>The beat when the Unresponsive overlay reaches 100% opacity.</summary>
     public double EndBeatUnresponsive = double.NaN;
 
     public WindowData()
     {
-      // Bubble sub-manager changes up to WindowData level
       StoryboardEvents.OnUpdated += BubbleStoryboard;
       SpeedSteps.OnUpdated += BubbleSpeedStep;
       Notes.OnLifeCycleChanged += BubbleNoteLifeCycle;

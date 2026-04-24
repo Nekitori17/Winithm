@@ -4,6 +4,9 @@ using Winithm.Core.Managers;
 
 namespace Winithm.Core.Data
 {
+  /// <summary>
+  /// Root metadata structure for a song.
+  /// </summary>
   public class SongMetaData
   {
     public float VERSION = 1f;

@@ -7,8 +7,7 @@ using Winithm.Core.Managers;
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// Post-processing shader overlay from [OVERLAYS].
-  /// Format: + <ID> <initParam1> <initParam2> ...
+  /// Post-processing shader overlay with dynamic parameters.
   /// </summary>
   public class OverlayData : IStoryboardable<string>, IDeepCloneable<OverlayData>
   {
@@ -28,7 +27,7 @@ namespace Winithm.Core.Data
     private int _layer = 0;
     public int Layer { get => _layer; set { if (_layer == value) return; _layer = value; OnUpdated?.Invoke(this); } }
 
-    /// <summary>Shader uniform definitions, auto-scanned from .glsl</summary>
+    /// <summary>Shader uniform definitions.</summary>
     public Dictionary<string, ShaderParamDef> ShaderParams { get; } = new Dictionary<string, ShaderParamDef>();
 
     public Dictionary<string, AnyValue> InitParams { get; } = new Dictionary<string, AnyValue>();

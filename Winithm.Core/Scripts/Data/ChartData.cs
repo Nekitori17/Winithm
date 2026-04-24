@@ -4,7 +4,7 @@ using Winithm.Core.Managers;
 namespace Winithm.Core.Data
 {
   /// <summary>
-  /// Top-level container aggregating all parsed data from .wnm and .wnc files.
+  /// Root container aggregating all parsed chart and metadata.
   /// </summary>
   public class ChartData
   {
