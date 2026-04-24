@@ -56,9 +56,9 @@ namespace Winithm.Core.Managers
       NotifyChanged();
     }
 
-    public void AddOverlays(List<OverlayData> overlays)
+    public void AddOverlays(IEnumerable<OverlayData> overlays)
     {
-      if (overlays.Count == 0) return;
+      if (!overlays.Any()) return;
 
       BeginUpdate();
       foreach (var overlay in overlays) AddOverlay(overlay);
@@ -76,9 +76,9 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveOverlays(List<string> ids)
+    public int RemoveOverlays(IEnumerable<string> ids)
     {
-      if (ids.Count == 0) return 0;
+      if (!ids.Any()) return 0;
 
       BeginUpdate();
       int success = ids.Count(id => RemoveOverlay(id));
@@ -93,18 +93,19 @@ namespace Winithm.Core.Managers
       throw new KeyNotFoundException($"Overlay {id} not found.");
     }
 
-    public List<OverlayData> GetOverlays(List<string> ids)
+    public IReadOnlyList<OverlayData> GetOverlays(IEnumerable<string> ids)
     {
+      if (!ids.Any()) return Array.Empty<OverlayData>();
+
       var result = new List<OverlayData>();
       foreach (var id in ids)
-      {
-        if (OverlayCollection.TryGetValue(id, out var overlay)) result.Add(overlay);
-      }
+        try { result.Add(GetOverlay(id)); }
+        catch (KeyNotFoundException) { continue; }
       return result;
     }
 
     public bool ContainsOverlay(string id) => OverlayCollection.ContainsKey(id);
 
-    public List<OverlayData> GetAllOverlays() => OverlayCollection.Values.ToList();
+    public IReadOnlyList<OverlayData> GetAllOverlays() => OverlayCollection.Values.ToList();
   }
 }

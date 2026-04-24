@@ -17,7 +17,7 @@ namespace Winithm.Core.Managers
   {
     public event Action<ComponentManager> OnUpdated;
 
-    public Dictionary<ComponentType, ComponentData> ComponentDictionary = new Dictionary<ComponentType, ComponentData>();
+    public Dictionary<ComponentType, ComponentData> ComponentDictionary { get; private set; } = new Dictionary<ComponentType, ComponentData>();
 
     public ComponentManager()
     {

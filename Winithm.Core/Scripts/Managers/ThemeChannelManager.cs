@@ -56,9 +56,9 @@ namespace Winithm.Core.Managers
       NotifyChanged();
     }
 
-    public void AddThemeChannels(List<ThemeChannelData> themeChannels)
+    public void AddThemeChannels(IEnumerable<ThemeChannelData> themeChannels)
     {
-      if (themeChannels.Count == 0) return;
+      if (!themeChannels.Any()) return;
 
       BeginUpdate();
       foreach (var channel in themeChannels) AddThemeChannel(channel);
@@ -76,9 +76,9 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveThemeChannels(List<string> ids)
+    public int RemoveThemeChannels(IEnumerable<string> ids)
     {
-      if (ids.Count == 0) return 0;
+      if (!ids.Any()) return 0;
 
       BeginUpdate();
       int success = ids.Count(id => RemoveThemeChannel(id));
@@ -93,7 +93,7 @@ namespace Winithm.Core.Managers
       throw new KeyNotFoundException($"ThemeChannel {id} not found.");
     }
 
-    public List<ThemeChannelData> GetThemeChannels(List<string> ids)
+    public IReadOnlyList<ThemeChannelData> GetThemeChannels(IEnumerable<string> ids)
     {
       var result = new List<ThemeChannelData>();
       foreach (var id in ids)
@@ -105,6 +105,6 @@ namespace Winithm.Core.Managers
 
     public bool ContainsThemeChannel(string id) => ThemeChannelCollection.ContainsKey(id);
 
-    public List<ThemeChannelData> GetAllThemeChannels() => ThemeChannelCollection.Values.ToList();
+    public IReadOnlyDictionary<string, ThemeChannelData> GetAllThemeChannels() => ThemeChannelCollection;
   }
 }

@@ -62,7 +62,6 @@ namespace Winithm.Core.Managers
       double length = 0,
       float x = 0.5f,
       float width = 0.5f,
-      NoteSide side = NoteSide.Bottom,
       int fakeType = 0
     )
       => new NoteData
@@ -73,7 +72,6 @@ namespace Winithm.Core.Managers
         Length = length,
         X = x,
         Width = width,
-        Side = side,
         FakeType = fakeType
       };
       

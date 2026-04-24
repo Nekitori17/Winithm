@@ -193,9 +193,9 @@ namespace Winithm.Core.Managers
       NotifyChanged();
     }
 
-    public void AddWindows(List<WindowData> windows)
+    public void AddWindows(IEnumerable<WindowData> windows)
     {
-      if (windows.Count == 0) return;
+      if (!windows.Any()) return;
 
       BeginUpdate();
       foreach (var window in windows) AddWindow(window);
@@ -215,9 +215,9 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveWindows(List<string> ids)
+    public int RemoveWindows(IEnumerable<string> ids)
     {
-      if (ids.Count == 0) return 0;
+      if (!ids.Any()) return 0;
 
       BeginUpdate();
       int success = ids.Count(id => RemoveWindow(id));
@@ -236,7 +236,7 @@ namespace Winithm.Core.Managers
       throw new KeyNotFoundException($"Window {id} not found.");
     }
 
-    public List<WindowData> GetWindows(List<string> ids)
+    public List<WindowData> GetWindows(IEnumerable<string> ids)
     {
       var result = new List<WindowData>();
       foreach (var id in ids)
@@ -246,12 +246,12 @@ namespace Winithm.Core.Managers
       return result;
     }
 
-    public List<WindowData> GetAllWindows() => WindowCollection.Values.ToList();
+    public IReadOnlyDictionary<string, WindowData> GetAllWindows() => WindowCollection;
 
     /// <summary>
     /// Returns all windows sorted by Layer (ascending) for correct render order.
     /// </summary>
-    public List<WindowData> GetWindowsByLayer()
+    public IReadOnlyList<WindowData> GetWindowsByLayer()
     {
       var sorted = WindowCollection.Values.ToList();
       sorted.Sort((a, b) => a.Layer.CompareTo(b.Layer));

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Winithm.Core.Common;
 using Winithm.Core.Data;
 using Winithm.Core.Interfaces;
@@ -130,9 +131,9 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveSpeedSteps(List<SpeedStepData> speedSteps)
+    public int RemoveSpeedSteps(IEnumerable<SpeedStepData> speedSteps)
     {
-      if (speedSteps.Count == 0) return 0;
+      if (!speedSteps.Any()) return 0;
 
       BeginUpdate();
 
@@ -160,7 +161,7 @@ namespace Winithm.Core.Managers
 
     public int RemoveSpeedSteps(List<string> ids)
     {
-      if (SpeedStepCollection.Count == 0) return 0;
+      if (ids.Count == 0) return 0;
 
       BeginUpdate();
 

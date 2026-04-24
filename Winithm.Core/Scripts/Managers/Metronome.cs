@@ -206,26 +206,7 @@ namespace Winithm.Core.Managers
 
       return removedCount;
     }
-
-    public BPMStop GetBPMStop(BPMStop bPMStop)
-    {
-      if (BPMStops.Contains(bPMStop)) return bPMStop;
-      throw new InvalidOperationException($"BPM stop not found: {bPMStop}");
-    }
-
-    public List<BPMStop> GetBPMStops(List<BPMStop> bPMStops)
-    {
-      var result = new List<BPMStop>();
-      foreach (var bPMStop in bPMStops)
-      {
-        if (BPMStops.Contains(bPMStop))
-        {
-          result.Add(bPMStop);
-        }
-      }
-      return result;
-    }
-
+    
     public float GetBPMAtBeat(double beat)
     {
       int idx = FindStopIndex(beat);

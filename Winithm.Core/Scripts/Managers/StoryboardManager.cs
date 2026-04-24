@@ -185,6 +185,19 @@ namespace Winithm.Core.Managers
       _eventKeyMap.Remove(evt);
     }
 
+    private void OnEventStartBeatChanged(TProp prop, EventData evt)
+    {
+      if (!EventCollection.TryGetValue(prop, out var list)) return;
+      if (!list.Contains(evt)) return;
+
+      list.Remove(evt);
+      int index = FindAddIndex(list, evt);
+      list.Insert(index, evt);
+
+      PropertyCursors[prop].Reset();
+      NotifyChanged();
+    }
+
     private void HandleStartBeatChanged(EventData evt)
     {
       if (_eventKeyMap.TryGetValue(evt, out var key)) OnEventStartBeatChanged(key, evt);
@@ -214,15 +227,15 @@ namespace Winithm.Core.Managers
       return index;
     }
 
-    public int[] AddEvents(TProp prop, List<EventData> evts)
+    public int[] AddEvents(TProp prop, IEnumerable<EventData> evts)
     {
-      if (evts.Count == 0) return Array.Empty<int>();
+      if (!evts.Any()) return Array.Empty<int>();
 
       BeginUpdate();
 
-      int[] indices = new int[evts.Count];
-      for (int i = 0; i < evts.Count; i++)
-        indices[i] = AddEvent(prop, evts[i]);
+      int[] indices = new int[evts.Count()];
+      for (int i = 0; i < evts.Count(); i++)
+        indices[i] = AddEvent(prop, evts.ElementAt(i));
 
       EndUpdate();
 
@@ -247,9 +260,9 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveEvents(TProp prop, List<EventData> evts)
+    public int RemoveEvents(TProp prop, IEnumerable<EventData> evts)
     {
-      if (evts.Count == 0) return 0;
+      if (!evts.Any()) return 0;
 
       BeginUpdate();
 
@@ -269,9 +282,9 @@ namespace Winithm.Core.Managers
       return false;
     }
 
-    public int RemoveEvents(List<EventData> evts)
+    public int RemoveEvents(IEnumerable<EventData> evts)
     {
-      if (evts.Count == 0) return 0;
+      if (!evts.Any()) return 0;
 
       BeginUpdate();
 
@@ -303,9 +316,9 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveEvents(TProp prop, List<string> ids)
+    public int RemoveEvents(TProp prop, IEnumerable<string> ids)
     {
-      if (ids.Count == 0) return 0;
+      if (!ids.Any()) return 0;
 
       BeginUpdate();
 
@@ -333,9 +346,9 @@ namespace Winithm.Core.Managers
       return anySuccess;
     }
 
-    public int RemoveEvents(List<string> ids)
+    public int RemoveEvents(IEnumerable<string> ids)
     {
-      if (ids.Count == 0) return 0;
+      if (!ids.Any()) return 0;
 
       BeginUpdate();
 
@@ -346,39 +359,6 @@ namespace Winithm.Core.Managers
       return success;
     }
 
-    public EventData GetEvent(TProp prop, EventData evt)
-    {
-      if (EventCollection.TryGetValue(prop, out var list) && list.Contains(evt)) return evt;
-      throw new KeyNotFoundException($"Event {evt.ID} not found.");
-    }
-
-    public List<EventData> GetEvents(TProp prop, List<EventData> evts)
-    {
-      var result = new List<EventData>();
-      if (EventCollection.TryGetValue(prop, out var list))
-      {
-        foreach (var evt in evts)
-          if (list.Contains(evt)) result.Add(evt);
-      }
-      return result;
-    }
-
-    public (TProp prop, EventData evt) GetEvent(EventData evt)
-    {
-      if (_eventKeyMap.TryGetValue(evt, out var prop)) return (prop, evt);
-      throw new KeyNotFoundException($"Event {evt.ID} not found.");
-    }
-
-    public Dictionary<TProp, EventData> GetEvents(List<EventData> evts)
-    {
-      var result = new Dictionary<TProp, EventData>();
-      foreach (var evt in evts)
-      {
-        if (_eventKeyMap.TryGetValue(evt, out var prop)) result[prop] = evt;
-      }
-      return result;
-    }
-
     public List<EventData> GetEvent(TProp prop, string id)
     {
       if (EventCollection.TryGetValue(prop, out var evts))
@@ -386,8 +366,10 @@ namespace Winithm.Core.Managers
       throw new KeyNotFoundException($"Event {id} not found.");
     }
 
-    public List<EventData> GetEvents(TProp prop, List<string> ids)
+    public IReadOnlyList<EventData> GetEvents(TProp prop, IEnumerable<string> ids)
     {
+      if (!ids.Any()) return Array.Empty<EventData>();
+
       var result = new List<EventData>();
       if (EventCollection.TryGetValue(prop, out var list))
       {
@@ -397,7 +379,7 @@ namespace Winithm.Core.Managers
       return result;
     }
 
-    public (TProp prop, List<EventData> evts) GetEvent(string id)
+    public (TProp prop, IReadOnlyList<EventData> evts) GetEvent(string id)
     {
       foreach (var pair in EventCollection)
       {
@@ -407,44 +389,28 @@ namespace Winithm.Core.Managers
       throw new KeyNotFoundException($"Event {id} not found.");
     }
 
-    public Dictionary<TProp, List<EventData>> GetEvents(List<string> ids)
+    public IReadOnlyDictionary<TProp, List<EventData>> GetEvents(IEnumerable<string> ids)
     {
       var result = new Dictionary<TProp, List<EventData>>();
       var idSet = new HashSet<string>(ids);
 
+      if(idSet.Count == 0) return result;
+
       foreach (var pair in EventCollection)
       {
         var found = pair.Value.Where(e => idSet.Contains(e.ID)).ToList();
-        if (found.Count > 0)
-        {
-          if (!result.TryGetValue(pair.Key, out var evts))
-            result[pair.Key] = new List<EventData>();
-          result[pair.Key].AddRange(found);
-        }
+        if (found.Count > 0) result[pair.Key] = found;
       }
       return result;
     }
 
-    public List<EventData> GetPropEvents(TProp prop)
+    public IReadOnlyList<EventData> GetPropEvents(TProp prop)
     {
       if (EventCollection.TryGetValue(prop, out var events)) return events;
       throw new KeyNotFoundException($"Property {prop} not found.");
     }
 
-    public Dictionary<TProp, List<EventData>> GetAllEvents() => EventCollection;
-
-    private void OnEventStartBeatChanged(TProp prop, EventData evt)
-    {
-      if (!EventCollection.TryGetValue(prop, out var list)) return;
-      if (!list.Contains(evt)) return;
-
-      list.Remove(evt);
-      int index = FindAddIndex(list, evt);
-      list.Insert(index, evt);
-
-      PropertyCursors[prop].Reset();
-      NotifyChanged();
-    }
+    public IReadOnlyDictionary<TProp, List<EventData>> GetAllEvents() => EventCollection;
 
     public void SortAllEvents()
     {

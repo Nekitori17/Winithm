@@ -57,9 +57,9 @@ namespace Winithm.Core.Managers
       NotifyChanged();
     }
 
-    public void AddGroups(List<GroupData> groups)
+    public void AddGroups(IEnumerable<GroupData> groups)
     {
-      if (groups.Count == 0) return;
+      if (!groups.Any()) return;
 
       BeginUpdate();
       foreach (var group in groups) AddGroup(group);
@@ -77,9 +77,9 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveGroups(List<string> ids)
+    public int RemoveGroups(IEnumerable<string> ids)
     {
-      if (ids.Count == 0) return 0;
+      if (!ids.Any()) return 0;
 
       BeginUpdate();
       int success = ids.Count(id => RemoveGroup(id));
@@ -94,18 +94,19 @@ namespace Winithm.Core.Managers
       throw new KeyNotFoundException($"Group {id} not found.");
     }
 
-    public List<GroupData> GetGroups(List<string> ids)
+    public IReadOnlyList<GroupData> GetGroups(IEnumerable<string> ids)
     {
+      if (!ids.Any()) return Array.Empty<GroupData>();
+
       var result = new List<GroupData>();
       foreach (var id in ids)
-      {
-        if (GroupCollection.TryGetValue(id, out var group)) result.Add(group);
-      }
+        try { result.Add(GetGroup(id)); }
+        catch (KeyNotFoundException) { continue; }
       return result;
     }
 
     public bool ContainsGroup(string id) => GroupCollection.ContainsKey(id);
 
-    public List<GroupData> GetAllGroups() => GroupCollection.Values.ToList();
+    public IReadOnlyDictionary<string, GroupData> GetAllGroups() => GroupCollection;
   }
 }

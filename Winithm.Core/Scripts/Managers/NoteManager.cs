@@ -423,17 +423,25 @@ namespace Winithm.Core.Managers
       return success;
     }
 
-    // ==========================================
-    // Fetch Methods
-    // ==========================================
-
-    public NoteData GetNote(NoteSide side, NoteData note)
+    public IReadOnlyList<NoteData> GetNote(NoteSide side, string id)
     {
-      if (NoteCollection.TryGetValue(side, out var list) && list.Contains(note)) return note;
-      throw new KeyNotFoundException($"Note {note.ID} not found.");
+      if (NoteCollection.TryGetValue(side, out var notes))
+        return notes.FindAll(n => n.ID == id);
+      throw new KeyNotFoundException($"Note {id} not found.");
     }
 
-    public List<NoteData> GetNote(string id)
+    public IReadOnlyList<NoteData> GetNotes(NoteSide side, IEnumerable<string> ids)
+    {
+      if (!ids.Any() || NoteCollection.Count == 0) return Array.Empty<NoteData>();
+
+      var result = new List<NoteData>();
+      foreach (var id in ids)
+        try { result.AddRange(GetNote(side, id)); }
+        catch (KeyNotFoundException) { continue; }
+      return result;
+    }
+
+    public IReadOnlyList<NoteData> GetNote(string id)
     {
       var result = new List<NoteData>();
       foreach (var pair in NoteCollection)
@@ -445,7 +453,16 @@ namespace Winithm.Core.Managers
       return result;
     }
 
-    public List<NoteData> GetSideNotes(NoteSide side)
+    public IReadOnlyList<NoteData> GetNotes(IEnumerable<string> ids)
+    {
+      var result = new List<NoteData>();
+      foreach (var id in ids)
+        try { result.AddRange(GetNote(id)); }
+        catch (KeyNotFoundException) { continue; }
+      return result;
+    }
+
+    public IReadOnlyList<NoteData> GetSideNotes(NoteSide side)
     {
       if (NoteCollection.TryGetValue(side, out var notes)) return notes;
 
@@ -453,14 +470,7 @@ namespace Winithm.Core.Managers
       return NoteCollection[side];
     }
 
-    public Dictionary<NoteSide, List<NoteData>> GetAllNotes() => NoteCollection;
-
-    public List<NoteData> GetNote(NoteSide side, string id)
-    {
-      if (NoteCollection.TryGetValue(side, out var notes))
-        return notes.FindAll(n => n.ID == id);
-      throw new KeyNotFoundException($"Note {id} not found.");
-    }
+    public IReadOnlyDictionary<NoteSide, List<NoteData>> GetAllNotes() => NoteCollection;
 
     // ==========================================
     // Operations
