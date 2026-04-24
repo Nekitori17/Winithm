@@ -249,7 +249,7 @@ namespace Winithm.Core.Managers
     // Event Management
     // ==========================================
 
-    private readonly Dictionary<NoteData, NoteSide> _eventKeyMap = new Dictionary<NoteData, NoteSide>();
+    private readonly Dictionary<NoteData, NoteSide> _noteSideMap = new Dictionary<NoteData, NoteSide>();
 
     private void SubscribeChangeEvent(NoteSide side, NoteData note)
     {
@@ -262,7 +262,7 @@ namespace Winithm.Core.Managers
       note.OnUpdated -= HandleUpdated;
       note.OnUpdated += HandleUpdated;
 
-      _eventKeyMap[note] = side;
+      _noteSideMap[note] = side;
     }
 
     private void UnsubscribeChangeEvent(NoteData note)
@@ -271,12 +271,12 @@ namespace Winithm.Core.Managers
       note.OnInvalidate -= HandleInvalidate;
       note.OnUpdated -= HandleUpdated;
 
-      _eventKeyMap.Remove(note);
+      _noteSideMap.Remove(note);
     }
 
     private void HandleStartBeatChanged(NoteData note)
     {
-      if (!_eventKeyMap.TryGetValue(note, out var side)) return;
+      if (!_noteSideMap.TryGetValue(note, out var side)) return;
 
       var list = NoteCollection[side];
       list.Remove(note);
@@ -353,7 +353,7 @@ namespace Winithm.Core.Managers
 
     public bool RemoveNote(NoteData note)
     {
-      if (_eventKeyMap.TryGetValue(note, out var side))
+      if (_noteSideMap.TryGetValue(note, out var side))
         return RemoveNote(side, note);
       return false;
     }
