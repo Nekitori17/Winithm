@@ -89,8 +89,10 @@ namespace Winithm.Core.Managers
 
     public ThemeChannelData GetThemeChannel(string id)
     {
+      if (string.IsNullOrEmpty(id)) return null;
+
       if (ThemeChannelCollection.TryGetValue(id, out var channelData)) return channelData;
-      throw new KeyNotFoundException($"ThemeChannel {id} not found.");
+      return null;
     }
 
     public IReadOnlyList<ThemeChannelData> GetThemeChannels(IEnumerable<string> ids)

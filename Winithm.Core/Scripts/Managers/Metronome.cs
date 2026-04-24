@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Winithm.Core.Data;
 using Winithm.Core.Common;
 using System;
+using System.Linq;
 
 namespace Winithm.Core.Managers
 {
@@ -161,15 +162,15 @@ namespace Winithm.Core.Managers
       return idx;
     }
 
-    public int[] AddBPMStops(List<BPMStop> bPMStops)
+    public int[] AddBPMStops(IEnumerable<BPMStop> bPMStops)
     {
-      if (bPMStops.Count == 0) return Array.Empty<int>();
+      if (!bPMStops.Any()) return Array.Empty<int>();
 
       BeginUpdate();
 
-      int[] indices = new int[bPMStops.Count];
-      for (int i = 0; i < bPMStops.Count; i++)
-        indices[i] = AddBPMStop(bPMStops[i]);
+      int[] indices = new int[bPMStops.Count()];
+      for (int i = 0; i < bPMStops.Count(); i++)
+        indices[i] = AddBPMStop(bPMStops.ElementAt(i));
       
       EndUpdate();
 
@@ -190,17 +191,15 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveBPMStops(List<BPMStop> bPMStops)
+    public int RemoveBPMStops(IEnumerable<BPMStop> bPMStops)
     {
-      if (bPMStops.Count == 0) return 0;
+      if (!bPMStops.Any()) return 0;
 
       BeginUpdate();
 
       int removedCount = 0;
-      for (int i = 0; i < bPMStops.Count; i++)
-      {
-        if (RemoveBPMStop(bPMStops[i])) removedCount++;
-      }
+      for (int i = 0; i < bPMStops.Count(); i++)
+        if (RemoveBPMStop(bPMStops.ElementAt(i))) removedCount++;
       
       EndUpdate(removedCount > 0);
 

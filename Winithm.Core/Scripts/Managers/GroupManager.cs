@@ -45,8 +45,7 @@ namespace Winithm.Core.Managers
 
     public void AddGroup(GroupData groupData)
     {
-      if (string.IsNullOrEmpty(groupData.ID))
-        throw new ArgumentException("GroupData ID cannot be null or empty.");
+      if (string.IsNullOrEmpty(groupData.ID)) return;
 
       // Overwrite and cleanly strip old event bindings if ID collision occurs
       if (GroupCollection.TryGetValue(groupData.ID, out var existing))
@@ -68,6 +67,8 @@ namespace Winithm.Core.Managers
 
     public bool RemoveGroup(string id)
     {
+      if (string.IsNullOrEmpty(id)) return false;
+
       if (!GroupCollection.TryGetValue(id, out var groupData)) return false;
 
       UnsubscribeChangeEvent(groupData);
@@ -90,8 +91,10 @@ namespace Winithm.Core.Managers
 
     public GroupData GetGroup(string id)
     {
+      if (string.IsNullOrEmpty(id)) return null;
+
       if (GroupCollection.TryGetValue(id, out var groupData)) return groupData;
-      throw new KeyNotFoundException($"Group {id} not found.");
+        return null;
     }
 
     public IReadOnlyList<GroupData> GetGroups(IEnumerable<string> ids)
@@ -100,8 +103,10 @@ namespace Winithm.Core.Managers
 
       var result = new List<GroupData>();
       foreach (var id in ids)
-        try { result.Add(GetGroup(id)); }
-        catch (KeyNotFoundException) { continue; }
+      {
+        var group = GetGroup(id);
+        if (group != null) result.Add(group);
+      }
       return result;
     }
 

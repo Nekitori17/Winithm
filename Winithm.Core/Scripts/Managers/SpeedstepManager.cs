@@ -105,17 +105,15 @@ namespace Winithm.Core.Managers
       return index;
     }
 
-    public int[] AddSpeedSteps(List<SpeedStepData> speedSteps)
+    public int[] AddSpeedSteps(IEnumerable<SpeedStepData> speedSteps)
     {
-      if (speedSteps.Count == 0) return Array.Empty<int>();
+      if (!speedSteps.Any()) return Array.Empty<int>();
 
       BeginUpdate();
 
-      int[] indices = new int[speedSteps.Count];
-      for (int i = 0; i < speedSteps.Count; i++)
-      {
-        indices[i] = AddSpeedStep(speedSteps[i]);
-      }
+      int[] indices = new int[speedSteps.Count()];
+      for (int i = 0; i < speedSteps.Count(); i++)
+        indices[i] = AddSpeedStep(speedSteps.ElementAt(i));
 
       EndUpdate();
 
@@ -149,6 +147,7 @@ namespace Winithm.Core.Managers
     public bool RemoveSpeedStep(string id)
     {
       if (string.IsNullOrEmpty(id)) return false;
+      
       var toRemove = SpeedStepCollection.FindAll(st => st.ID == id);
       if (toRemove.Count == 0) return false;
 
@@ -174,42 +173,27 @@ namespace Winithm.Core.Managers
       return removedCount;
     }
 
-    public SpeedStepData GetSpeedStep(SpeedStepData speedStep)
-    {
-      if (SpeedStepCollection.Contains(speedStep)) return speedStep;
 
-      throw new ArgumentException($"SpeedStep {speedStep.ID} not found in collection.");
-    }
-
-    public List<SpeedStepData> GetSpeedSteps(List<SpeedStepData> speedSteps)
-    {
-      var result = new List<SpeedStepData>();
-
-      foreach (var st in speedSteps)
-        if (SpeedStepCollection.Contains(st)) result.Add(st);
-
-      return result;
-    }
-
-    public List<SpeedStepData> GetSpeedStep(string id)
+    public SpeedStepData GetSpeedStep(string id)
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      var speedStep = SpeedStepCollection.FindAll(st => st.ID == id);
+      var speedStep = SpeedStepCollection.FirstOrDefault(st => st.ID == id);
 
-      if (speedStep.Count == 0)
-        throw new ArgumentException($"SpeedStep {id} not found in collection.");
-
+      if (speedStep == default) return null;
       return speedStep;
     }
 
-    public List<SpeedStepData> GetSpeedSteps(List<string> ids)
+    public IReadOnlyList<SpeedStepData> GetSpeedSteps(IEnumerable<string> ids)
     {
-      var result = new List<SpeedStepData>();
+      if (!ids.Any()) return Array.Empty<SpeedStepData>();
 
+      var result = new List<SpeedStepData>();
       foreach (var id in ids)
-        try { result.AddRange(GetSpeedStep(id)); }
-        catch (ArgumentException) { continue; }
+      {
+        var speedStep = GetSpeedStep(id);
+        if (speedStep != null) result.Add(speedStep);
+      }
 
       return result;
     }

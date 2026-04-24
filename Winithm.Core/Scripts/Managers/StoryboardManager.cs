@@ -297,6 +297,8 @@ namespace Winithm.Core.Managers
 
     public bool RemoveEvent(TProp prop, string id)
     {
+      if (string.IsNullOrEmpty(id)) return false;
+
       if (!EventCollection.TryGetValue(prop, out var list)) return false;
 
       var toRemove = list.FindAll(x => x.ID == id);
@@ -331,7 +333,7 @@ namespace Winithm.Core.Managers
 
     public bool RemoveEvent(string id)
     {
-      if (EventCollection.Count == 0) return false;
+      if (string.IsNullOrEmpty(id)) return false;
 
       BeginUpdate();
 
@@ -359,11 +361,16 @@ namespace Winithm.Core.Managers
       return success;
     }
 
-    public List<EventData> GetEvent(TProp prop, string id)
+    public EventData GetEvent(TProp prop, string id)
     {
-      if (EventCollection.TryGetValue(prop, out var evts))
-        return evts.Where(e => e.ID == id).ToList();
-      throw new KeyNotFoundException($"Event {id} not found.");
+      if (string.IsNullOrEmpty(id)) return null;
+
+      if (!EventCollection.TryGetValue(prop, out var evts)) return null;
+
+      var result = evts.FirstOrDefault(e => e.ID == id);
+
+      if (result == default) return null;
+      return result;
     }
 
     public IReadOnlyList<EventData> GetEvents(TProp prop, IEnumerable<string> ids)
@@ -379,14 +386,22 @@ namespace Winithm.Core.Managers
       return result;
     }
 
-    public (TProp prop, IReadOnlyList<EventData> evts) GetEvent(string id)
+    public EventData GetEvent(string id, out TProp prop)
     {
+      prop = default;
+
+      if (string.IsNullOrEmpty(id)) return null;
+
       foreach (var pair in EventCollection)
       {
-        var found = pair.Value.Where(e => e.ID == id).ToList();
-        if (found.Count > 0) return (pair.Key, found);
+        var result = pair.Value.FirstOrDefault(e => e.ID == id);
+        if (result != default) {
+          prop = pair.Key;
+          return result;
+        }
       }
-      throw new KeyNotFoundException($"Event {id} not found.");
+
+      return null;
     }
 
     public IReadOnlyDictionary<TProp, List<EventData>> GetEvents(IEnumerable<string> ids)
@@ -407,7 +422,7 @@ namespace Winithm.Core.Managers
     public IReadOnlyList<EventData> GetPropEvents(TProp prop)
     {
       if (EventCollection.TryGetValue(prop, out var events)) return events;
-      throw new KeyNotFoundException($"Property {prop} not found.");
+      return Array.Empty<EventData>();
     }
 
     public IReadOnlyDictionary<TProp, List<EventData>> GetAllEvents() => EventCollection;

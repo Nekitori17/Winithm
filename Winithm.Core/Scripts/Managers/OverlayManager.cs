@@ -67,6 +67,8 @@ namespace Winithm.Core.Managers
 
     public bool RemoveOverlay(string id)
     {
+      if (string.IsNullOrEmpty(id)) return false;
+
       if (!OverlayCollection.TryGetValue(id, out var overlayData)) return false;
 
       UnsubscribeChangeEvent(overlayData);
@@ -89,8 +91,10 @@ namespace Winithm.Core.Managers
 
     public OverlayData GetOverlay(string id)
     {
+      if (string.IsNullOrEmpty(id)) return null;
+
       if (OverlayCollection.TryGetValue(id, out var overlayData)) return overlayData;
-      throw new KeyNotFoundException($"Overlay {id} not found.");
+      return null;
     }
 
     public IReadOnlyList<OverlayData> GetOverlays(IEnumerable<string> ids)
@@ -99,8 +103,10 @@ namespace Winithm.Core.Managers
 
       var result = new List<OverlayData>();
       foreach (var id in ids)
-        try { result.Add(GetOverlay(id)); }
-        catch (KeyNotFoundException) { continue; }
+      {
+        var overlay = GetOverlay(id);
+        if (overlay != null) result.Add(overlay);
+      }
       return result;
     }
 

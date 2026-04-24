@@ -13,10 +13,7 @@ namespace Winithm.Core.Managers
     public event Action<WindowManager> OnUpdated;
 
     public Metronome Metronome { get; private set; }
-    public Dictionary<string, WindowData> WindowCollection { get; private set; } = new Dictionary<string, WindowData>();
-
-    /// <summary>Windows sorted by StartBeat for cursor-based culling.</summary>
-    public List<WindowData> SortedWindows { get; private set; } = new List<WindowData>();
+    public List<WindowData> WindowCollection { get; private set; } = new List<WindowData>();
 
     /// <summary>Prefix-max of EndBeatEndOut over SortedWindows, for backward sync binary search.</summary>
     public double[] MaxEndBeats { get; private set; } = Array.Empty<double>();
@@ -70,21 +67,17 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void Compute()
     {
-      SortedWindows.Clear();
-      SortedWindows.AddRange(WindowCollection.Values);
-      SortedWindows.Sort((a, b) => a.StartBeat.AbsoluteValue.CompareTo(b.StartBeat.AbsoluteValue));
-
-      MaxEndBeats = new double[SortedWindows.Count];
-      PrefixCombo = new int[SortedWindows.Count];
+      MaxEndBeats = new double[WindowCollection.Count];
+      PrefixCombo = new int[WindowCollection.Count];
       double runningMax = double.MinValue;
       int runningCombo = 0;
 
-      for (int i = 0; i < SortedWindows.Count; i++)
+      for (int i = 0; i < WindowCollection.Count; i++)
       {
-        runningMax = Math.Max(runningMax, SortedWindows[i].EndBeatEndOut);
+        runningMax = Math.Max(runningMax, WindowCollection[i].EndBeatEndOut);
         MaxEndBeats[i] = runningMax;
 
-        runningCombo += SortedWindows[i].Notes.TotalComboCount;
+        runningCombo += WindowCollection[i].Notes.TotalComboCount;
         PrefixCombo[i] = runningCombo;
       }
 
@@ -112,7 +105,7 @@ namespace Winithm.Core.Managers
       if (Metronome == null)
         throw new InvalidOperationException("Metronome must be set before computing animations.");
 
-      foreach (var window in WindowCollection.Values)
+      foreach (var window in WindowCollection)
         ComputeAnimations(window);
 
       RequestRecompute();
@@ -179,14 +172,9 @@ namespace Winithm.Core.Managers
 
     public void AddWindow(WindowData windowData)
     {
-      if (string.IsNullOrEmpty(windowData.ID))
-        throw new ArgumentException("WindowData ID cannot be null or empty.");
+      var idx = FindAddIndex(WindowCollection, windowData);
 
-      // Overwrite: cleanly strip old event bindings if ID collision occurs
-      if (WindowCollection.TryGetValue(windowData.ID, out var existing))
-        UnsubscribeChangeEvent(existing);
-
-      WindowCollection[windowData.ID] = windowData;
+      WindowCollection.Insert(idx, windowData);
       SubscribeChangeEvent(windowData);
 
       RequestRecompute();
@@ -204,10 +192,14 @@ namespace Winithm.Core.Managers
 
     public bool RemoveWindow(string id)
     {
-      if (!WindowCollection.TryGetValue(id, out var windowData)) return false;
+      if (string.IsNullOrEmpty(id)) return false;
+
+      var windowData = WindowCollection.FirstOrDefault(w => w.ID == id);
+
+      if (windowData == default) return false;
 
       UnsubscribeChangeEvent(windowData);
-      WindowCollection.Remove(id);
+      WindowCollection.Remove(windowData);
 
       RequestRecompute();
       NotifyChanged();
@@ -232,30 +224,51 @@ namespace Winithm.Core.Managers
 
     public WindowData GetWindow(string id)
     {
-      if (WindowCollection.TryGetValue(id, out var windowData)) return windowData;
-      throw new KeyNotFoundException($"Window {id} not found.");
+      if (string.IsNullOrEmpty(id)) return null;
+
+      var result = WindowCollection.FirstOrDefault(w => w.ID == id);
+
+      if (result == default) return null;
+      return result;
     }
 
-    public List<WindowData> GetWindows(IEnumerable<string> ids)
+    public IReadOnlyList<WindowData> GetWindows(IEnumerable<string> ids)
     {
       var result = new List<WindowData>();
       foreach (var id in ids)
       {
-        if (WindowCollection.TryGetValue(id, out var window)) result.Add(window);
+        var window = GetWindow(id);
+        if (window != null) result.Add(window);
       }
       return result;
     }
 
-    public IReadOnlyDictionary<string, WindowData> GetAllWindows() => WindowCollection;
+    public IReadOnlyList<WindowData> GetAllWindows() => WindowCollection;
 
     /// <summary>
     /// Returns all windows sorted by Layer (ascending) for correct render order.
     /// </summary>
     public IReadOnlyList<WindowData> GetWindowsByLayer()
     {
-      var sorted = WindowCollection.Values.ToList();
-      sorted.Sort((a, b) => a.Layer.CompareTo(b.Layer));
-      return sorted;
+      var windows = new List<WindowData>(WindowCollection);
+
+      windows.Sort((a, b) => a.Layer.CompareTo(b.Layer));
+
+      return windows;
+    }
+
+    public int FindAddIndex(List<WindowData> list, WindowData target)
+    {
+      if (list.Count == 0) return 0;
+
+      int left = 0, right = list.Count - 1;
+      while (left <= right)
+      {
+        int mid = left + (right - left) / 2;
+        if (list[mid].StartBeat <= target.StartBeat) left = mid + 1;
+        else right = mid - 1;
+      }
+      return left;
     }
   }
 }

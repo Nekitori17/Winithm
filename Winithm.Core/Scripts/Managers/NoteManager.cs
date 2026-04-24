@@ -312,15 +312,15 @@ namespace Winithm.Core.Managers
       return index;
     }
 
-    public int[] AddNotes(NoteSide side, List<NoteData> notes)
+    public int[] AddNotes(NoteSide side, IEnumerable<NoteData> notes)
     {
-      if (notes.Count == 0) return Array.Empty<int>();
+      if (!notes.Any()) return Array.Empty<int>();
 
       BeginUpdate();
 
-      int[] indices = new int[notes.Count];
-      for (int i = 0; i < notes.Count; i++)
-        indices[i] = AddNote(side, notes[i]);
+      int[] indices = new int[notes.Count()];
+      for (int i = 0; i < notes.Count(); i++)
+        indices[i] = AddNote(side, notes.ElementAt(i));
 
       EndUpdate();
       return indices;
@@ -340,9 +340,9 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveNotes(NoteSide side, List<NoteData> notes)
+    public int RemoveNotes(NoteSide side, IEnumerable<NoteData> notes)
     {
-      if (notes.Count == 0) return 0;
+      if (!notes.Any()) return 0;
 
       BeginUpdate();
       int success = notes.Count(n => RemoveNote(side, n));
@@ -358,9 +358,9 @@ namespace Winithm.Core.Managers
       return false;
     }
 
-    public int RemoveNotes(List<NoteData> notes)
+    public int RemoveNotes(IEnumerable<NoteData> notes)
     {
-      if (notes.Count == 0) return 0;
+      if (!notes.Any()) return 0;
 
       BeginUpdate();
       int success = notes.Count(n => RemoveNote(n));
@@ -371,6 +371,8 @@ namespace Winithm.Core.Managers
 
     public bool RemoveNote(NoteSide side, string id)
     {
+      if (string.IsNullOrEmpty(id)) return false;
+
       if (!NoteCollection.TryGetValue(side, out var list)) return false;
 
       var toRemove = list.FindAll(x => x.ID == id);
@@ -386,9 +388,9 @@ namespace Winithm.Core.Managers
       return true;
     }
 
-    public int RemoveNotes(NoteSide side, List<string> ids)
+    public int RemoveNotes(NoteSide side, IEnumerable<string> ids)
     {
-      if (ids.Count == 0) return 0;
+      if (!ids.Any()) return 0;
 
       BeginUpdate();
       int success = ids.Count(id => RemoveNote(side, id));
@@ -399,6 +401,8 @@ namespace Winithm.Core.Managers
 
     public bool RemoveNote(string id)
     {
+      if (string.IsNullOrEmpty(id)) return false;
+
       if (NoteCollection.Count == 0) return false;
 
       BeginUpdate();
@@ -412,9 +416,9 @@ namespace Winithm.Core.Managers
       return anySuccess;
     }
 
-    public int RemoveNotes(List<string> ids)
+    public int RemoveNotes(IEnumerable<string> ids)
     {
-      if (ids.Count == 0) return 0;
+      if (!ids.Any()) return 0;
 
       BeginUpdate();
       int success = ids.Count(id => RemoveNote(id));
@@ -423,42 +427,54 @@ namespace Winithm.Core.Managers
       return success;
     }
 
-    public IReadOnlyList<NoteData> GetNote(NoteSide side, string id)
+    public NoteData GetNote(NoteSide side, string id)
     {
-      if (NoteCollection.TryGetValue(side, out var notes))
-        return notes.FindAll(n => n.ID == id);
-      throw new KeyNotFoundException($"Note {id} not found.");
+      if (string.IsNullOrEmpty(id)) return null;
+
+      if (!NoteCollection.TryGetValue(side, out var notes)) return null;
+
+      var result = notes.FirstOrDefault((n) => n.ID == id);
+
+      if (result == default) return null;
+      return result;
     }
 
     public IReadOnlyList<NoteData> GetNotes(NoteSide side, IEnumerable<string> ids)
     {
-      if (!ids.Any() || NoteCollection.Count == 0) return Array.Empty<NoteData>();
+      if (!ids.Any()) return Array.Empty<NoteData>();
 
       var result = new List<NoteData>();
       foreach (var id in ids)
-        try { result.AddRange(GetNote(side, id)); }
-        catch (KeyNotFoundException) { continue; }
+      {
+        var note = GetNote(side, id);
+        if (note != null) result.Add(note);
+      }
       return result;
     }
 
-    public IReadOnlyList<NoteData> GetNote(string id)
+    public NoteData GetNote(string id)
     {
-      var result = new List<NoteData>();
+      if (string.IsNullOrEmpty(id)) return null;
+
       foreach (var pair in NoteCollection)
       {
-        result.AddRange(pair.Value.FindAll(n => n.ID == id));
+        var note = pair.Value.Find(n => n.ID == id);
+        if (note != null) return note;
       }
 
-      if (result.Count == 0) throw new KeyNotFoundException($"Note {id} not found.");
-      return result;
+      return null;
     }
 
     public IReadOnlyList<NoteData> GetNotes(IEnumerable<string> ids)
     {
+      if (!ids.Any()) return Array.Empty<NoteData>();
+
       var result = new List<NoteData>();
       foreach (var id in ids)
-        try { result.AddRange(GetNote(id)); }
-        catch (KeyNotFoundException) { continue; }
+      {
+        var note = GetNote(id);
+        if (note != null) result.Add(note);
+      }
       return result;
     }
 
