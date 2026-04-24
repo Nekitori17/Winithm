@@ -24,26 +24,26 @@ namespace Winithm.Core.Controllers
 
     public bool HasThemeChannel(string id) => _themeManager.ContainsThemeChannel(id);
 
-    public (Color WindowColor, float NoteA) GetThemeColor(
-      string id, float currentBeat, Color colorFallback, float noteAFallback
+    public (Color WindowColor, float NoteA)? GetThemeColor(
+      string id, float currentBeat
     )
     {
       if (string.IsNullOrEmpty(id) || !_themeManager.ContainsThemeChannel(id)) 
-        return (colorFallback, noteAFallback);
+        return null;
 
       var stateVal = _lastStates[id];
       if (Mathf.Abs(stateVal.LastBeat - currentBeat) <= 0.0001f)
         return (stateVal.Color, stateVal.NoteAlpha);
 
-      return ForceGetThemeColor(id, currentBeat, colorFallback, noteAFallback);
+      return ForceGetThemeColor(id, currentBeat, false);
     }
 
-    public (Color WindowColor, float NoteA) ForceGetThemeColor(
-      string id, float currentBeat, Color colorFallback, float noteAFallback, bool _force = true
+    public (Color WindowColor, float NoteA)? ForceGetThemeColor(
+      string id, float currentBeat, bool _force = true
     )
     {
       if (string.IsNullOrEmpty(id) || !_themeManager.ContainsThemeChannel(id)) 
-        return (colorFallback, noteAFallback);
+        return null;
       
       var tc = _themeManager.GetThemeChannel(id);
 
