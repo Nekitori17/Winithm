@@ -8,11 +8,20 @@ using Winithm.Core.Interfaces;
 
 namespace Winithm.Core.Managers
 {
+  public enum NoteSide
+  {
+    Top,
+    Bottom,
+    Left,
+    Right
+  }
+
   /// <summary>
   /// Manages Note segments, boundaries, spatial extents, and rendering lifetimes.
   /// </summary>
   public class NoteManager : IDeepCloneable<NoteManager>
   {
+
     public event Action<NoteManager> OnLifeCycleChanged;
     public event Action<NoteManager> OnUpdated;
 
@@ -97,33 +106,38 @@ namespace Winithm.Core.Managers
       NotifyChanged();
     }
 
-    public static NoteType ParseNoteType(string text)
+    public static NoteData ParseNoteLine(string text, out NoteSide side)
     {
-      switch (text.Trim())
-      {
-        case "Tap": return NoteType.Tap;
-        case "Hold": return NoteType.Hold;
-        case "Drag": return NoteType.Drag;
-        case "Focus": return NoteType.Focus;
-        case "Close": return NoteType.Close;
-        default:
-          GD.PushError($"[WinithmParser] Unknown note type: '{text}', defaulting to Tap.");
-          return NoteType.Tap;
-      }
+      side = NoteSide.Bottom;
+
+      string[] parts = text.Trim().Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+      var current = new NoteData();
+
+      if (parts.Length >= 1)
+        current.ID = parts[0];
+      if (parts.Length >= 2)
+        current.Type = Enum.TryParse<NoteType>(parts[1], true, out var t) ? t : NoteType.Tap;
+      if (parts.Length >= 3)
+        current.StartBeat = BeatTime.TryParse(parts[2], out var sb) ? sb : BeatTime.Zero;
+      if (parts.Length >= 4)
+        current.Length = double.TryParse(parts[3], out var l) ? l : 0;
+      if (parts.Length >= 5)
+        current.X = float.TryParse(parts[4], out var x) ? x : 0.5f;
+      if (parts.Length >= 6)
+        current.Width = float.TryParse(parts[5], out var w) ? w : 0.5f;
+      if (parts.Length >= 7)
+        side = Enum.TryParse<NoteSide>(parts[6], true, out var s) ? s : NoteSide.Bottom;
+      if (parts.Length >= 8)
+        current.FakeType = int.TryParse(parts[7], out var ft) ? ft : 0;
+
+      return current;
     }
 
-    public static NoteSide ParseSide(string text)
+    public static string GenerateNoteLine(NoteSide side, NoteData data, int indent = 2)
     {
-      switch (text.Trim())
-      {
-        case "Top": return NoteSide.Top;
-        case "Bottom": return NoteSide.Bottom;
-        case "Left": return NoteSide.Left;
-        case "Right": return NoteSide.Right;
-        default:
-          GD.PushError($"[WinithmParser] Unknown side: '{text}', defaulting to Bottom.");
-          return NoteSide.Bottom;
-      }
+      string result = $"# {data.ID} {data.Type} {data.StartBeat} {data.Length} {data.X} {data.Width} {side} {data.FakeType}";
+      return result.PadLeft(indent);
     }
 
     /// <summary>
@@ -242,9 +256,6 @@ namespace Winithm.Core.Managers
       note.OnStartBeatChanged -= HandleStartBeatChanged;
       note.OnStartBeatChanged += HandleStartBeatChanged;
 
-      note.OnSideChanged -= HandleSideChanged;
-      note.OnSideChanged += HandleSideChanged;
-
       note.OnInvalidate -= HandleInvalidate;
       note.OnInvalidate += HandleInvalidate;
 
@@ -257,7 +268,6 @@ namespace Winithm.Core.Managers
     private void UnsubscribeChangeEvent(NoteData note)
     {
       note.OnStartBeatChanged -= HandleStartBeatChanged;
-      note.OnSideChanged -= HandleSideChanged;
       note.OnInvalidate -= HandleInvalidate;
       note.OnUpdated -= HandleUpdated;
 
@@ -275,17 +285,6 @@ namespace Winithm.Core.Managers
 
       RequestRecompute();
       NotifyChanged();
-    }
-
-    private void HandleSideChanged(NoteData note)
-    {
-      if (!_eventKeyMap.TryGetValue(note, out var currentSide)) return;
-      if (note.Side == currentSide) { RequestRecompute(); NotifyChanged(); return; }
-
-      BeginUpdate();
-      RemoveNote(currentSide, note);
-      AddNote(note.Side, note);
-      EndUpdate();
     }
 
     private void HandleInvalidate(NoteData note) { RequestRecompute(); NotifyChanged(); }

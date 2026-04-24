@@ -18,14 +18,6 @@ namespace Winithm.Core.Data
     Close
   }
 
-  public enum NoteSide
-  {
-    Top,
-    Bottom,
-    Left,
-    Right
-  }
-
   public class NoteData : IDeepCloneable<NoteData>
   {
     /// <summary>Fired when StartBeat changes; Manager uses this to re-sort.</summary>
