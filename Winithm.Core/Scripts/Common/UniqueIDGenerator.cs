@@ -7,7 +7,7 @@ namespace Winithm.Core.Common
     private const string CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
     /// <summary>Generates a unique 6-char ID using Incremental Base-62 encoding.</summary>
-    public static (long NextSeed, string UniqueID) Generate(long? seed = null)
+    public static string Generate(long? seed = null)
     {
       long currentSeed = seed ?? 0;
       char[] idChars = new char[6];
@@ -20,7 +20,7 @@ namespace Winithm.Core.Common
         value /= 62;
       }
 
-      return (currentSeed + 1, new string(idChars));
+      return new string(idChars);
     }
 
     /// <summary>Decodes a 6-char Base-62 ID back into its original integer seed.</summary>

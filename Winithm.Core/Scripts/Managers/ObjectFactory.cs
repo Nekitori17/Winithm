@@ -7,7 +7,7 @@ namespace Winithm.Core.Managers
 {
   public class ObjectFactory
   {
-    public long NextIDSeed = 0;
+    public long CurrentIDSeed { get; private set; } = 0;
 
     public readonly BeatTime DEFAULT_WINDOW_LIFECYCLE_DURATION = new BeatTime(15, 0, 0);
 
@@ -16,8 +16,8 @@ namespace Winithm.Core.Managers
     /// </summary>
     public string GenerateUID()
     {
-      var (nextSeed, uid) = UniqueIDGenerator.Generate(NextIDSeed);
-      NextIDSeed = nextSeed;
+      var uid = UniqueIDGenerator.Generate(CurrentIDSeed);
+      CurrentIDSeed++;
       return uid;
     }
 
@@ -31,14 +31,19 @@ namespace Winithm.Core.Managers
       long seed = UniqueIDGenerator.Decode(ID);
       if (seed <= 0) return;
 
-      NextIDSeed = Math.Max(NextIDSeed - 1, seed + 1);
+      CurrentIDSeed = Math.Max(CurrentIDSeed, seed);
     }
 
     // ==========================================
     // Factory Methods
     // ==========================================
 
-    public BPMStop CreateBPMStop(BeatTime startBeat, float bpm, int signature) => new BPMStop(startBeat, bpm, signature);
+    public BPMStop CreateBPMStop(BeatTime startBeat, float bpm, int signature) => new BPMStop
+    {
+      StartBeat = startBeat,
+      BPM = bpm,
+      TimeSignature = signature
+    };
 
     public OverlayData CreateOverlay() => new OverlayData { ID = GenerateUID() };
     public GroupData CreateGroup() => new GroupData { ID = GenerateUID() };
