@@ -8,8 +8,7 @@ namespace Winithm.Core.Data
   /// </summary>
   public class ChartData
   {
-    public event Action<ChartData> OnSongMetaDataUpdated;
-    public event Action<ChartData> OnChartMetadataUpdated;
+    public event Action<ChartData> OnMetaDataUpdated;
 
     public event Action<ChartData> OnChartUpdated;
 
@@ -28,9 +27,10 @@ namespace Winithm.Core.Data
 
     public ChartData()
     {
-      SongMetaData.OnUpdated += (sm) => OnSongMetaDataUpdated?.Invoke(this);
-      ChartMetadata.OnUpdated += (cm) => OnChartMetadataUpdated?.Invoke(this);
+      SongMetaData.OnUpdated += (sm) => OnMetaDataUpdated?.Invoke(this);
+      ChartMetadata.OnUpdated += (cm) => OnMetaDataUpdated?.Invoke(this);
 
+      SongMetaData.OnMetronomeUpdated += (sm) => OnChartUpdated?.Invoke(this);
       Overlays.OnUpdated += (om) => OnChartUpdated?.Invoke(this);
       Components.OnUpdated += (cmp) => OnChartUpdated?.Invoke(this);
       ThemeChannels.OnUpdated += (tc) => OnChartUpdated?.Invoke(this);

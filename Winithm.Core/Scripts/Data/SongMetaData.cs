@@ -9,8 +9,6 @@ namespace Winithm.Core.Data
     public float VERSION = 1f;
 
     public event Action<SongMetaData> OnMetronomeUpdated;
-    public event Action<SongMetaData> OnAudioUpdated;
-    public event Action<SongMetaData> OnIllustrationUpdated;
     public event Action<SongMetaData> OnUpdated;
 
     public string _id = "prototype.test";
@@ -38,8 +36,8 @@ namespace Winithm.Core.Data
     public SongMetaData()
     {
       Audio.OnMetronomeUpdated += (a) => OnMetronomeUpdated?.Invoke(this);
-      Audio.OnUpdated += (a) => { OnAudioUpdated?.Invoke(this); OnUpdated?.Invoke(this); };
-      Illustration.OnUpdated += (i) => { OnIllustrationUpdated?.Invoke(this); OnUpdated?.Invoke(this); };
+      Audio.OnUpdated += (a) => OnUpdated?.Invoke(this);
+      Illustration.OnUpdated += (i) => OnUpdated?.Invoke(this);
     }
   }
 
