@@ -100,7 +100,21 @@ namespace Winithm.Core.Managers
       TotalComboCount = runningCombo;
     }
 
-    public void SetMetronome(Metronome metronome) => Metronome = metronome;
+    public void SetMetronome(Metronome metronome)
+    {
+      if (Metronome == metronome) return;
+
+      if (Metronome != null) Metronome.OnUpdated -= HandleMetronomeUpdated;
+      Metronome = metronome;
+      if (Metronome != null) Metronome.OnUpdated += HandleMetronomeUpdated;
+      NotifyChanged();
+    }
+
+    private void HandleMetronomeUpdated(Metronome metronome)
+    {
+      RequestRecompute();
+      NotifyChanged();
+    }
 
     /// <summary>
     /// Computes animation data for a single window.
