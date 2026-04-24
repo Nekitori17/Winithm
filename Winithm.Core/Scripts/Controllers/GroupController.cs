@@ -1,37 +1,33 @@
 using Godot;
 using System.Collections.Generic;
 using Winithm.Core.Data;
-using Winithm.Core.Logic;
 using Winithm.Core.Common;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Controllers
 {
   [Tool]
   public class GroupController : Node
   {
-    private Dictionary<string, GroupData> _groupDataMap = new Dictionary<string, GroupData>();
-    private Dictionary<string, Node2D> _groupNodes = new Dictionary<string, Node2D>();
-    private Dictionary<string, float> _lastUpdateBeat = new Dictionary<string, float>();
+    private GroupManager _groupManager;
+    private readonly Dictionary<string, Node2D> _groupNodes = new Dictionary<string, Node2D>();
+    private readonly Dictionary<string, float> _lastUpdateBeat = new Dictionary<string, float>();
 
-    private Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>> _cursors
-      = new Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>>();
-
-    public void LoadGroups(List<GroupData> groups)
+    public void LoadGroups(GroupManager manager)
     {
+      _groupManager = manager ?? new GroupManager();
+
       foreach (var node in _groupNodes.Values)
       {
         if (IsInstanceValid(node)) node.QueueFree();
       }
       _groupNodes.Clear();
-      _groupDataMap.Clear();
       _lastUpdateBeat.Clear();
-      _cursors.Clear();
 
-      if (groups == null) return;
+      var allGroups = _groupManager.GroupCollection.Values;
 
-      foreach (var g in groups)
+      foreach (var g in allGroups)
       {
-        _groupDataMap[g.ID] = g;
         _lastUpdateBeat[g.ID] = -1f;
 
         var node = new Node2D
@@ -42,19 +38,10 @@ namespace Winithm.Core.Controllers
           RotationDegrees = g.InitRotation
         };
 
-
         _groupNodes[g.ID] = node;
-
-        var propCursors = new Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>();
-        if (g.StoryboardEvents != null)
-        {
-          foreach (var prop in g.StoryboardEvents.Keys)
-            propCursors[prop] = new StoryboardEvaluator.Cursor();
-        }
-        _cursors[g.ID] = propCursors;
       }
 
-      foreach (var g in groups)
+      foreach (var g in allGroups)
       {
         var node = _groupNodes[g.ID];
         if (!string.IsNullOrEmpty(g.ParentGroupID) && _groupNodes.TryGetValue(g.ParentGroupID, out Node2D parentNode))
@@ -70,7 +57,7 @@ namespace Winithm.Core.Controllers
 
     public Node2D GetGroupNode(string id, float currentBeat)
     {
-      if (string.IsNullOrEmpty(id) || !_groupDataMap.ContainsKey(id)) return null;
+      if (string.IsNullOrEmpty(id) || !_groupManager.ContainsGroup(id)) return null;
 
       if (Mathf.Abs(_lastUpdateBeat[id] - currentBeat) <= 0.0001f)
         return _groupNodes[id];
@@ -80,21 +67,22 @@ namespace Winithm.Core.Controllers
 
     public Node2D ForceGetGroupNode(string id, float currentBeat, bool _force = true)
     {
-      if (string.IsNullOrEmpty(id) || !_groupDataMap.TryGetValue(id, out var g)) return null;
+      if (string.IsNullOrEmpty(id) || !_groupManager.GroupCollection.TryGetValue(id, out var g)) return null;
 
       if (!string.IsNullOrEmpty(g.ParentGroupID))
+      {
         if (_force) ForceGetGroupNode(g.ParentGroupID, currentBeat);
         else GetGroupNode(g.ParentGroupID, currentBeat);
+      }
 
       var node = _groupNodes[id];
-      var cursors = _cursors[id];
 
-      float x = EvaluateProperty(g, StoryboardProperty.X, currentBeat, g.InitX, GetCursor(cursors, StoryboardProperty.X));
-      float y = EvaluateProperty(g, StoryboardProperty.Y, currentBeat, g.InitY, GetCursor(cursors, StoryboardProperty.Y));
-      float scale = EvaluateProperty(g, StoryboardProperty.Scale, currentBeat, 1f, GetCursor(cursors, StoryboardProperty.Scale));
-      float scaleX = EvaluateProperty(g, StoryboardProperty.ScaleX, currentBeat, g.InitScaleX, GetCursor(cursors, StoryboardProperty.ScaleX));
-      float scaleY = EvaluateProperty(g, StoryboardProperty.ScaleY, currentBeat, g.InitScaleY, GetCursor(cursors, StoryboardProperty.ScaleY));
-      float rotation = EvaluateProperty(g, StoryboardProperty.Rotation, currentBeat, g.InitRotation, GetCursor(cursors, StoryboardProperty.Rotation));
+      float x = EvaluateProperty(g, StoryboardProperty.X, currentBeat, g.InitX, _force);
+      float y = EvaluateProperty(g, StoryboardProperty.Y, currentBeat, g.InitY, _force);
+      float scale = EvaluateProperty(g, StoryboardProperty.Scale, currentBeat, 1f, _force);
+      float scaleX = EvaluateProperty(g, StoryboardProperty.ScaleX, currentBeat, g.InitScaleX, _force);
+      float scaleY = EvaluateProperty(g, StoryboardProperty.ScaleY, currentBeat, g.InitScaleY, _force);
+      float rotation = EvaluateProperty(g, StoryboardProperty.Rotation, currentBeat, g.InitRotation, _force);
 
       node.Position = new Vector2(x, y);
       node.Scale = new Vector2(scale * scaleX, scale * scaleY);
@@ -105,16 +93,13 @@ namespace Winithm.Core.Controllers
       return node;
     }
 
-    private StoryboardEvaluator.Cursor GetCursor(Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor> cursors, StoryboardProperty prop)
+    private float EvaluateProperty(GroupData g, StoryboardProperty prop, double beat, float defaultValue, bool isScrubbing = true)
     {
-      if (cursors.TryGetValue(prop, out var cursor)) return cursor;
-      return null;
-    }
+      if (g.StoryboardEvents == null 
+        || !g.StoryboardEvents.EventCollection.TryGetValue(prop, out var events)
+      ) return defaultValue;
 
-    private float EvaluateProperty(GroupData g, StoryboardProperty propType, float beat, float defaultValue, StoryboardEvaluator.Cursor cursor)
-    {
-      if (g.StoryboardEvents == null || !g.StoryboardEvents.TryGetValue(propType, out var events)) return defaultValue;
-      return StoryboardEvaluator.Evaluate(events, beat, new AnyValue(defaultValue), cursor).X;
+      return g.StoryboardEvents.Evaluate(prop, beat, new AnyValue(defaultValue), isScrubbing).X;
     }
   }
 }

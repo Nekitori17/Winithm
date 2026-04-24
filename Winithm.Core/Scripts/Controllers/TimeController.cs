@@ -1,16 +1,16 @@
 using Godot;
-using Winithm.Core.Logic;
+using Winithm.Core.Managers;
 
-namespace Winithm.Core.Managers
+namespace Winithm.Core.Controllers
 {
   [Tool]
-  public class TimeManager : AudioStreamPlayer
+  public class TimeController : AudioStreamPlayer
   {
     public Metronome Metronome { get; set; }
 
-    private float _manualTime = 0f;
+    private double _manualTime = 0f;
 
-    public float CurrentTime
+    public double CurrentTime
     {
       get
       {
@@ -19,15 +19,15 @@ namespace Winithm.Core.Managers
       }
       set
       {
-        if (Playing) base.Seek(value);
+        if (Playing) base.Seek((float)value);
         else _manualTime = value;
       }
     }
 
-    public float CurrentBeat => Metronome.ToBeat(CurrentTime);
+    public double CurrentBeat => Metronome.ToBeat(CurrentTime);
 
     /// <summary>Current playback time in milliseconds.</summary>
-    public float CurrentTimeMs => CurrentTime * 1000f;
+    public double CurrentTimeMs => CurrentTime * 1000d;
 
     /// <summary>Pause playback (keeps position).</summary>
     public void Pause()
@@ -44,18 +44,19 @@ namespace Winithm.Core.Managers
     {
       if (!Playing)
       {
-        Play(_manualTime);
+        Play((float)_manualTime);
       }
     }
 
-    /// <summary>Seek to a specific beat (sets CurrentTime accordingly).</summary>
-    public new void Seek(float beat)
+    /// <summary>Seek to a specific beat.</summary>
+    public void Seek(double beat)
     {
-      // Reverse: find time from beat
-      float time = Metronome.ToSeconds(beat);
+      double time = Metronome.ToSeconds(beat);
       CurrentTime = time;
     }
 
-    public float GetCurrentBPS() => Metronome.GetCurrentBPS(CurrentTime);
+    public double GetCurrentBPS() => Metronome.GetCurrentBPS(CurrentTime);
+
+    public void SetAudioOffset(double offset) => Metronome.AudioOffsetSeconds = offset;
   }
 }
