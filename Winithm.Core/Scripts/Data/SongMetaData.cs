@@ -42,6 +42,46 @@ namespace Winithm.Core.Data
       Audio.OnUpdated += (a) => OnUpdated?.Invoke(this);
       Illustration.OnUpdated += (i) => OnUpdated?.Invoke(this);
     }
+
+    public void CopyFrom(SongMetaData other)
+    {
+      if (other == null) return;
+
+      ID = other.ID;
+      Name = other.Name;
+      NameAlt = other.NameAlt;
+      Artist = other.Artist;
+      ArtistAlt = other.ArtistAlt;
+      Tags = other.Tags;
+
+      Audio.SongPath = other.Audio.SongPath;
+      Audio.PreviewStart = other.Audio.PreviewStart;
+      Audio.PreviewEnd = other.Audio.PreviewEnd;
+      Audio.Metronome = other.Audio.Metronome;
+
+      Illustration.Illustrator = other.Illustration.Illustrator;
+      Illustration.IllustrationPath = other.Illustration.IllustrationPath;
+      Illustration.IconCenterX = other.Illustration.IconCenterX;
+      Illustration.IconCenterY = other.Illustration.IconCenterY;
+      Illustration.IconSize = other.Illustration.IconSize;
+
+      Charts.Clear();
+      foreach (ChartReference chart in other.Charts)
+      {
+        Charts.Add(new ChartReference
+        {
+          ID = chart.ID,
+          Index = chart.Index,
+          Name = chart.Name,
+          Charter = chart.Charter,
+          Level = chart.Level,
+          Constant = chart.Constant
+        });
+      }
+
+      OnUpdated?.Invoke(this);
+      OnMetronomeUpdated?.Invoke(this);
+    }
   }
 
   public class AudioResource
