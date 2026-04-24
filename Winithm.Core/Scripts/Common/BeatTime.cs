@@ -41,6 +41,7 @@ namespace Winithm.Core.Common
 
     public static readonly BeatTime Zero = new BeatTime(0, 0, 0);
     public static readonly BeatTime NaN = new BeatTime(0, 0, 0);
+    public static readonly BeatTime Min = new BeatTime(int.MinValue, 0, 1);
     public static readonly BeatTime Max = new BeatTime(int.MaxValue, 1, 1);
 
     // ==========================================

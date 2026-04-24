@@ -6,8 +6,7 @@ using Winithm.Core.Data;
 namespace Winithm.Core.Managers
 {
   /// <summary>
-  /// Manages OverlayData configurations and tracks underlying data changes.
-  /// Storyboard changes are already bubbled through OverlayData.OnUpdated.
+  /// Manages OverlayData configurations and tracks data changes.
   /// </summary>
   public class OverlayManager
   {

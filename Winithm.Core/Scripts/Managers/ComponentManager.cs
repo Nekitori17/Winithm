@@ -13,6 +13,9 @@ namespace Winithm.Core.Managers
     Difficulty
   }
 
+  /// <summary>
+  /// Manages active component data and tracks property changes.
+  /// </summary>
   public class ComponentManager
   {
     public event Action<ComponentManager> OnUpdated;
@@ -21,37 +24,43 @@ namespace Winithm.Core.Managers
 
     public ComponentManager()
     {
+      BeginUpdate();
       SetComponent(ComponentType.Info, new ComponentData());
       SetComponent(ComponentType.Difficulty, new ComponentData());
       SetComponent(ComponentType.Combo, new ComponentData());
       SetComponent(ComponentType.Score, new ComponentData());
+      EndUpdate();
     }
 
+    /// <summary>
+    /// Parses a component line from chart data.
+    /// </summary>
     public static ComponentData ParseComponentLine(string text, out ComponentType type)
     {
       type = ComponentType.Info;
-
-      string[] parts = text.Trim().Split(new[] { ' ' } , StringSplitOptions.RemoveEmptyEntries);
-
+      string[] parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
       var current = new ComponentData();
-      if (parts.Length >= 1) type = 
-        Enum.TryParse<ComponentType>(parts[0], out var t) ? t : ComponentType.Info;
-      if (parts.Length >= 2) current.InitX = 
-        ParserUtils.TryParseFloat(parts[1], out float x) ? x : 0f;
-      if (parts.Length >= 3) current.InitY =
-        ParserUtils.TryParseFloat(parts[2], out float y) ? y : 0f;
-      if (parts.Length >= 4) current.InitScale =
-        ParserUtils.TryParseFloat(parts[3], out float s) ? s : 1f;
-      if (parts.Length >= 5) current.InitX =
-        ParserUtils.TryParseFloat(parts[4], out float a) ? a : 1f;
+
+      if (parts.Length >= 1) 
+        type = Enum.TryParse<ComponentType>(parts[0], out var t) ? t : ComponentType.Info;
+      if (parts.Length >= 2) 
+        current.InitX = ParserUtils.TryParseFloat(parts[1], out float x) ? x : 0f;
+      if (parts.Length >= 3) 
+        current.InitY = ParserUtils.TryParseFloat(parts[2], out float y) ? y : 0f;
+      if (parts.Length >= 4) 
+        current.InitScale = ParserUtils.TryParseFloat(parts[3], out float s) ? s : 1f;
+      if (parts.Length >= 5) 
+        current.InitAlpha = ParserUtils.TryParseFloat(parts[4], out float a) ? a : 1f;
 
       return current;
     }
 
+    /// <summary>
+    /// Generates a component line for chart data.
+    /// </summary>
     public static string GenerateComponentLine(ComponentData comp, ComponentType type, int indent = 0)
     {
-      string result = $"* {type} {comp.InitX} {comp.InitY} {comp.InitScale} {comp.InitAlpha}";
-      return result.PadLeft(indent);
+      return $"* {type} {comp.InitX} {comp.InitY} {comp.InitScale} {comp.InitAlpha}".PadLeft(indent);
     }
 
     private int _updateLockCount = 0;

@@ -6,29 +6,45 @@ using Winithm.Core.Data;
 namespace Winithm.Core.Managers
 {
   /// <summary>
-  /// Manages WindowData collections and monitors nested sub-manager (SpeedStep, Note, Storyboard) changes.
+  /// Manages WindowData collections and monitors nested sub-manager changes.
   /// </summary>
   public class WindowManager
   {
     public event Action<WindowManager> OnUpdated;
 
     public Metronome Metronome { get; private set; }
+
+    /// <summary>
+    /// Collection of windows sorted by StartBeat.
+    /// </summary>
     public List<WindowData> WindowCollection { get; private set; } = new List<WindowData>();
 
-    /// <summary>Prefix-max of EndBeatEndOut over SortedWindows, for backward sync binary search.</summary>
+    /// <summary>
+    /// Prefix-max of EndBeatEndOut over windows for binary search.
+    /// </summary>
     public double[] MaxEndBeats { get; private set; } = Array.Empty<double>();
 
-    /// <summary>Prefix sum of TotalComboCount for windows in SortedWindows.</summary>
+    /// <summary>
+    /// Prefix sum of TotalComboCount for windows.
+    /// </summary>
     public int[] PrefixCombo { get; private set; } = Array.Empty<int>();
 
-    /// <summary>Total combo count across all windows.</summary>
+    /// <summary>
+    /// Total combo count across all windows.
+    /// </summary>
     public int TotalComboCount { get; private set; } = 0;
 
     private int _updateLockCount = 0;
     private bool _needsRecompute = false;
 
+    /// <summary>
+    /// Suspends notifications to allow batch edits.
+    /// </summary>
     public void BeginUpdate() => _updateLockCount++;
 
+    /// <summary>
+    /// Resumes notifications and runs Compute if edits were made.
+    /// </summary>
     public void EndUpdate(bool success = true)
     {
       if (_updateLockCount > 0) _updateLockCount--;
@@ -48,10 +64,7 @@ namespace Winithm.Core.Managers
       }
     }
 
-    private void RequestRecompute()
-    {
-      _needsRecompute = true;
-    }
+    private void RequestRecompute() => _needsRecompute = true;
 
     private void CommitRecompute()
     {
@@ -63,32 +76,35 @@ namespace Winithm.Core.Managers
     }
 
     /// <summary>
-    /// Full recompute: rebuilds SortedWindows, MaxEndBeats, and PrefixCombo.
+    /// Rebuilds MaxEndBeats and PrefixCombo based on the current WindowCollection.
     /// </summary>
     public void Compute()
     {
       MaxEndBeats = new double[WindowCollection.Count];
       PrefixCombo = new int[WindowCollection.Count];
+      
       double runningMax = double.MinValue;
       int runningCombo = 0;
 
       for (int i = 0; i < WindowCollection.Count; i++)
       {
-        runningMax = Math.Max(runningMax, WindowCollection[i].EndBeatEndOut);
+        var window = WindowCollection[i];
+        
+        runningMax = Math.Max(runningMax, window.EndBeatEndOut);
         MaxEndBeats[i] = runningMax;
 
-        runningCombo += WindowCollection[i].Notes.TotalComboCount;
+        runningCombo += window.Notes.TotalComboCount;
         PrefixCombo[i] = runningCombo;
       }
 
       TotalComboCount = runningCombo;
     }
 
-    public void SetMetronome(Metronome metronome)
-    {
-      Metronome = metronome;
-    }
+    public void SetMetronome(Metronome metronome) => Metronome = metronome;
 
+    /// <summary>
+    /// Computes animation data for a single window.
+    /// </summary>
     public void ComputeAnimations(WindowData windowData)
     {
       if (Metronome == null)
@@ -100,6 +116,9 @@ namespace Winithm.Core.Managers
         windowData.ComputeAnimationWhenUnresponsive(Metronome);
     }
 
+    /// <summary>
+    /// Computes animation data for all windows.
+    /// </summary>
     public void ComputeAllAnimations()
     {
       if (Metronome == null)
@@ -139,29 +158,25 @@ namespace Winithm.Core.Managers
       windowData.OnUnResponsiveChanged -= HandleUnResponsiveChanged;
     }
 
-    /// <summary>
-    /// WindowData.OnDataChanged already aggregates events from its inner SpeedStep, Note, and Storyboard.
-    /// A single subscription here captures all nested changes without redundant wiring.
-    /// </summary>
     private void HandleUpdated(WindowData windowData) => NotifyChanged();
+
     private void HandleUnFocusChanged(WindowData windowData)
     {
       windowData.Notes.Compute();
-
       NotifyChanged();
     }
+
     private void HandleUnResponsiveChanged(WindowData windowData)
     {
       ComputeAnimations(windowData);
-
       RequestRecompute();
       NotifyChanged();
     }
+
     private void HandleLifeCycleChanged(WindowData windowData)
     {
       windowData.Notes.Compute();
       ComputeAnimations(windowData);
-
       RequestRecompute();
       NotifyChanged();
     }
@@ -170,10 +185,12 @@ namespace Winithm.Core.Managers
     // Lifecycle Management
     // ==========================================
 
+    /// <summary>
+    /// Adds a window to the collection and maintains sort order.
+    /// </summary>
     public void AddWindow(WindowData windowData)
     {
       var idx = FindAddIndex(WindowCollection, windowData);
-
       WindowCollection.Insert(idx, windowData);
       SubscribeChangeEvent(windowData);
 
@@ -190,13 +207,15 @@ namespace Winithm.Core.Managers
       EndUpdate();
     }
 
+    /// <summary>
+    /// Removes a window by its unique identifier.
+    /// </summary>
     public bool RemoveWindow(string id)
     {
       if (string.IsNullOrEmpty(id)) return false;
 
       var windowData = WindowCollection.FirstOrDefault(w => w.ID == id);
-
-      if (windowData == default) return false;
+      if (windowData == null) return false;
 
       UnsubscribeChangeEvent(windowData);
       WindowCollection.Remove(windowData);
@@ -225,11 +244,7 @@ namespace Winithm.Core.Managers
     public WindowData GetWindow(string id)
     {
       if (string.IsNullOrEmpty(id)) return null;
-
-      var result = WindowCollection.FirstOrDefault(w => w.ID == id);
-
-      if (result == default) return null;
-      return result;
+      return WindowCollection.FirstOrDefault(w => w.ID == id);
     }
 
     public IReadOnlyList<WindowData> GetWindows(IEnumerable<string> ids)
@@ -246,17 +261,18 @@ namespace Winithm.Core.Managers
     public IReadOnlyList<WindowData> GetAllWindows() => WindowCollection;
 
     /// <summary>
-    /// Returns all windows sorted by Layer (ascending) for correct render order.
+    /// Returns all windows sorted by layer for correct render order.
     /// </summary>
     public IReadOnlyList<WindowData> GetWindowsByLayer()
     {
       var windows = new List<WindowData>(WindowCollection);
-
       windows.Sort((a, b) => a.Layer.CompareTo(b.Layer));
-
       return windows;
     }
 
+    /// <summary>
+    /// Finds the insertion index for a window to keep the list sorted by StartBeat.
+    /// </summary>
     public int FindAddIndex(List<WindowData> list, WindowData target)
     {
       if (list.Count == 0) return 0;

@@ -17,7 +17,7 @@ namespace Winithm.Core.Managers
   }
 
   /// <summary>
-  /// Manages Note segments, boundaries, spatial extents, and rendering lifetimes.
+  /// Manages Note segments, boundaries, and spatial data.
   /// </summary>
   public class NoteManager : IDeepCloneable<NoteManager>
   {
@@ -45,7 +45,6 @@ namespace Winithm.Core.Managers
     public NoteManager DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       var cloned = new NoteManager();
-      cloned.SetWindowData(this.WindowData);
 
       cloned.BeginUpdate();
       foreach (var sideNotes in NoteCollection)
@@ -59,12 +58,12 @@ namespace Winithm.Core.Managers
     }
 
     /// <summary>
-    /// Suspends compute calculations to allow multiple edits without triggering massive overhead.
+    /// Suspends calculations to allow batch edits.
     /// </summary>
     public void BeginUpdate() => _updateLockCount++;
 
     /// <summary>
-    /// Resumes notifications and runs Compute() once if edits were made.
+    /// Resumes notifications and runs Compute if edits were made.
     /// </summary>
     public void EndUpdate(bool success = true)
     {
@@ -141,7 +140,7 @@ namespace Winithm.Core.Managers
     }
 
     /// <summary>
-    /// Re-evaluates note boundaries, MaxEndBeats, and combo prefix-sum.
+    /// Re-evaluates note boundaries, max end beats, and combo prefix-sum.
     /// </summary>
     public void Compute()
     {
@@ -159,9 +158,7 @@ namespace Winithm.Core.Managers
       BeatTime prevExpectedEndCloseBeat = ExpectedEndCloseBeat;
       BeatTime prevWindowEndBeat = WindowData.EndBeat;
 
-      ExpectedStartFocusBeat = WindowData.UnFocus
-        ? WindowData.StartBeat
-        : BeatTime.Max;
+      ExpectedStartFocusBeat = WindowData.UnFocus ? WindowData.StartBeat : BeatTime.Min;
       ExpectedEndCloseBeat = WindowData.EndBeat;
 
       foreach (var notes in NoteCollection.Values)
@@ -184,30 +181,28 @@ namespace Winithm.Core.Managers
       }
 
       WindowData.EndBeat = ExpectedEndCloseBeat;
-
       TotalComboCount = 0;
-      MaxEndBeats.Clear();
 
-      // Collect combo events and build MaxEndBeats in the same pass
       var comboEvents = new List<(double beat, int combo)>();
 
       foreach (var sideNotes in NoteCollection)
       {
         var list = sideNotes.Value;
-        double[] maxEnds = new double[list.Count];
+        
+        // Use existing array if size matches, otherwise allocate new
+        if (!MaxEndBeats.TryGetValue(sideNotes.Key, out var maxEnds) || maxEnds.Length != list.Count)
+          maxEnds = new double[list.Count];
+        
         double runningMax = double.MinValue;
 
         for (int i = 0; i < list.Count; i++)
         {
           var note = list[i];
 
-          if (note.StartBeat >= ExpectedStartFocusBeat
-              && note.StartBeat <= ExpectedEndCloseBeat
-              && note.IsHittable)
+          if (note.StartBeat >= ExpectedStartFocusBeat && note.StartBeat <= ExpectedEndCloseBeat && note.IsHittable)
           {
             if (note.Type == NoteType.Hold)
             {
-              // Hold: 2 combo scored at END beat
               comboEvents.Add((note.StartBeat.AbsoluteValue + note.Length, 2));
               TotalComboCount += 2;
             }
@@ -224,10 +219,14 @@ namespace Winithm.Core.Managers
         MaxEndBeats[sideNotes.Key] = maxEnds;
       }
 
-      // Sort combo events by beat and build prefix-sum
       comboEvents.Sort((a, b) => a.beat.CompareTo(b.beat));
-      ComboEventBeats = new double[comboEvents.Count];
-      ComboPrefixSum = new int[comboEvents.Count];
+      
+      // Binary search expects exact array lengths
+      if (ComboEventBeats.Length != comboEvents.Count)
+        ComboEventBeats = new double[comboEvents.Count];
+      if (ComboPrefixSum.Length != comboEvents.Count)
+        ComboPrefixSum = new int[comboEvents.Count];
+
       int runningCombo = 0;
       for (int i = 0; i < comboEvents.Count; i++)
       {
@@ -236,13 +235,8 @@ namespace Winithm.Core.Managers
         ComboPrefixSum[i] = runningCombo;
       }
 
-      if (
-        prevExpectedEndCloseBeat != ExpectedEndCloseBeat ||
-        prevWindowEndBeat != WindowData.EndBeat
-      )
-      {
+      if (prevExpectedEndCloseBeat != ExpectedEndCloseBeat || prevWindowEndBeat != WindowData.EndBeat)
         OnLifeCycleChanged?.Invoke(this);
-      }
     }
 
     // ==========================================

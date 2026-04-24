@@ -11,14 +11,19 @@ namespace Winithm.Core.Managers
 
     public readonly BeatTime DEFAULT_WINDOW_LIFECYCLE_DURATION = new BeatTime(15, 0, 0);
 
+    /// <summary>
+    /// Generates a new unique identifier.
+    /// </summary>
     public string GenerateUID()
     {
       var (nextSeed, uid) = UniqueIDGenerator.Generate(NextIDSeed);
       NextIDSeed = nextSeed;
-
       return uid;
     }
 
+    /// <summary>
+    /// Synchronizes the next ID seed with an existing ID to prevent collisions.
+    /// </summary>
     public void SyncMaxIDSeed(string ID)
     {
       if (string.IsNullOrEmpty(ID) || ID.Length != 6) return;
@@ -26,10 +31,8 @@ namespace Winithm.Core.Managers
       long seed = UniqueIDGenerator.Decode(ID);
       if (seed <= 0) return;
 
-      NextIDSeed = Math.Max(NextIDSeed, seed);
+      NextIDSeed = Math.Max(NextIDSeed - 1, seed + 1);
     }
-
-    public void IncrementNextIDSeed() => NextIDSeed++;
 
     // ==========================================
     // Factory Methods
@@ -83,11 +86,12 @@ namespace Winithm.Core.Managers
         Multiplier = multiplier
       };
 
-    public EventData CreateStoryboardEvent(BeatTime startBeat) =>
+    public EventData CreateStoryboardEvent(BeatTime startBeat, AnyValue ToValue) =>
       new EventData
       {
         ID = GenerateUID(),
-        StartBeat = startBeat
+        StartBeat = startBeat,
+        To = ToValue
       };
   }
 }

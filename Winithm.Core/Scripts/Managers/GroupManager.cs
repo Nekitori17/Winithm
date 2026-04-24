@@ -6,8 +6,7 @@ using Winithm.Core.Data;
 namespace Winithm.Core.Managers
 {
   /// <summary>
-  /// Manages GroupData configurations and tracks underlying data changes.
-  /// Storyboard changes are already bubbled through GroupData.OnDataChanged.
+  /// Manages GroupData configurations and tracks data changes.
   /// </summary>
   public class GroupManager
   {
@@ -47,7 +46,6 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(groupData.ID)) return;
 
-      // Overwrite and cleanly strip old event bindings if ID collision occurs
       if (GroupCollection.TryGetValue(groupData.ID, out var existing))
         UnsubscribeChangeEvent(existing);
 

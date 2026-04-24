@@ -6,8 +6,7 @@ using Winithm.Core.Data;
 namespace Winithm.Core.Managers
 {
   /// <summary>
-  /// Manages ThemeChannelData configurations and monitors inner data changes.
-  /// Storyboard changes are already bubbled through ThemeChannelData.OnDataChanged.
+  /// Manages ThemeChannelData configurations and monitors data changes.
   /// </summary>
   public class ThemeChannelManager
   {

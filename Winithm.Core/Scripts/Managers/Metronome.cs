@@ -7,7 +7,7 @@ using System.Linq;
 namespace Winithm.Core.Managers
 {
   /// <summary>
-  /// Manages BPM changes and converts between time and beats deterministically.
+  /// Manages BPM changes and converts between time and beats.
   /// </summary>
   public class Metronome
   {
@@ -17,12 +17,12 @@ namespace Winithm.Core.Managers
     private int _minRecalculateIdx = int.MaxValue;
 
     /// <summary>
-    /// Suspends event notifications and delays prefix calculation to allow multiple property edits without overhead.
+    /// Suspends notifications and calculations to allow batch edits.
     /// </summary>
     public void BeginUpdate() => _updateLockCount++;
 
     /// <summary>
-    /// Resumes event notifications and recalculates state if edits were made.
+    /// Resumes notifications and recalculates state if edits were made.
     /// </summary>
     public void EndUpdate(bool success = true)
     {

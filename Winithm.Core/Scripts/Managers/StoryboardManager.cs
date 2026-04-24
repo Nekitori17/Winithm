@@ -18,7 +18,7 @@ namespace Winithm.Core.Managers
   }
 
   /// <summary>
-  /// Tracks timeline events for generic properties, parsing and computing values at exact points.
+  /// Manages timeline events and interpolates values.
   /// </summary>
   public class StoryboardManager<TProp> : IDeepCloneable<StoryboardManager<TProp>>
   {
@@ -27,12 +27,12 @@ namespace Winithm.Core.Managers
     private int _updateLockCount = 0;
 
     /// <summary>
-    /// Suspends event notifications to allow multiple property edits without triggering updates overhead.
+    /// Suspends notifications to allow batch edits.
     /// </summary>
     public void BeginUpdate() => _updateLockCount++;
 
     /// <summary>
-    /// Resumes event notifications and recalculates state if edits were made.
+    /// Resumes notifications and triggers OnUpdated if edits were made.
     /// </summary>
     public void EndUpdate(bool success = true)
     {

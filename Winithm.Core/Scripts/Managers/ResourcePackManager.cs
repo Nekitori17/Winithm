@@ -32,8 +32,6 @@ namespace Winithm.Core.Managers
     public static ResourcePackManager Instance { get; private set; }
 
     private Dictionary<string, ResourcePack> _resourcePacks;
-    
-    // Cache active pack for high performance O(1) access
     private ResourcePack _activeResourcePack;
     private string _activeResourcePackName = "default";
 
@@ -48,27 +46,22 @@ namespace Winithm.Core.Managers
       Instance = this;
 
       string resourcePacksPath = "res://Winithm.Core/Resources/ResourcePacks";
-
       Directory resourcePacksDir = new Directory();
       if (resourcePacksDir.Open(resourcePacksPath) != Error.Ok)
       {
-        GD.PushError($"[NoteResourceManager] Failed to open resource packs directory: {resourcePacksPath}");
+        GD.PushError($"[ResourcePackManager] Failed to open resource packs directory: {resourcePacksPath}");
         return;
       }
 
-      // Pre-allocate to avoid resize overhead during initialization
       _resourcePacks = new Dictionary<string, ResourcePack>(StringComparer.OrdinalIgnoreCase);
-
       resourcePacksDir.ListDirBegin(skipNavigational: true);
 
       string resourcePackName;
       while ((resourcePackName = resourcePacksDir.GetNext()) != "")
       {
-        if (resourcePacksDir.CurrentIsDir() == false) continue; // Only process directories
+        if (resourcePacksDir.CurrentIsDir() == false) continue;
 
         string resourcePackPath = resourcePacksPath.PlusFile(resourcePackName);
-
-        // Initialize base structures to prevent KeyNotFound/NullReference exceptions
         var resourcePack = new ResourcePack
         {
           TEX = new Dictionary<NoteType, Dictionary<NotePart, Texture>>(),
@@ -81,24 +74,14 @@ namespace Winithm.Core.Managers
           }
         };
 
-        // Load modules
         LoadConfig(resourcePackPath.PlusFile("config.ini"), ref resourcePack);
         LoadTexture(resourcePackPath.PlusFile("tex"), ref resourcePack);
         LoadSoundEffect(resourcePackPath.PlusFile("sfx"), ref resourcePack);
-
-        // // Load VFX if it exists
-        // string vfxFramesPath = resourcePackPath.PlusFile("hit_frames.tres");
-        // if (new File().FileExists(vfxFramesPath))
-        // {
-        //   resourcePack.VFX = GD.Load<SpriteFrames>(vfxFramesPath);
-        // }
 
         _resourcePacks[resourcePackName] = resourcePack;
       }
 
       resourcePacksDir.ListDirEnd();
-
-      // Ensure active resource pack is cached properly
       SetActiveResourcePack(_activeResourcePackName);
     }
 

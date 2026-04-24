@@ -17,7 +17,7 @@ namespace Winithm.Core.Managers
   }
 
   /// <summary>
-  /// Manages scroll speed segments and evaluates visual lane distances.
+  /// Manages scroll speed segments and visual lane distances.
   /// </summary>
   public class SpeedStepManager : IDeepCloneable<SpeedStepManager>
   {
@@ -26,12 +26,12 @@ namespace Winithm.Core.Managers
     private int _updateLockCount = 0;
 
     /// <summary>
-    /// Suspends event notifications to allow multiple property edits without triggering updates overhead.
+    /// Suspends notifications to allow batch edits.
     /// </summary>
     public void BeginUpdate() => _updateLockCount++;
 
     /// <summary>
-    /// Resumes event notifications and recalculates state if edits were made.
+    /// Resumes notifications and clears frame cache if edits were made.
     /// </summary>
     public void EndUpdate(bool success = true)
     {
