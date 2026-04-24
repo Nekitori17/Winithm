@@ -45,24 +45,6 @@ namespace Winithm.Core.Data
         StartTimeSeconds = StartTimeSeconds
       };
     }
-
-    public static BPMStop Parse(string text)
-    {
-      var current = new BPMStop(BeatTime.Zero, 0, 0);
-
-      var parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-      if (parts.Length >= 1) current.StartBeat =
-        BeatTime.TryParse(parts[0], out BeatTime startBeat) ? startBeat : BeatTime.Zero;
-      if (parts.Length >= 2) current.BPM =
-        ParserUtils.TryParseFloat(parts[1], out float bpm) ? bpm : 120f;
-      if (parts.Length >= 3) current.TimeSignature =
-        int.TryParse(parts[2], out int signature) ? signature : 4;
-
-      return current;
-    }
-
-    public override string ToString() => $"{StartBeat} {BPM} {TimeSignature}";
   }
 
   /// <summary>
@@ -83,6 +65,8 @@ namespace Winithm.Core.Data
     public int TimeSignature { get => _timeSignature; set { if (_timeSignature != value) { _timeSignature = value; OnUpdated?.Invoke(this); } } }
 
     public float BeatsPerSecond => InitialBPM / 60f;
+    
+    public static readonly BaseBPM NaN = new BaseBPM(0, 0, 0);
 
     public BaseBPM(double offsetSeconds, float bpm, int timeSignature)
     {
@@ -91,24 +75,5 @@ namespace Winithm.Core.Data
       _timeSignature = timeSignature;
     }
 
-    public static readonly BaseBPM NaN = new BaseBPM(0, 0, 0);
-
-    public static BaseBPM Parse(string text)
-    {
-      var current = new BaseBPM(0, 0, 0);
-
-      var parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-      if (parts.Length >= 1) current.BaseOffsetSeconds =
-        ParserUtils.TryParseDouble(parts[0], out double offset) ? offset : 0.0;
-      if (parts.Length >= 2) current.InitialBPM =
-        ParserUtils.TryParseFloat(parts[1], out float bpm) ? bpm : 0f;
-      if (parts.Length >= 3) current.TimeSignature =
-        int.TryParse(parts[2], out int signature) ? signature : 0;
-
-      return current;
-    }
-
-    public override string ToString() => $"{BaseOffsetSeconds} {InitialBPM} {TimeSignature}";
   }
 }

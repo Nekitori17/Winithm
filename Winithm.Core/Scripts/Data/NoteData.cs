@@ -31,8 +31,6 @@ namespace Winithm.Core.Data
     /// <summary>Fired when StartBeat changes; Manager uses this to re-sort.</summary>
     public event Action<NoteData> OnStartBeatChanged;
     /// <summary>Fired when Side changes; Manager uses this to migrate lanes.</summary>
-    public event Action<NoteData> OnSideChanged;
-    /// <summary>Fired on any </summary>
     public event Action<NoteData> OnInvalidate;
     /// <summary>Fired on any non-structural property change.</summary>
     public event Action<NoteData> OnUpdated;
@@ -53,9 +51,6 @@ namespace Winithm.Core.Data
 
     private float _width = 1;
     public float Width { get => _width; set { if (_width == value) return; _width = value; OnUpdated?.Invoke(this); } }
-
-    private NoteSide _side = NoteSide.Bottom;
-    public NoteSide Side { get => _side; set { if (_side == value) return; _side = value; OnSideChanged?.Invoke(this); } }
 
     private int _fakeType = 0;
     public int FakeType { get => _fakeType; set { if (_fakeType == value) return; _fakeType = value; OnInvalidate?.Invoke(this); } }
@@ -93,37 +88,9 @@ namespace Winithm.Core.Data
         Length = Length,
         X = X,
         Width = Width,
-        Side = Side,
         FakeType = FakeType,
         ResourcePack = ResourcePack
       };
     }
-
-    public static NoteData Parse(string text)
-    {
-      var current = new NoteData();
-
-      string[] parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-      if (parts.Length >= 1) current.ID = parts[0];
-      if (parts.Length >= 2) current.Type =
-        Enum.TryParse<NoteType>(parts[1], true, out var t) ? t : NoteType.Tap;
-      if (parts.Length >= 3) current.StartBeat =
-        BeatTime.TryParse(parts[2], out var sb) ? sb : BeatTime.Zero;
-      if (parts.Length >= 4) current.Length =
-        ParserUtils.TryParseDouble(parts[3], out double l) ? l : 0.0;
-      if (parts.Length >= 5) current.X =
-        ParserUtils.TryParseFloat(parts[4], out float x) ? x : 0.0f;
-      if (parts.Length >= 6) current.Width =
-        ParserUtils.TryParseFloat(parts[5], out float w) ? w : 1.0f;
-      if (parts.Length >= 7) current.Side =
-        Enum.TryParse<NoteSide>(parts[6], true, out var s) ? s : NoteSide.Bottom;
-      if (parts.Length >= 8) current.FakeType =
-        int.TryParse(parts[7], out int f) ? f : 0;
-
-      return current;
-    }
-
-    public override string ToString()
-      => $"{ID} {Type} {StartBeat} {Length} {Side} {FakeType}";
   }
 }

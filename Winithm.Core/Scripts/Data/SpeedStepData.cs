@@ -48,22 +48,5 @@ namespace Winithm.Core.Data
 
     // Named delegate for clean subscribe/unsubscribe in DeepClone
     private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnUpdated?.Invoke(this);
-
-    public static SpeedStepData Parse(string text)
-    {
-      var current = new SpeedStepData();
-
-      var parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-      if (parts.Length >= 1) current.ID = parts[0];
-      if (parts.Length >= 2) current.StartBeat =
-        BeatTime.TryParse(parts[1], out BeatTime startBeat) ? startBeat : BeatTime.Zero;
-      if (parts.Length >= 3) current.Multiplier =
-        ParserUtils.TryParseFloat(parts[2], out float multiplier) ? multiplier : 1f;
-
-      return current;
-    }
-
-    public override string ToString() => $"{ID} {StartBeat} {Multiplier}";
   }
 }
