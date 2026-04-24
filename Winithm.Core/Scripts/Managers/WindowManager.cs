@@ -215,7 +215,7 @@ namespace Winithm.Core.Managers
       if (string.IsNullOrEmpty(id)) return false;
 
       var windowData = WindowCollection.FirstOrDefault(w => w.ID == id);
-      if (windowData == null) return false;
+      if (windowData == default) return false;
 
       UnsubscribeChangeEvent(windowData);
       WindowCollection.Remove(windowData);
@@ -244,7 +244,12 @@ namespace Winithm.Core.Managers
     public WindowData GetWindow(string id)
     {
       if (string.IsNullOrEmpty(id)) return null;
-      return WindowCollection.FirstOrDefault(w => w.ID == id);
+
+      var result = WindowCollection.FirstOrDefault(w => w.ID == id);
+
+      if (result == default) return null;
+
+      return result;
     }
 
     public IReadOnlyList<WindowData> GetWindows(IEnumerable<string> ids)
