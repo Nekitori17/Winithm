@@ -38,12 +38,12 @@ namespace Winithm.Core.Common
       if (data.Overlays.OverlayCollection.Count > 0)
       {
         sb.AppendLine("[OVERLAYS]");
-        foreach (var overlay in data.Overlays.OverlayCollection.Values)
+        foreach (var overlay in data.Overlays.OverlayCollection)
         {
           string initParams = "";
           foreach (var p in overlay.InitParams.OrderBy(kv => int.TryParse(kv.Key, out int i) ? i : int.MaxValue))
             initParams += " " + p.Value.ToString();
-          sb.AppendLine($"+ {overlay.ID}{initParams}");
+          sb.AppendLine($"+ {overlay.ID} {overlay.StartBeat} {overlay.EndBeat}{initParams}");
           sb.AppendLine($"  Name: {overlay.Name ?? ""}");
           sb.AppendLine($"  Shader: {overlay.ShaderFile}");
           sb.AppendLine($"  Affects UI: {ParserUtils.FormatIntBool(overlay.AffectsUI)}");

@@ -148,43 +148,21 @@ namespace Winithm.Core.Common
         current = new OverlayData();
         string[] parts = trimmed.Substring(2).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-        if (parts.Length >= 1)
-          current.ID = parts[0];
-        for (int j = 1; j < parts.Length; j++)
+        if (parts.Length >= 1) current.ID = parts[0];
+        if (parts.Length >= 2) current.StartBeat =
+          BeatTime.TryParse(parts[1], out var sb) ? sb : BeatTime.Zero;
+        if (parts.Length >= 3) current.EndBeat =
+          BeatTime.TryParse(parts[2], out var eb) ? eb : BeatTime.Zero;
+
+        for (int j = 3; j < parts.Length; j++)
         {
           string p = parts[j];
           string key = (j - 1).ToString();
-          AnyValue val = new AnyValue();
-          AnyValueType hintType = AnyValueType.Float;
-          bool hasHint = false;
+          AnyValue val = p == "-"
+            ? new AnyValue { Type = AnyValueType.Inherited }
+            : AnyValue.Parse(p);
 
-          if (p.StartsWith("["))
-          {
-            int endIdx = p.IndexOf(']');
-            if (endIdx > 0)
-            {
-              string hintStr = p.Substring(1, endIdx - 1);
-              if (Enum.TryParse(hintStr, true, out hintType))
-              {
-                hasHint = true;
-                p = p.Substring(endIdx + 1);
-              }
-            }
-          }
-
-          if (p == "-")
-          {
-            val = new AnyValue { Type = AnyValueType.Inherited };
-          }
-          else
-          {
-            val = AnyValue.Parse(p);
-          }
-
-          if (hasHint) val.Type = hintType;
           current.InitParams[key] = val;
-
-          // Store metadata hint
           current.ShaderParams[key] = new ShaderParamDef(val.Type, val);
         }
         overlays.AddOverlay(current);

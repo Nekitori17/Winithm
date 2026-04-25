@@ -11,9 +11,15 @@ namespace Winithm.Core.Data
   /// </summary>
   public class OverlayData : IStoryboardable<string>, IDeepCloneable<OverlayData>
   {
+    public event Action<OverlayData> OnLifeCycleChanged;
     public event Action<OverlayData> OnUpdated;
 
     public string ID;
+
+    private BeatTime _startBeat;
+    public BeatTime StartBeat { get => _startBeat; set { if (_startBeat == value) return; _startBeat = value; OnLifeCycleChanged?.Invoke(this); } }
+    private BeatTime _endBeat;
+    public BeatTime EndBeat { get => _endBeat; set { if (_endBeat == value) return; _endBeat = value; OnLifeCycleChanged?.Invoke(this); } }
 
     private string _name;
     public string Name { get => _name; set { if (_name == value) return; _name = value; OnUpdated?.Invoke(this); } }

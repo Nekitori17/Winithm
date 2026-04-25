@@ -6,52 +6,118 @@ using Winithm.Core.Data;
 namespace Winithm.Core.Managers
 {
   /// <summary>
-  /// Manages OverlayData configurations and tracks data changes.
+  /// Manages WindowData collections and monitors nested sub-manager changes.
   /// </summary>
   public class OverlayManager
   {
     public event Action<OverlayManager> OnUpdated;
 
-    public Dictionary<string, OverlayData> OverlayCollection { get; private set; } = new Dictionary<string, OverlayData>();
+
+    /// <summary>
+    /// Collection of overlays sorted by StartBeat.
+    /// </summary>
+    public List<OverlayData> OverlayCollection { get; private set; } = new List<OverlayData>();
+
+    /// <summary>
+    /// Prefix-max of EndBeatEndOut over overlayss for binary search.
+    /// </summary>
+    public double[] MaxEndBeats { get; private set; } = Array.Empty<double>();
 
     private int _updateLockCount = 0;
+    private bool _needsRecompute = false;
 
+    /// <summary>
+    /// Suspends notifications to allow batch edits.
+    /// </summary>
     public void BeginUpdate() => _updateLockCount++;
 
+    /// <summary>
+    /// Resumes notifications and runs Compute if edits were made.
+    /// </summary>
     public void EndUpdate(bool success = true)
     {
       if (_updateLockCount > 0) _updateLockCount--;
-      if (_updateLockCount == 0 && success) OnUpdated?.Invoke(this);
+      if (_updateLockCount == 0 && success)
+      {
+        CommitRecompute();
+        OnUpdated?.Invoke(this);
+      }
     }
 
     private void NotifyChanged()
     {
-      if (_updateLockCount == 0) OnUpdated?.Invoke(this);
+      if (_updateLockCount == 0)
+      {
+        CommitRecompute();
+        OnUpdated?.Invoke(this);
+      }
     }
+
+    private void RequestRecompute() => _needsRecompute = true;
+
+    private void CommitRecompute()
+    {
+      if (_needsRecompute)
+      {
+        Compute();
+        _needsRecompute = false;
+      }
+    }
+
+    /// <summary>
+    /// Rebuilds MaxEndBeats and PrefixCombo based on the current WindowCollection.
+    /// </summary>
+    public void Compute()
+    {
+      MaxEndBeats = new double[OverlayCollection.Count];
+
+      double runningMax = double.MinValue;
+
+      for (int i = 0; i < OverlayCollection.Count; i++)
+      {
+        var overlay = OverlayCollection[i];
+
+        runningMax = Math.Max(runningMax, overlay.EndBeat.AbsoluteValue);
+        MaxEndBeats[i] = runningMax; 
+      }
+    }
+
+    // ==========================================
+    // Event Subscription
+    // ==========================================
 
     private void SubscribeChangeEvent(OverlayData overlayData)
     {
       overlayData.OnUpdated -= HandleUpdated;
       overlayData.OnUpdated += HandleUpdated;
+
+      overlayData.OnLifeCycleChanged -= HandleLifeCycleChanged;
+      overlayData.OnLifeCycleChanged += HandleLifeCycleChanged;
     }
 
     private void UnsubscribeChangeEvent(OverlayData overlayData)
     {
       overlayData.OnUpdated -= HandleUpdated;
+      overlayData.OnLifeCycleChanged -= HandleLifeCycleChanged;
     }
 
     private void HandleUpdated(OverlayData overlayData) => NotifyChanged();
-
-    public void AddOverlay(OverlayData overlayData)
+    private void HandleLifeCycleChanged(OverlayData overlayData)
     {
-      if (string.IsNullOrEmpty(overlayData.ID))
-        throw new ArgumentException("OverlayData ID cannot be null or empty.");
+      RequestRecompute();
+      NotifyChanged();
+    }
 
-      if (OverlayCollection.TryGetValue(overlayData.ID, out var existing))
-        UnsubscribeChangeEvent(existing);
+    /// <summary>
+    /// Adds a window to the collection and maintains sort order.
+    /// </summary>
+    public void AddOverlay(OverlayData overlay)
+    {
+      var idx = FindAddIndex(OverlayCollection, overlay);
+      OverlayCollection.Insert(idx, overlay);
+      SubscribeChangeEvent(overlay);
 
-      OverlayCollection[overlayData.ID] = overlayData;
-      SubscribeChangeEvent(overlayData);
+      RequestRecompute();
       NotifyChanged();
     }
 
@@ -64,14 +130,20 @@ namespace Winithm.Core.Managers
       EndUpdate();
     }
 
+    /// <summary>
+    /// Removes a window by its unique identifier.
+    /// </summary>
     public bool RemoveOverlay(string id)
     {
       if (string.IsNullOrEmpty(id)) return false;
 
-      if (!OverlayCollection.TryGetValue(id, out var overlayData)) return false;
+      var overlay = OverlayCollection.FirstOrDefault(o => o.ID == id);
+      if (overlay == default) return false;
 
-      UnsubscribeChangeEvent(overlayData);
-      OverlayCollection.Remove(id);
+      UnsubscribeChangeEvent(overlay);
+      OverlayCollection.Remove(overlay);
+
+      RequestRecompute();
       NotifyChanged();
 
       return true;
@@ -88,18 +160,23 @@ namespace Winithm.Core.Managers
       return success;
     }
 
+    // ==========================================
+    // Fetch Methods
+    // ==========================================
+
     public OverlayData GetOverlay(string id)
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      if (OverlayCollection.TryGetValue(id, out var overlayData)) return overlayData;
-      return null;
+      var result = OverlayCollection.FirstOrDefault(o => o.ID == id);
+
+      if (result == default) return null;
+
+      return result;
     }
 
     public IReadOnlyList<OverlayData> GetOverlays(IEnumerable<string> ids)
     {
-      if (!ids.Any()) return Array.Empty<OverlayData>();
-
       var result = new List<OverlayData>();
       foreach (var id in ids)
       {
@@ -109,8 +186,33 @@ namespace Winithm.Core.Managers
       return result;
     }
 
-    public bool ContainsOverlay(string id) => OverlayCollection.ContainsKey(id);
+    public IReadOnlyList<OverlayData> GetAllOverlays() => OverlayCollection;
 
-    public IReadOnlyList<OverlayData> GetAllOverlays() => OverlayCollection.Values.ToList();
+    /// <summary>
+    /// Returns all windows sorted by layer for correct render order.
+    /// </summary>
+    public IReadOnlyList<OverlayData> GetOverlayByLayer()
+    {
+      var overlays = new List<OverlayData>(OverlayCollection);
+      overlays.Sort((a, b) => a.Layer.CompareTo(b.Layer));
+      return overlays;
+    }
+
+    /// <summary>
+    /// Finds the insertion index for an overlay to keep the list sorted by StartBeat.
+    /// </summary>
+    public int FindAddIndex(List<OverlayData> list, OverlayData target)
+    {
+      if (list.Count == 0) return 0;
+
+      int left = 0, right = list.Count - 1;
+      while (left <= right)
+      {
+        int mid = left + (right - left) / 2;
+        if (list[mid].StartBeat <= target.StartBeat) left = mid + 1;
+        else right = mid - 1;
+      }
+      return left;
+    }
   }
 }
