@@ -68,9 +68,6 @@ namespace Winithm.Core.Managers
     };
     public List<BPMStop> BPMStops { get; private set; } = new List<BPMStop>();
 
-    public double _audioOffsetSeconds = 0;
-    public double AudioOffsetSeconds { get => _audioOffsetSeconds; set { if (_audioOffsetSeconds == value) return; _audioOffsetSeconds = value; RequestRecalculate(0); NotifyChanged(); } }
-
     public int StopCount => BPMStops.Count;
     public float LowestBPM = float.MaxValue;
     public float HightestBPM = float.MinValue;
@@ -97,7 +94,7 @@ namespace Winithm.Core.Managers
         if (i == 0)
         {
           double beatDiff = curr.StartBeat.AbsoluteValue;
-          curr.StartTimeSeconds = _audioOffsetSeconds + BaseBPM.BaseOffsetSeconds + (beatDiff / BaseBPM.BeatsPerSecond);
+          curr.StartTimeSeconds = BaseBPM.BaseOffsetSeconds + (beatDiff / BaseBPM.BeatsPerSecond);
         }
         else
         {
@@ -249,7 +246,7 @@ namespace Winithm.Core.Managers
 
       if (idx == -1)
       {
-        return _audioOffsetSeconds + BaseBPM.BaseOffsetSeconds + (beat / BaseBPM.BeatsPerSecond);
+        return BaseBPM.BaseOffsetSeconds + (beat / BaseBPM.BeatsPerSecond);
       }
 
       var stop = BPMStops[idx];
@@ -263,7 +260,7 @@ namespace Winithm.Core.Managers
 
       if (idx == -1)
       {
-        double deltaSec = seconds - (_audioOffsetSeconds + BaseBPM.BaseOffsetSeconds);
+        double deltaSec = seconds - BaseBPM.BaseOffsetSeconds;
         return deltaSec * BaseBPM.BeatsPerSecond;
       }
 
