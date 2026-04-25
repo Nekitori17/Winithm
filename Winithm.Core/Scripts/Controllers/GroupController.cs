@@ -11,9 +11,9 @@ namespace Winithm.Core.Controllers
   {
     private GroupManager _groupManager;
     private readonly Dictionary<string, Node2D> _groupNodes = new Dictionary<string, Node2D>();
-    private readonly Dictionary<string, float> _lastUpdateBeat = new Dictionary<string, float>();
+    private readonly Dictionary<string, double> _lastUpdateBeat = new Dictionary<string, double>();
 
-    public void LoadGroups(GroupManager manager)
+    public GroupController(GroupManager manager)
     {
       _groupManager = manager ?? new GroupManager();
 
@@ -55,17 +55,17 @@ namespace Winithm.Core.Controllers
       }
     }
 
-    public Node2D GetGroupNode(string id, float currentBeat)
+    public Node2D GetGroupNode(string id, double currentBeat)
     {
       if (string.IsNullOrEmpty(id) || !_groupManager.ContainsGroup(id)) return null;
 
-      if (Mathf.Abs(_lastUpdateBeat[id] - currentBeat) <= 0.0001f)
+      if (Mathf.Abs((float)(_lastUpdateBeat[id] - currentBeat)) <= 0.0001f)
         return _groupNodes[id];
 
       return ForceGetGroupNode(id, currentBeat, false);
     }
 
-    public Node2D ForceGetGroupNode(string id, float currentBeat, bool _force = true)
+    public Node2D ForceGetGroupNode(string id, double currentBeat, bool _force = true)
     {
       if (string.IsNullOrEmpty(id) || !_groupManager.GroupCollection.TryGetValue(id, out var g)) return null;
 

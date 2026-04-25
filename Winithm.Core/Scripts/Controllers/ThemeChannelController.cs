@@ -10,9 +10,9 @@ namespace Winithm.Core.Controllers
   public class ThemeChannelController : Node
   {
     private ThemeChannelManager _themeManager;
-    private readonly Dictionary<string, (float LastBeat, Color Color, float NoteAlpha)> _lastStates = new Dictionary<string, (float, Color, float)>();
+    private readonly Dictionary<string, (double LastBeat, Color Color, float NoteAlpha)> _lastStates = new Dictionary<string, (double, Color, float)>();
 
-    public void LoadThemeChannels(ThemeChannelManager manager)
+    public ThemeChannelController(ThemeChannelManager manager)
     {
       _themeManager = manager ?? new ThemeChannelManager();
 
@@ -25,21 +25,21 @@ namespace Winithm.Core.Controllers
     public bool HasThemeChannel(string id) => _themeManager.ContainsThemeChannel(id);
 
     public (Color WindowColor, float NoteA)? GetThemeColor(
-      string id, float currentBeat
+      string id, double currentBeat
     )
     {
       if (string.IsNullOrEmpty(id) || !_themeManager.ContainsThemeChannel(id)) 
         return null;
 
       var stateVal = _lastStates[id];
-      if (Mathf.Abs(stateVal.LastBeat - currentBeat) <= 0.0001f)
+      if (Mathf.Abs((float)(stateVal.LastBeat - currentBeat)) <= 0.0001f)
         return (stateVal.Color, stateVal.NoteAlpha);
 
       return ForceGetThemeColor(id, currentBeat, false);
     }
 
     public (Color WindowColor, float NoteA)? ForceGetThemeColor(
-      string id, float currentBeat, bool _force = true
+      string id, double currentBeat, bool _force = true
     )
     {
       if (string.IsNullOrEmpty(id) || !_themeManager.ContainsThemeChannel(id)) 
