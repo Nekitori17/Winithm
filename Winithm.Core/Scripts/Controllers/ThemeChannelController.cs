@@ -28,9 +28,6 @@ namespace Winithm.Core.Controllers
       string id, double currentBeat
     )
     {
-      if (string.IsNullOrEmpty(id) || !_themeManager.ContainsThemeChannel(id)) 
-        return null;
-
       var stateVal = _lastStates[id];
       if (Mathf.Abs((float)(stateVal.LastBeat - currentBeat)) <= 0.0001f)
         return (stateVal.Color, stateVal.NoteAlpha);

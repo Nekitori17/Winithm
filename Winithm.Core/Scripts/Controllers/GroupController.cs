@@ -57,8 +57,6 @@ namespace Winithm.Core.Controllers
 
     public Node2D GetGroupNode(string id, double currentBeat)
     {
-      if (string.IsNullOrEmpty(id) || !_groupManager.ContainsGroup(id)) return null;
-
       if (Mathf.Abs((float)(_lastUpdateBeat[id] - currentBeat)) <= 0.0001f)
         return _groupNodes[id];
 
@@ -67,8 +65,10 @@ namespace Winithm.Core.Controllers
 
     public Node2D ForceGetGroupNode(string id, double currentBeat, bool _force = true)
     {
-      if (string.IsNullOrEmpty(id) || !_groupManager.GroupCollection.TryGetValue(id, out var g)) return null;
+      if (string.IsNullOrEmpty(id) || !_groupManager.ContainsGroup(id)) 
+        return null;
 
+      var g = _groupManager.GetGroup(id);
       if (!string.IsNullOrEmpty(g.ParentGroupID))
       {
         if (_force) ForceGetGroupNode(g.ParentGroupID, currentBeat);
