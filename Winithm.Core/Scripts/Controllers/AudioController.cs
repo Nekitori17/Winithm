@@ -1,108 +1,116 @@
 using Godot;
-using Winithm.Core.Common;
 using Winithm.Core.Managers;
 
 namespace Winithm.Core.Controllers
 {
-  [Tool]
-  public class AudioController : AudioStreamPlayer
+  /// <summary>Master clock for chart and audio. Tick() must be called manually each frame.</summary>
+  public class AudioController : Node
   {
     public Metronome Metronome { get; private set; }
+
+    private readonly AudioStreamPlayer _player = new AudioStreamPlayer();
+
+    // Master clock in seconds.
+    private double _currentTime = 0d;
+
+    // DSP anchor for drift correction while stream is playing.
+    private double _dspTimeAtPlay = 0f;
+    private double _seekPositionAtPlay = 0f;
+
+    // Positive: music leads chart. Negative: chart leads music.
+    private double _audioOffset = 0f;
+
+    private bool _isPlaying = false;
+    private bool _streamStarted = false;
+
+    public bool IsPlaying => _isPlaying;
+
+    public double CurrentTime => _currentTime;
+    public double CurrentBeat => Metronome.ToBeat(_currentTime);
+    public double CurrentTimeMs => _currentTime * 1000d;
 
     public AudioController(Metronome metronome)
     {
       Metronome = metronome;
+      AddChild(_player);
     }
 
-    private double _manualTime = 0f;
-
-    // DSP clock reference at last sync point.
-    private double _dspTimeAtPlay = 0f;
-    private double _seekPositionAtPlay = 0f;
-
-    // Chart sync offset (seconds). Positive = audio ahead of chart.
-    private double _audioOffset = 0f;
-
-    // Hardware output latency compensation to align perceived sound with game clock.
-    private double _dspBufferLatency = 0f;
-
-    /// <summary>Perceived playback position in seconds (raw + offset + latency).</summary>
-    public double CurrentTime
+    /// <summary>Updates clock; uses DSP for drift correction or delta for pre-delay.</summary>
+    public void Tick(double delta)
     {
-      get
-      {
-        double raw = Playing
-          ? _seekPositionAtPlay + (AudioServer.GetTimeSinceLastMix() - _dspTimeAtPlay)
-          : _manualTime;
+      if (!_isPlaying) return;
 
-        return raw + _audioOffset + _dspBufferLatency;
+      if (_streamStarted && _player.Playing)
+      {
+        // DSP-anchored time to correct drift. (Stream + Offset = Clock)
+        _currentTime = _seekPositionAtPlay
+          + (AudioServer.GetTimeSinceLastMix() - _dspTimeAtPlay)
+          - _audioOffset;
       }
-      set
+      else
       {
-        // Remove offsets to get raw stream position for Seek.
-        double rawValue = value - _audioOffset - _dspBufferLatency;
+        _currentTime += delta;
 
-        if (Playing)
-        {
-          base.Seek((float)rawValue);
-          _AnchorDsp(rawValue);
-        }
-        else
-        {
-          _manualTime = rawValue;
-        }
+        // Start stream when clock reaches start point.
+        if (!_streamStarted && _currentTime >= -_audioOffset)
+          _StartStream();
       }
     }
 
-    public double CurrentBeat => Metronome.ToBeat(CurrentTime);
-
-    public double CurrentTimeMs => CurrentTime * 1000d;
-
-    /// <summary>Pauses and captures the current raw position for accurate resume.</summary>
-    public void Pause()
-    {
-      if (Playing)
-      {
-        // Capture raw position before stopping.
-        _manualTime = 
-          _seekPositionAtPlay + (AudioServer.GetTimeSinceLastMix() - _dspTimeAtPlay);
-        Stop();
-      }
-    }
-
-    /// <summary>Resume from paused position with DSP anchor reset.</summary>
+    /// <summary>Resume playback from current position.</summary>
     public void Resume()
     {
-      if (!Playing)
-      {
-        Play((float)_manualTime);
-        _AnchorDsp(_manualTime);
-      }
+      if (_isPlaying) return;
+      _isPlaying = true;
+
+      if (_currentTime + _audioOffset >= 0)
+        _StartStream();
+      // Tick() will start stream once clock advances enough.
     }
 
-    public void Seek(double beat) => CurrentTime = Metronome.ToSeconds(beat);
+    /// <summary>Pause playback.</summary>
+    public void Pause()
+    {
+      if (!_isPlaying) return;
+      _isPlaying = false;
+      _streamStarted = false;
+      _player.Stop();
+    }
 
-    public double GetCurrentBPS() => Metronome.GetCurrentBPS(CurrentTime);
+    public void SeekSeconds(double seconds)
+    {
+      _currentTime = seconds;
+      _RestartStream();
+    }
 
-    /// <summary>Sets the chart sync offset in seconds.</summary>
+    public void SeekMilliseconds(double ms) => SeekSeconds(ms / 1000d);
+
+    public void SeekBeat(double beat) => SeekSeconds(Metronome.ToSeconds(beat));
+
     public void SetAudioOffsetSeconds(double offset) => _audioOffset = offset;
     public double GetAudioOffsetSeconds() => _audioOffset;
 
-    /// <summary>Calculates latency compensation from buffer settings.</summary>
-    public void SetDSPBufferSize(int bufferSizeSamples) 
-      => _dspBufferLatency = (double)bufferSizeSamples / AudioServer.GetMixRate();
+    public AudioStream GetStream() => _player.Stream;
+    public void SetStream(AudioStream stream) => _player.Stream = stream;
 
-    /// <summary>Explicitly sets latency compensation in seconds.</summary>
-    public void SetDSPBufferLatencySeconds(double latencySeconds) 
-      => _dspBufferLatency = latencySeconds;
-
-    public double GetDSPBufferLatencySeconds() => _dspBufferLatency;
-
-    // Captures DSP clock and raw position as a sync anchor.
-    private void _AnchorDsp(double rawSeekPosition)
+    // Starts stream at position relative to clock (pos = clock + offset).
+    private void _StartStream()
     {
+      double streamPosition = _currentTime + _audioOffset;
+      _player.Play((float)streamPosition);
       _dspTimeAtPlay = AudioServer.GetTimeSinceLastMix();
-      _seekPositionAtPlay = rawSeekPosition;
+      _seekPositionAtPlay = streamPosition;
+      _streamStarted = true;
+    }
+
+    private void _RestartStream()
+    {
+      _streamStarted = false;
+      _player.Stop();
+
+      // Only restart if playing — Seek does not imply Resume.
+      if (_isPlaying && _currentTime + _audioOffset >= 0)
+        _StartStream();
     }
   }
 }
