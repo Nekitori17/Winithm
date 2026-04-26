@@ -2,36 +2,36 @@ using Godot;
 
 namespace Winithm.Client.Managers
 {
-  public enum AppDisplayMode
+  public enum DesktopDisplayMode
   {
     FullScreen,
     Windowed
   }
 
-  public class ScreenManager : Node
+  public class DesktopManager : Node
   {
-    public static ScreenManager Instance { get; private set; }
+    public static DesktopManager Instance { get; private set; }
 
-    public AppDisplayMode DisplayMode { get; private set; } = AppDisplayMode.Windowed;
+    public DesktopDisplayMode DisplayMode { get; private set; } = DesktopDisplayMode.Windowed;
 
     public override void _Ready()
     {
       Instance = this;
-      SetAppDisplayMode(AppDisplayMode.Windowed);
+      SetDesktopDisplayMode(DesktopDisplayMode.Windowed);
       OS.WindowPosition = Vector2.Zero;
     }
 
-    public void SetAppDisplayMode(AppDisplayMode mode)
+    public void SetDesktopDisplayMode(DesktopDisplayMode mode)
     {
       DisplayMode = mode;
       switch (mode)
       {
-        case AppDisplayMode.FullScreen:
+        case DesktopDisplayMode.FullScreen:
           OS.WindowPosition = Vector2.Zero;
           OS.WindowBorderless = true;
           OS.WindowResizable = false;
           break;
-        case AppDisplayMode.Windowed:
+        case DesktopDisplayMode.Windowed:
           OS.WindowFullscreen = false;
           OS.WindowBorderless = false;
           OS.WindowResizable = true;
@@ -44,9 +44,9 @@ namespace Winithm.Client.Managers
     /// </summary>
     public void ToggleDisplayMode()
     {
-      SetAppDisplayMode(DisplayMode == AppDisplayMode.FullScreen
-          ? AppDisplayMode.Windowed
-          : AppDisplayMode.FullScreen);
+      SetDesktopDisplayMode(DisplayMode == DesktopDisplayMode.FullScreen
+          ? DesktopDisplayMode.Windowed
+          : DesktopDisplayMode.FullScreen);
     }
   }
 }

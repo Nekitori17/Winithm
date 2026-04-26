@@ -7,7 +7,7 @@ namespace Winithm.Client.Behaviors
   /// A simple UI overlay that draws a decorative border around the entire game window
   /// when the application is running in Windowed mode.
   /// </summary>
-  public class GameBorder : Control
+  public class DesktopBorder : Control
   {
     public override void _Process(float delta)
     {
@@ -16,7 +16,7 @@ namespace Winithm.Client.Behaviors
 
     public override void _Draw()
     {
-      if (ScreenManager.Instance != null && ScreenManager.Instance.DisplayMode == AppDisplayMode.Windowed)
+      if (DesktopManager.Instance != null && DesktopManager.Instance.DisplayMode == DesktopDisplayMode.Windowed)
       {
         // Draw a sleek white border slightly inside the window bounds
         // Thickness of 2.0 with anti-aliasing (aa=true)
