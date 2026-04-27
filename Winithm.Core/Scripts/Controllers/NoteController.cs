@@ -65,7 +65,7 @@ namespace Winithm.Core.Controllers
     // Initialization
     // =============================================
 
-    public void Initialize(AudioController audioController, bool autoplay = false)
+    public NoteController(AudioController audioController, bool autoplay = false)
     {
       Autoplay = autoplay;
       _audioController = audioController;
