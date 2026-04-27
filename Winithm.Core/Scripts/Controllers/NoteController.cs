@@ -32,7 +32,7 @@ namespace Winithm.Core.Controllers
     private static readonly Color NOTE_COLOR_EVALUATED = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 
     /// <summary>Off-screen margin multiplier relative to note head height.</summary>
-    private const float OffScreenMarginFactor = 3f;
+    private const float OFF_SCREEN_MARGIN_FACTOR = 3f;
 
     private PackedScene _noteScene;
     private AudioController _audioController;
@@ -129,10 +129,10 @@ namespace Winithm.Core.Controllers
       ForceUpdate(currentBeat, false);
     }
 
-    public void ForceUpdate(double currentBeat, bool force = true)
+    public void ForceUpdate(double currentBeat, bool _force = true)
     {
       foreach (var entry in _windowStates)
-        ProcessWindow(entry.Key, entry.Value, currentBeat, force);
+        ProcessWindow(entry.Key, entry.Value, currentBeat, _force);
 
       _lastBeat = currentBeat;
     }
@@ -156,10 +156,16 @@ namespace Winithm.Core.Controllers
 
       double beatsPerSecond = _audioController.Metronome.GetCurrentBPS(_audioController.CurrentTime);
       float pixelsPerBeat =
-        NOTE_SPEED_PIXELS_PER_SEC * PlayerNoteSpeed / (float)(beatsPerSecond > 0f ? beatsPerSecond : 2f);
+        NOTE_SPEED_PIXELS_PER_SEC * PlayerNoteSpeed / (float)(
+          beatsPerSecond > 0f ? beatsPerSecond : 2f
+        );
 
-      float noteHeadHeight = PlayerNoteSize * Mathf.Min(playerAreaSize.x, playerAreaSize.y) * Note.NOTE_HEAD_HEIGHT_RATIO;
-      float offScreenMarginPx = noteHeadHeight * OffScreenMarginFactor;
+      float noteHeadHeight = PlayerNoteSize * Mathf.Min(
+        playerAreaSize.x, 
+        playerAreaSize.y
+      ) * Note.NOTE_HEAD_HEIGHT_RATIO;
+
+      float offScreenMarginPx = noteHeadHeight * OFF_SCREEN_MARGIN_FACTOR;
 
       float viewportScale = Math.Min(
         playerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
@@ -276,8 +282,9 @@ namespace Winithm.Core.Controllers
       while (lo <= hi)
       {
         int mid = (lo + hi) / 2;
-        float distancePx =
-          state.WindowData.SpeedSteps.GetVisualOffset(currentBeat, maxEndBeats[mid]) * pixelsPerBeat * viewportScale;
+        float distancePx = state.WindowData.SpeedSteps.GetVisualOffset(
+          currentBeat, maxEndBeats[mid]
+        ) * pixelsPerBeat * viewportScale;
 
         if (distancePx >= -offScreenMarginPx)
         {
@@ -393,7 +400,10 @@ namespace Winithm.Core.Controllers
       Vector2 playerAreaSize = state.WindowVisual.PlayerAreaSize;
       Vector2 windowSize = state.WindowVisual.WindowSize;
 
-      float headHeight = noteVisual.NoteSize * Mathf.Min(playerAreaSize.x, playerAreaSize.y) * Note.NOTE_HEAD_HEIGHT_RATIO;
+      float headHeight = 
+        noteVisual.NoteSize * Mathf.Min(
+          playerAreaSize.x, playerAreaSize.y
+        ) * Note.NOTE_HEAD_HEIGHT_RATIO;
       float bodyHeight = 0f;
 
       if (note.Type == NoteType.Hold)
@@ -500,8 +510,8 @@ namespace Winithm.Core.Controllers
         return;
       }
 
-      float dragWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Bad];
-      float missWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
+      double dragWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Bad];
+      double missWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
       int evalCursor = state.EvalCursors[side];
       var noteList = state.WindowData.Notes[side];
 
@@ -611,6 +621,8 @@ namespace Winithm.Core.Controllers
       }
     }
 
+
+    // TODO: Move two Methods to HitController
     // =============================================
     // Hit Evaluation API
     // =============================================
@@ -621,8 +633,8 @@ namespace Winithm.Core.Controllers
     /// </summary>
     public List<(string WindowId, NoteData Note, float OffsetMs)> TryEvaluateAll(NoteType type, float currentBeat)
     {
-      float missWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
-      float perfectWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Perfect];
+      double missWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
+      double perfectWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Perfect];
 
       var candidates = new List<(string WindowId, NoteData Note, float OffsetMs)>();
       float closestAbsMs = float.MaxValue;
@@ -709,7 +721,7 @@ namespace Winithm.Core.Controllers
     {
       string bestWindowId = null;
       NoteData closestNote = null;
-      float closestAbsMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
+      double closestAbsMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
 
       foreach (var entry in _windowStates)
       {
