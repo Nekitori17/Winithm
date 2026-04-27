@@ -112,7 +112,7 @@ namespace Winithm.Core.Common
         if (parts.Length >= 3)
           bPMStop.TimeSignature = int.TryParse(parts[2], out int ts) ? ts : 4;
 
-        meta.Audio.Metronome.BPMStops.Add(bPMStop);
+        meta.Audio.Metronome.AddBPMStop(bPMStop);
         return;
       }
 
