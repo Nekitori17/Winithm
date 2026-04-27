@@ -40,7 +40,7 @@ namespace Winithm.Core.Common
       sb.AppendLine($"  Preview Range: {ParserUtils.FormatDouble(data.Audio.PreviewStart)} {ParserUtils.FormatDouble(data.Audio.PreviewEnd)}");
       sb.AppendLine($"  Base BPM: {ParserUtils.FormatFloat((float)data.Audio.Metronome.BaseBPM.BaseOffsetSeconds)} {ParserUtils.FormatFloat(data.Audio.Metronome.BaseBPM.InitialBPM)} {data.Audio.Metronome.BaseBPM.TimeSignature}");
       sb.AppendLine("  BPM List:");
-      foreach (var bpm in data.Audio.Metronome.BPMStops)
+      foreach (var bpm in data.Audio.Metronome)
         sb.AppendLine($"  + {bpm.StartBeat} {ParserUtils.FormatFloat(bpm.BPM)} {bpm.TimeSignature}");
 
       sb.AppendLine("* Illustration");
