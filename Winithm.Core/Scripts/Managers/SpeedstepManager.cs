@@ -243,7 +243,7 @@ namespace Winithm.Core.Managers
     /// <summary>
     /// Returns the visual offset of targetBeat relative to currentBeat.
     /// </summary>
-    public float GetVisualOffset(float currentBeat, float targetBeat)
+    public float GetVisualOffset(double currentBeat, double targetBeat)
     {
       if (Math.Abs(currentBeat - targetBeat) < 0.0001f) return 0f;
 
