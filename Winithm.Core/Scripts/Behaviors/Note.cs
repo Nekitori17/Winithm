@@ -126,7 +126,7 @@ namespace Winithm.Core.Behaviors
     public void UpdateVisual()
     {
       float headH = NoteSize * Math.Min(PlayerAreaSize.x, PlayerAreaSize.y) * NOTE_HEAD_HEIGHT_RATIO;
-      float headW = Width;
+      float headW = Math.Max(Width, headH * 2f);
       float headCW = headW - headH * 2f;
 
       bool headDirty =
@@ -163,7 +163,7 @@ namespace Winithm.Core.Behaviors
       if (bodyDirty)
       {
         // Update body component layout (for Hold notes)
-        float bodyW = headW * BODY_TO_HEAD_RATIO;
+        float bodyW = Math.Max(headW * BODY_TO_HEAD_RATIO, headH * 2f);
         float bodyCW = bodyW - headH * 2f;
 
         _bodyContainer.RectSize = new Vector2(bodyW, BodyHeight);
