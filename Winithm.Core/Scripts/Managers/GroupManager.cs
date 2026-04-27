@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Winithm.Core.Data;
@@ -8,11 +9,23 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages GroupData configurations and tracks data changes.
   /// </summary>
-  public class GroupManager
+  public class GroupManager : IEnumerable<GroupData>
   {
     public event Action<GroupManager> OnUpdated;
 
-    public Dictionary<string, GroupData> GroupCollection { get; private set; } = new Dictionary<string, GroupData>();
+    private readonly Dictionary<string, GroupData> _groupCollection = new Dictionary<string, GroupData>();
+    public int Count => _groupCollection.Count;
+    
+    public IEnumerator<GroupData> GetEnumerator() => _groupCollection.Values.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => _groupCollection.GetEnumerator();
+
+    public GroupData this[string id] => _groupCollection.TryGetValue(id, out var g) ? g : null;
+    public GroupData this[int index] => _groupCollection.Values.ElementAtOrDefault(index);
+
+    public ICollection<string> Keys => _groupCollection.Keys;
+    public ICollection<GroupData> Values => _groupCollection.Values;
+
+    public bool TryGetValue(string id, out GroupData data) => _groupCollection.TryGetValue(id, out data);
 
     private int _updateLockCount = 0;
 
@@ -46,10 +59,10 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(groupData.ID)) return;
 
-      if (GroupCollection.TryGetValue(groupData.ID, out var existing))
+      if (_groupCollection.TryGetValue(groupData.ID, out var existing))
         UnsubscribeChangeEvent(existing);
 
-      GroupCollection[groupData.ID] = groupData;
+      _groupCollection[groupData.ID] = groupData;
       SubscribeChangeEvent(groupData);
       NotifyChanged();
     }
@@ -67,10 +80,10 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return false;
 
-      if (!GroupCollection.TryGetValue(id, out var groupData)) return false;
+      if (!_groupCollection.TryGetValue(id, out var groupData)) return false;
 
       UnsubscribeChangeEvent(groupData);
-      GroupCollection.Remove(id);
+      _groupCollection.Remove(id);
       NotifyChanged();
 
       return true;
@@ -91,7 +104,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      if (GroupCollection.TryGetValue(id, out var groupData)) return groupData;
+      if (_groupCollection.TryGetValue(id, out var groupData)) return groupData;
         return null;
     }
 
@@ -108,8 +121,8 @@ namespace Winithm.Core.Managers
       return result;
     }
 
-    public bool ContainsGroup(string id) => GroupCollection.ContainsKey(id);
+    public bool ContainsGroup(string id) => _groupCollection.ContainsKey(id);
 
-    public IReadOnlyDictionary<string, GroupData> GetAllGroups() => GroupCollection;
+    public IReadOnlyDictionary<string, GroupData> GetAllGroups() => _groupCollection;
   }
 }

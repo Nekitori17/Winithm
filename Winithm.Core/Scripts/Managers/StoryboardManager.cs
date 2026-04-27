@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Winithm.Core.Common;
@@ -20,9 +21,27 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages timeline events and interpolates values.
   /// </summary>
-  public class StoryboardManager<TProp> : IDeepCloneable<StoryboardManager<TProp>>
+  public class StoryboardManager<TProp> : IDeepCloneable<StoryboardManager<TProp>>, IEnumerable<KeyValuePair<TProp, List<EventData>>>
   {
     public event Action<StoryboardManager<TProp>> OnUpdated;
+
+    private Dictionary<TProp, List<EventData>> _eventCollection = new Dictionary<TProp, List<EventData>>();
+
+    public int Count => _eventCollection.Count;
+
+    public IEnumerator<KeyValuePair<TProp, List<EventData>>> GetEnumerator() => _eventCollection.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public List<EventData> this[TProp prop] => _eventCollection.TryGetValue(prop, out var list) ? list : null;
+    public List<EventData> this[int index] => _eventCollection.Values.ElementAtOrDefault(index);
+
+    public ICollection<TProp> Keys => _eventCollection.Keys;
+    public ICollection<List<EventData>> Values => _eventCollection.Values;
+
+    public bool TryGetValue(TProp prop, out List<EventData> data) => _eventCollection.TryGetValue(prop, out data);
+
+
+    private Dictionary<TProp, Cursor> _propertyCursors = new Dictionary<TProp, Cursor>();
 
     private int _updateLockCount = 0;
 
@@ -45,18 +64,13 @@ namespace Winithm.Core.Managers
       if (_updateLockCount == 0) OnUpdated?.Invoke(this);
     }
 
-    public Dictionary<TProp, List<EventData>> EventCollection { get; private set; } = new Dictionary<TProp, List<EventData>>();
-    public Dictionary<TProp, Cursor> PropertyCursors { get; private set; } = new Dictionary<TProp, Cursor>();
-
-    private readonly Dictionary<EventData, TProp> _eventKeyMap = new Dictionary<EventData, TProp>();
-
     public StoryboardManager<TProp> DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
       var newStoryboard = new StoryboardManager<TProp>();
 
       newStoryboard.BeginUpdate();
 
-      foreach (var events in EventCollection)
+      foreach (var events in _eventCollection)
       {
         foreach (var evt in events.Value)
           newStoryboard.AddEvent(events.Key, evt.DeepClone(objectFactory, offset));
@@ -169,6 +183,7 @@ namespace Winithm.Core.Managers
       return result.PadLeft(indent);
     }
 
+    private readonly Dictionary<EventData, TProp> _eventKeyMap = new Dictionary<EventData, TProp>();
     private void SubscribeChangeEvent(TProp prop, EventData evt)
     {
       evt.OnStartBeatChanged -= HandleStartBeatChanged;
@@ -187,14 +202,14 @@ namespace Winithm.Core.Managers
 
     private void OnEventStartBeatChanged(TProp prop, EventData evt)
     {
-      if (!EventCollection.TryGetValue(prop, out var list)) return;
+      if (!_eventCollection.TryGetValue(prop, out var list)) return;
       if (!list.Contains(evt)) return;
 
       list.Remove(evt);
       int index = FindAddIndex(list, evt);
       list.Insert(index, evt);
 
-      PropertyCursors[prop].Reset();
+      _propertyCursors[prop].Reset();
       NotifyChanged();
     }
 
@@ -210,16 +225,16 @@ namespace Winithm.Core.Managers
 
     public int AddEvent(TProp prop, EventData evt)
     {
-      if (!EventCollection.TryGetValue(prop, out var list))
+      if (!_eventCollection.TryGetValue(prop, out var list))
       {
         list = new List<EventData>();
-        EventCollection[prop] = list;
-        PropertyCursors[prop] = new Cursor();
+        _eventCollection[prop] = list;
+        _propertyCursors[prop] = new Cursor();
       }
 
       int index = FindAddIndex(list, evt);
       list.Insert(index, evt);
-      PropertyCursors[prop].Reset();
+      _propertyCursors[prop].Reset();
 
       SubscribeChangeEvent(prop, evt);
       NotifyChanged();
@@ -244,17 +259,17 @@ namespace Winithm.Core.Managers
 
     public bool RemoveEvent(TProp prop, EventData evt)
     {
-      if (!EventCollection.TryGetValue(prop, out var list)) return false;
+      if (!_eventCollection.TryGetValue(prop, out var list)) return false;
       if (!list.Remove(evt)) return false;
 
       UnSubscribeChangeEvent(evt);
 
       if (list.Count == 0)
       {
-        EventCollection.Remove(prop);
-        PropertyCursors.Remove(prop);
+        _eventCollection.Remove(prop);
+        _propertyCursors.Remove(prop);
       }
-      else PropertyCursors[prop].Reset();
+      else _propertyCursors[prop].Reset();
 
       NotifyChanged();
       return true;
@@ -299,7 +314,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return false;
 
-      if (!EventCollection.TryGetValue(prop, out var list)) return false;
+      if (!_eventCollection.TryGetValue(prop, out var list)) return false;
 
       var toRemove = list.FindAll(x => x.ID == id);
       if (toRemove.Count == 0) return false;
@@ -309,10 +324,10 @@ namespace Winithm.Core.Managers
 
       if (list.Count == 0)
       {
-        EventCollection.Remove(prop);
-        PropertyCursors.Remove(prop);
+        _eventCollection.Remove(prop);
+        _propertyCursors.Remove(prop);
       }
-      else PropertyCursors[prop].Reset();
+      else _propertyCursors[prop].Reset();
 
       NotifyChanged();
       return true;
@@ -338,7 +353,7 @@ namespace Winithm.Core.Managers
       BeginUpdate();
 
       bool anySuccess = false;
-      foreach (var key in EventCollection.Keys.ToList())
+      foreach (var key in _eventCollection.Keys.ToList())
       {
         if (RemoveEvent(key, id)) anySuccess = true;
       }
@@ -365,7 +380,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      if (!EventCollection.TryGetValue(prop, out var evts)) return null;
+      if (!_eventCollection.TryGetValue(prop, out var evts)) return null;
 
       var result = evts.FirstOrDefault(e => e.ID == id);
 
@@ -378,7 +393,7 @@ namespace Winithm.Core.Managers
       if (!ids.Any()) return Array.Empty<EventData>();
 
       var result = new List<EventData>();
-      if (EventCollection.TryGetValue(prop, out var list))
+      if (_eventCollection.TryGetValue(prop, out var list))
       {
         var idSet = new HashSet<string>(ids);
         result.AddRange(list.Where(e => idSet.Contains(e.ID)));
@@ -392,7 +407,7 @@ namespace Winithm.Core.Managers
 
       if (string.IsNullOrEmpty(id)) return null;
 
-      foreach (var pair in EventCollection)
+      foreach (var pair in _eventCollection)
       {
         var result = pair.Value.FirstOrDefault(e => e.ID == id);
         if (result != default) {
@@ -411,7 +426,7 @@ namespace Winithm.Core.Managers
 
       if(idSet.Count == 0) return result;
 
-      foreach (var pair in EventCollection)
+      foreach (var pair in _eventCollection)
       {
         var found = pair.Value.Where(e => idSet.Contains(e.ID)).ToList();
         if (found.Count > 0) result[pair.Key] = found;
@@ -421,25 +436,25 @@ namespace Winithm.Core.Managers
 
     public IReadOnlyList<EventData> GetPropEvents(TProp prop)
     {
-      if (EventCollection.TryGetValue(prop, out var events)) return events;
+      if (_eventCollection.TryGetValue(prop, out var events)) return events;
       return Array.Empty<EventData>();
     }
 
-    public IReadOnlyDictionary<TProp, List<EventData>> GetAllEvents() => EventCollection;
+    public IReadOnlyDictionary<TProp, List<EventData>> GetAllEvents() => _eventCollection;
 
     public void SortAllEvents()
     {
-      if (EventCollection.Count == 0) return;
-      foreach (TProp prop in EventCollection.Keys.ToList()) SortPropEvents(prop);
+      if (_eventCollection.Count == 0) return;
+      foreach (TProp prop in _eventCollection.Keys.ToList()) SortPropEvents(prop);
       NotifyChanged();
     }
 
     public void SortPropEvents(TProp key)
     {
-      if (!EventCollection.TryGetValue(key, out var events) || events.Count <= 1) return;
+      if (!_eventCollection.TryGetValue(key, out var events) || events.Count <= 1) return;
 
       events.Sort((a, b) => a.StartBeat.CompareTo(b.StartBeat));
-      PropertyCursors[key].Reset();
+      _propertyCursors[key].Reset();
       NotifyChanged();
     }
 
@@ -459,7 +474,7 @@ namespace Winithm.Core.Managers
 
     public AnyValue Evaluate(TProp prop, double currentBeat, AnyValue defaultValue, bool isScrubbing = false)
     {
-      if (!EventCollection.TryGetValue(prop, out var events) || events.Count == 0)
+      if (!_eventCollection.TryGetValue(prop, out var events) || events.Count == 0)
         return defaultValue;
 
       int idx = AdvanceCursor(prop, currentBeat, isScrubbing);
@@ -497,8 +512,8 @@ namespace Winithm.Core.Managers
 
     private int AdvanceCursor(TProp prop, double currentBeat, bool isScrubbing)
     {
-      var events = EventCollection[prop];
-      var cursor = PropertyCursors[prop];
+      var events = _eventCollection[prop];
+      var cursor = _propertyCursors[prop];
 
       int n = events.Count;
       int last = cursor.LastIndex;
@@ -534,7 +549,7 @@ namespace Winithm.Core.Managers
 
     private int FindLastStarted(TProp prop, double currentBeat)
     {
-      var events = EventCollection[prop];
+      var events = _eventCollection[prop];
       int left = 0, right = events.Count - 1, best = -1;
 
       while (left <= right)

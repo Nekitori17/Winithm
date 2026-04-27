@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Winithm.Core.Data;
@@ -8,11 +9,23 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages ThemeChannelData configurations and monitors data changes.
   /// </summary>
-  public class ThemeChannelManager
+  public class ThemeChannelManager : IEnumerable<ThemeChannelData>
   {
     public event Action<ThemeChannelManager> OnUpdated;
 
-    public Dictionary<string, ThemeChannelData> ThemeChannelCollection { get; private set; } = new Dictionary<string, ThemeChannelData>();
+    private Dictionary<string, ThemeChannelData> _themeChannelCollection = new Dictionary<string, ThemeChannelData>();
+
+    public int Count => _themeChannelCollection.Count;
+    
+    public IEnumerator<ThemeChannelData> GetEnumerator() => _themeChannelCollection.Values.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public ThemeChannelData this[string id] => _themeChannelCollection.TryGetValue(id, out var tc) ? tc : null;
+    public ThemeChannelData this[int index] => _themeChannelCollection.Values.ElementAtOrDefault(index);
+    
+    public ICollection<string> Keys => _themeChannelCollection.Keys;
+    public ICollection<ThemeChannelData> Values => _themeChannelCollection.Values;
+    public bool TryGetValue(string id, out ThemeChannelData data) => _themeChannelCollection.TryGetValue(id, out data);
 
     private int _updateLockCount = 0;
 
@@ -47,10 +60,10 @@ namespace Winithm.Core.Managers
       if (string.IsNullOrEmpty(themeChannelData.ID))
         throw new ArgumentException("ThemeChannelData ID cannot be null or empty.");
 
-      if (ThemeChannelCollection.TryGetValue(themeChannelData.ID, out var existing))
+      if (_themeChannelCollection.TryGetValue(themeChannelData.ID, out var existing))
         UnsubscribeChangeEvent(existing);
 
-      ThemeChannelCollection[themeChannelData.ID] = themeChannelData;
+      _themeChannelCollection[themeChannelData.ID] = themeChannelData;
       SubscribeChangeEvent(themeChannelData);
       NotifyChanged();
     }
@@ -66,10 +79,10 @@ namespace Winithm.Core.Managers
 
     public bool RemoveThemeChannel(string id)
     {
-      if (!ThemeChannelCollection.TryGetValue(id, out var channelData)) return false;
+      if (!_themeChannelCollection.TryGetValue(id, out var channelData)) return false;
 
       UnsubscribeChangeEvent(channelData);
-      ThemeChannelCollection.Remove(id);
+      _themeChannelCollection.Remove(id);
       NotifyChanged();
 
       return true;
@@ -90,7 +103,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      if (ThemeChannelCollection.TryGetValue(id, out var channelData)) return channelData;
+      if (_themeChannelCollection.TryGetValue(id, out var channelData)) return channelData;
       return null;
     }
 
@@ -99,13 +112,13 @@ namespace Winithm.Core.Managers
       var result = new List<ThemeChannelData>();
       foreach (var id in ids)
       {
-        if (ThemeChannelCollection.TryGetValue(id, out var channel)) result.Add(channel);
+        if (_themeChannelCollection.TryGetValue(id, out var channel)) result.Add(channel);
       }
       return result;
     }
 
-    public bool ContainsThemeChannel(string id) => ThemeChannelCollection.ContainsKey(id);
+    public bool ContainsThemeChannel(string id) => _themeChannelCollection.ContainsKey(id);
 
-    public IReadOnlyDictionary<string, ThemeChannelData> GetAllThemeChannels() => ThemeChannelCollection;
+    public IReadOnlyDictionary<string, ThemeChannelData> GetAllThemeChannels() => _themeChannelCollection;
   }
 }

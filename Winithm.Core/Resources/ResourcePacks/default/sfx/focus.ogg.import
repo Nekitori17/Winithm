@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/focus.ogg-885c2abd529c0fea8b3ba6e53ad30100.oggstr"
+
+[deps]
+
+source_file="res://Winithm.Core/Resources/ResourcePacks/default/sfx/focus.ogg"
+dest_files=[ "res://.import/focus.ogg-885c2abd529c0fea8b3ba6e53ad30100.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

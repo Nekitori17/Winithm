@@ -8,16 +8,23 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages WindowData collections and monitors nested sub-manager changes.
   /// </summary>
-  public class WindowManager
+  public class WindowManager : IEnumerable<WindowData>
   {
     public event Action<WindowManager> OnUpdated;
 
-    public Metronome Metronome { get; private set; }
+    private Metronome _metronome;
 
     /// <summary>
     /// Collection of windows sorted by StartBeat.
     /// </summary>
-    public List<WindowData> WindowCollection { get; private set; } = new List<WindowData>();
+    private List<WindowData> _windowCollection = new List<WindowData>();
+
+    public int Count => _windowCollection.Count;
+
+    public IEnumerator<WindowData> GetEnumerator() => _windowCollection.GetEnumerator();
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public WindowData this[int index] => _windowCollection.ElementAtOrDefault(index);
 
     /// <summary>
     /// Prefix-max of EndBeatEndOut over windows for binary search.
@@ -76,19 +83,19 @@ namespace Winithm.Core.Managers
     }
 
     /// <summary>
-    /// Rebuilds MaxEndBeats and PrefixCombo based on the current WindowCollection.
+    /// Rebuilds MaxEndBeats and PrefixCombo based on the current _windowCollection.
     /// </summary>
     public void Compute()
     {
-      MaxEndBeats = new double[WindowCollection.Count];
-      PrefixCombo = new int[WindowCollection.Count];
+      MaxEndBeats = new double[_windowCollection.Count];
+      PrefixCombo = new int[_windowCollection.Count];
       
       double runningMax = double.MinValue;
       int runningCombo = 0;
 
-      for (int i = 0; i < WindowCollection.Count; i++)
+      for (int i = 0; i < _windowCollection.Count; i++)
       {
-        var window = WindowCollection[i];
+        var window = _windowCollection[i];
         
         runningMax = Math.Max(runningMax, window.EndBeatEndOut);
         MaxEndBeats[i] = runningMax;
@@ -102,11 +109,11 @@ namespace Winithm.Core.Managers
 
     public void SetMetronome(Metronome metronome)
     {
-      if (Metronome == metronome) return;
+      if (_metronome == metronome) return;
 
-      if (Metronome != null) Metronome.OnUpdated -= HandleMetronomeUpdated;
-      Metronome = metronome;
-      if (Metronome != null) Metronome.OnUpdated += HandleMetronomeUpdated;
+      if (_metronome != null) _metronome.OnUpdated -= HandleMetronomeUpdated;
+      _metronome = metronome;
+      if (_metronome != null) _metronome.OnUpdated += HandleMetronomeUpdated;
       NotifyChanged();
     }
 
@@ -121,13 +128,13 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void ComputeAnimations(WindowData windowData)
     {
-      if (Metronome == null)
-        throw new InvalidOperationException("Metronome must be set before computing animations.");
+      if (_metronome == null)
+        throw new InvalidOperationException("_metronome must be set before computing animations.");
 
-      windowData.PreComputeAnimation(Metronome);
+      windowData.PreComputeAnimation(_metronome);
 
       if (windowData.Unresponsive)
-        windowData.ComputeAnimationWhenUnresponsive(Metronome);
+        windowData.ComputeAnimationWhenUnresponsive(_metronome);
     }
 
     /// <summary>
@@ -135,10 +142,10 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void ComputeAllAnimations()
     {
-      if (Metronome == null)
-        throw new InvalidOperationException("Metronome must be set before computing animations.");
+      if (_metronome == null)
+        throw new InvalidOperationException("_metronome must be set before computing animations.");
 
-      foreach (var window in WindowCollection)
+      foreach (var window in _windowCollection)
         ComputeAnimations(window);
 
       RequestRecompute();
@@ -204,8 +211,8 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void AddWindow(WindowData windowData)
     {
-      var idx = FindAddIndex(WindowCollection, windowData);
-      WindowCollection.Insert(idx, windowData);
+      var idx = FindAddIndex(windowData);
+      _windowCollection.Insert(idx, windowData);
       SubscribeChangeEvent(windowData);
 
       RequestRecompute();
@@ -228,11 +235,11 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return false;
 
-      var windowData = WindowCollection.FirstOrDefault(w => w.ID == id);
+      var windowData = _windowCollection.FirstOrDefault(w => w.ID == id);
       if (windowData == default) return false;
 
       UnsubscribeChangeEvent(windowData);
-      WindowCollection.Remove(windowData);
+      _windowCollection.Remove(windowData);
 
       RequestRecompute();
       NotifyChanged();
@@ -259,7 +266,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      var result = WindowCollection.FirstOrDefault(w => w.ID == id);
+      var result = _windowCollection.FirstOrDefault(w => w.ID == id);
 
       if (result == default) return null;
 
@@ -277,14 +284,14 @@ namespace Winithm.Core.Managers
       return result;
     }
 
-    public IReadOnlyList<WindowData> GetAllWindows() => WindowCollection;
+    public IReadOnlyList<WindowData> GetAllWindows() => _windowCollection;
 
     /// <summary>
     /// Returns all windows sorted by layer for correct render order.
     /// </summary>
     public IReadOnlyList<WindowData> GetWindowsByLayer()
     {
-      var windows = new List<WindowData>(WindowCollection);
+      var windows = new List<WindowData>(_windowCollection);
       windows.Sort((a, b) => a.Layer.CompareTo(b.Layer));
       return windows;
     }
@@ -292,8 +299,10 @@ namespace Winithm.Core.Managers
     /// <summary>
     /// Finds the insertion index for a window to keep the list sorted by StartBeat.
     /// </summary>
-    public int FindAddIndex(List<WindowData> list, WindowData target)
+    public int FindAddIndex(WindowData target)
     {
+      var list = _windowCollection;
+
       if (list.Count == 0) return 0;
 
       int left = 0, right = list.Count - 1;

@@ -24,9 +24,7 @@ namespace Winithm.Core.Controllers
       _groupNodes.Clear();
       _lastUpdateBeat.Clear();
 
-      var allGroups = _groupManager.GroupCollection.Values;
-
-      foreach (var g in allGroups)
+      foreach (var g in _groupManager)
       {
         _lastUpdateBeat[g.ID] = -1f;
 
@@ -41,7 +39,7 @@ namespace Winithm.Core.Controllers
         _groupNodes[g.ID] = node;
       }
 
-      foreach (var g in allGroups)
+      foreach (var g in _groupManager)
       {
         var node = _groupNodes[g.ID];
         if (!string.IsNullOrEmpty(g.ParentGroupID) && _groupNodes.TryGetValue(g.ParentGroupID, out Node2D parentNode))
@@ -96,7 +94,7 @@ namespace Winithm.Core.Controllers
     private float EvaluateProperty(GroupData g, StoryboardProperty prop, double beat, float defaultValue, bool isScrubbing = true)
     {
       if (g.StoryboardEvents == null 
-        || !g.StoryboardEvents.EventCollection.TryGetValue(prop, out var events)
+        || !g.StoryboardEvents.TryGetValue(prop, out var events)
       ) return defaultValue;
 
       return g.StoryboardEvents.Evaluate(prop, beat, new AnyValue(defaultValue), isScrubbing).X;

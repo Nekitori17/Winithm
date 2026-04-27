@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Winithm.Core.Common;
@@ -19,17 +20,31 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages Note segments, boundaries, and spatial data.
   /// </summary>
-  public class NoteManager : IDeepCloneable<NoteManager>
+  public class NoteManager : 
+    IDeepCloneable<NoteManager>, IEnumerable<KeyValuePair<NoteSide, List<NoteData>>>
   {
 
     public event Action<NoteManager> OnLifeCycleChanged;
     public event Action<NoteManager> OnUpdated;
 
-    public WindowData WindowData { get; private set; }
+    private WindowData _windowData;
 
-    public Dictionary<NoteSide, List<NoteData>> NoteCollection { get; private set; } = new Dictionary<NoteSide, List<NoteData>>();
+    private Dictionary<NoteSide, List<NoteData>> _noteCollection = new Dictionary<NoteSide, List<NoteData>>();
+
+    public int Count => _noteCollection.Count;
+
+    public IEnumerator<KeyValuePair<NoteSide, List<NoteData>>> GetEnumerator() => _noteCollection.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public List<NoteData> this[NoteSide side] => _noteCollection.TryGetValue(side, out var list) ? list : null;
+    public List<NoteData> this[int index] => _noteCollection.Values.ElementAtOrDefault(index);
+
+    public ICollection<NoteSide> Keys => _noteCollection.Keys;
+    public ICollection<List<NoteData>> Values => _noteCollection.Values;
+
+    public bool TryGetValue(NoteSide side, out List<NoteData> data) => _noteCollection.TryGetValue(side, out data);
+
     public Dictionary<NoteSide, double[]> MaxEndBeats { get; private set; } = new Dictionary<NoteSide, double[]>();
-
     /// <summary>Sorted beats where combo increments occur (Hold → end beat, others → start beat).</summary>
     public double[] ComboEventBeats { get; private set; } = Array.Empty<double>();
     /// <summary>Prefix-sum of combo values aligned with ComboEventBeats.</summary>
@@ -47,7 +62,7 @@ namespace Winithm.Core.Managers
       var cloned = new NoteManager();
 
       cloned.BeginUpdate();
-      foreach (var sideNotes in NoteCollection)
+      foreach (var sideNotes in _noteCollection)
       {
         foreach (var note in sideNotes.Value)
           cloned.AddNote(sideNotes.Key, note.DeepClone(objectFactory, offset));
@@ -100,7 +115,12 @@ namespace Winithm.Core.Managers
 
     public void SetWindowData(WindowData windowData)
     {
-      WindowData = windowData;
+      if (windowData == null)
+      {
+        throw new ArgumentNullException(nameof(windowData));
+      }
+
+      _windowData = windowData;
       RequestRecompute();
       NotifyChanged();
     }
@@ -144,7 +164,7 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void Compute()
     {
-      if (WindowData == null)
+      if (_windowData == null)
       {
         ExpectedStartFocusBeat = BeatTime.Max;
         ExpectedEndCloseBeat = BeatTime.Max;
@@ -156,12 +176,12 @@ namespace Winithm.Core.Managers
       }
 
       BeatTime prevExpectedEndCloseBeat = ExpectedEndCloseBeat;
-      BeatTime prevWindowEndBeat = WindowData.EndBeat;
+      BeatTime prevWindowEndBeat = _windowData.EndBeat;
 
-      ExpectedStartFocusBeat = WindowData.UnFocus ? WindowData.StartBeat : BeatTime.Min;
-      ExpectedEndCloseBeat = WindowData.EndBeat;
+      ExpectedStartFocusBeat = _windowData.UnFocus ? _windowData.StartBeat : BeatTime.Min;
+      ExpectedEndCloseBeat = _windowData.EndBeat;
 
-      foreach (var notes in NoteCollection.Values)
+      foreach (var notes in _noteCollection.Values)
       {
         foreach (NoteData note in notes)
         {
@@ -180,12 +200,12 @@ namespace Winithm.Core.Managers
         }
       }
 
-      WindowData.EndBeat = ExpectedEndCloseBeat;
+      _windowData.EndBeat = ExpectedEndCloseBeat;
       TotalComboCount = 0;
 
       var comboEvents = new List<(double beat, int combo)>();
 
-      foreach (var sideNotes in NoteCollection)
+      foreach (var sideNotes in _noteCollection)
       {
         var list = sideNotes.Value;
         
@@ -199,7 +219,11 @@ namespace Winithm.Core.Managers
         {
           var note = list[i];
 
-          if (note.StartBeat >= ExpectedStartFocusBeat && note.StartBeat <= ExpectedEndCloseBeat && note.IsHittable)
+          if (
+            note.StartBeat >= ExpectedStartFocusBeat 
+            && note.StartBeat <= ExpectedEndCloseBeat 
+            && note.IsHittable
+          )
           {
             if (note.Type == NoteType.Hold)
             {
@@ -235,7 +259,7 @@ namespace Winithm.Core.Managers
         ComboPrefixSum[i] = runningCombo;
       }
 
-      if (prevExpectedEndCloseBeat != ExpectedEndCloseBeat || prevWindowEndBeat != WindowData.EndBeat)
+      if (prevExpectedEndCloseBeat != ExpectedEndCloseBeat || prevWindowEndBeat != _windowData.EndBeat)
         OnLifeCycleChanged?.Invoke(this);
     }
 
@@ -272,9 +296,9 @@ namespace Winithm.Core.Managers
     {
       if (!_noteSideMap.TryGetValue(note, out var side)) return;
 
-      var list = NoteCollection[side];
+      var list = _noteCollection[side];
       list.Remove(note);
-      int index = FindAddIndex(list, note);
+      int index = FindAddIndex(side, note);
       list.Insert(index, note);
 
       RequestRecompute();
@@ -290,13 +314,13 @@ namespace Winithm.Core.Managers
 
     public int AddNote(NoteSide side, NoteData note)
     {
-      if (!NoteCollection.TryGetValue(side, out var list))
+      if (!_noteCollection.TryGetValue(side, out var list))
       {
         list = new List<NoteData>();
-        NoteCollection[side] = list;
+        _noteCollection[side] = list;
       }
 
-      int index = FindAddIndex(list, note);
+      int index = FindAddIndex(side, note);
       list.Insert(index, note);
 
       SubscribeChangeEvent(side, note);
@@ -322,12 +346,12 @@ namespace Winithm.Core.Managers
 
     public bool RemoveNote(NoteSide side, NoteData note)
     {
-      if (!NoteCollection.TryGetValue(side, out var list)) return false;
+      if (!_noteCollection.TryGetValue(side, out var list)) return false;
       if (!list.Remove(note)) return false;
 
       UnsubscribeChangeEvent(note);
 
-      if (list.Count == 0) NoteCollection.Remove(side);
+      if (list.Count == 0) _noteCollection.Remove(side);
       RequestRecompute();
       NotifyChanged();
 
@@ -367,7 +391,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return false;
 
-      if (!NoteCollection.TryGetValue(side, out var list)) return false;
+      if (!_noteCollection.TryGetValue(side, out var list)) return false;
 
       var toRemove = list.FindAll(x => x.ID == id);
       if (toRemove.Count == 0) return false;
@@ -375,7 +399,7 @@ namespace Winithm.Core.Managers
       foreach (var note in toRemove) UnsubscribeChangeEvent(note);
       list.RemoveAll(x => x.ID == id);
 
-      if (list.Count == 0) NoteCollection.Remove(side);
+      if (list.Count == 0) _noteCollection.Remove(side);
       RequestRecompute();
       NotifyChanged();
 
@@ -397,11 +421,11 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return false;
 
-      if (NoteCollection.Count == 0) return false;
+      if (_noteCollection.Count == 0) return false;
 
       BeginUpdate();
       bool anySuccess = false;
-      foreach (var side in NoteCollection.Keys.ToList())
+      foreach (var side in _noteCollection.Keys.ToList())
       {
         if (RemoveNote(side, id)) anySuccess = true;
       }
@@ -425,7 +449,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      if (!NoteCollection.TryGetValue(side, out var notes)) return null;
+      if (!_noteCollection.TryGetValue(side, out var notes)) return null;
 
       var result = notes.FirstOrDefault((n) => n.ID == id);
 
@@ -450,7 +474,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      foreach (var pair in NoteCollection)
+      foreach (var pair in _noteCollection)
       {
         var note = pair.Value.Find(n => n.ID == id);
         if (note != null) return note;
@@ -474,20 +498,22 @@ namespace Winithm.Core.Managers
 
     public IReadOnlyList<NoteData> GetSideNotes(NoteSide side)
     {
-      if (NoteCollection.TryGetValue(side, out var notes)) return notes;
+      if (_noteCollection.TryGetValue(side, out var notes)) return notes;
 
-      NoteCollection[side] = new List<NoteData>();
-      return NoteCollection[side];
+      _noteCollection[side] = new List<NoteData>();
+      return _noteCollection[side];
     }
 
-    public IReadOnlyDictionary<NoteSide, List<NoteData>> GetAllNotes() => NoteCollection;
+    public IReadOnlyDictionary<NoteSide, List<NoteData>> GetAllNotes() => _noteCollection;
 
     // ==========================================
     // Operations
     // ==========================================
 
-    public int FindAddIndex(List<NoteData> list, NoteData target)
+    public int FindAddIndex(NoteSide side, NoteData target)
     {
+      var list = GetSideNotes(side);
+
       if (list.Count == 0) return 0;
 
       int left = 0, right = list.Count - 1;

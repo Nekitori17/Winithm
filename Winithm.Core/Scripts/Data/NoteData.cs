@@ -45,7 +45,7 @@ namespace Winithm.Core.Data
     public int FakeType { get => _fakeType; set { if (_fakeType == value) return; _fakeType = value; OnInvalidate?.Invoke(this); } }
 
     private ResourcePack? _resourcePack;
-    public ResourcePack? ResourcePack { get => _resourcePack; set { if (_resourcePack.Equals(value)) return; _resourcePack = value; OnUpdated?.Invoke(this); } }
+    public ResourcePack? ResourcePack { get => _resourcePack; set { if (Nullable.Equals(_resourcePack, value)) return; _resourcePack = value; OnUpdated?.Invoke(this); } }
 
     public bool IsHittable => FakeType == 0;
     public bool IsMutedGhost => FakeType == 1;

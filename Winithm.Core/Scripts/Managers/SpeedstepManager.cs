@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Winithm.Core.Common;
@@ -19,9 +20,20 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages scroll speed segments and visual lane distances.
   /// </summary>
-  public class SpeedStepManager : IDeepCloneable<SpeedStepManager>
+  public class SpeedStepManager : 
+    IDeepCloneable<SpeedStepManager>, IEnumerable<SpeedStepData>
   {
     public event Action<SpeedStepManager> OnUpdated;
+
+    private List<SpeedStepData> _speedStepCollection = new List<SpeedStepData>();
+    private FrameCache _frameCache = new FrameCache();
+
+    public int Count => _speedStepCollection.Count;
+
+    public IEnumerator<SpeedStepData> GetEnumerator() => _speedStepCollection.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public SpeedStepData this[int index] => _speedStepCollection.ElementAtOrDefault(index);
 
     private int _updateLockCount = 0;
 
@@ -38,7 +50,7 @@ namespace Winithm.Core.Managers
       if (_updateLockCount > 0) _updateLockCount--;
       if (_updateLockCount == 0 && success)
       {
-        if (FrameCache != null) FrameCache.CachedBeat = double.NaN;
+        if (_frameCache != null) _frameCache.CachedBeat = double.NaN;
         OnUpdated?.Invoke(this);
       }
     }
@@ -47,13 +59,10 @@ namespace Winithm.Core.Managers
     {
       if (_updateLockCount == 0)
       {
-        if (FrameCache != null) FrameCache.CachedBeat = double.NaN;
+        if (_frameCache != null) _frameCache.CachedBeat = double.NaN;
         OnUpdated?.Invoke(this);
       }
     }
-
-    public List<SpeedStepData> SpeedStepCollection { get; private set; } = new List<SpeedStepData>();
-    public FrameCache FrameCache { get; private set; } = new FrameCache();
 
     public SpeedStepManager DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {
@@ -61,7 +70,7 @@ namespace Winithm.Core.Managers
 
       newSpeedStep.BeginUpdate();
 
-      foreach (var speedStep in SpeedStepCollection)
+      foreach (var speedStep in _speedStepCollection)
         newSpeedStep.AddSpeedStep(speedStep.DeepClone(objectFactory, offset));
 
       newSpeedStep.EndUpdate();
@@ -98,7 +107,7 @@ namespace Winithm.Core.Managers
     public int AddSpeedStep(SpeedStepData speedStep)
     {
       int index = FindAddIndex(speedStep);
-      SpeedStepCollection.Insert(index, speedStep);
+      _speedStepCollection.Insert(index, speedStep);
       SubscribeChangeSpeedSteps(speedStep);
 
       NotifyChanged();
@@ -122,7 +131,7 @@ namespace Winithm.Core.Managers
 
     public bool RemoveSpeedStep(SpeedStepData speedStep)
     {
-      if (!SpeedStepCollection.Remove(speedStep)) return false;
+      if (!_speedStepCollection.Remove(speedStep)) return false;
       UnSubscribeChangeSpeedSteps(speedStep);
 
       NotifyChanged();
@@ -148,11 +157,11 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return false;
       
-      var toRemove = SpeedStepCollection.FindAll(st => st.ID == id);
+      var toRemove = _speedStepCollection.FindAll(st => st.ID == id);
       if (toRemove.Count == 0) return false;
 
       foreach (var st in toRemove) UnSubscribeChangeSpeedSteps(st);
-      SpeedStepCollection.RemoveAll(x => x.ID == id);
+      _speedStepCollection.RemoveAll(x => x.ID == id);
 
       NotifyChanged();
       return true;
@@ -178,7 +187,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      var speedStep = SpeedStepCollection.FirstOrDefault(st => st.ID == id);
+      var speedStep = _speedStepCollection.FirstOrDefault(st => st.ID == id);
 
       if (speedStep == default) return null;
       return speedStep;
@@ -200,14 +209,14 @@ namespace Winithm.Core.Managers
 
     public SpeedStepData GetFirst()
     {
-      if (SpeedStepCollection.Count == 0) return null;
-      return SpeedStepCollection[0];
+      if (_speedStepCollection.Count == 0) return null;
+      return _speedStepCollection[0];
     }
 
     public SpeedStepData GetLast()
     {
-      if (SpeedStepCollection.Count == 0) return null;
-      return SpeedStepCollection[SpeedStepCollection.Count - 1];
+      if (_speedStepCollection.Count == 0) return null;
+      return _speedStepCollection[_speedStepCollection.Count - 1];
     }
 
     /// <summary>
@@ -215,42 +224,42 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void BakeFrameCache(double currentBeat)
     {
-      if (FrameCache == null || SpeedStepCollection.Count == 0) return;
+      if (_frameCache == null || _speedStepCollection.Count == 0) return;
 
       // Rebuild only when the beat has actually changed.
-      if (FrameCache.CachedBeat == currentBeat) return;
+      if (_frameCache.CachedBeat == currentBeat) return;
 
-      FrameCache.CachedBeat = currentBeat;
+      _frameCache.CachedBeat = currentBeat;
 
-      int n = SpeedStepCollection.Count;
-      if (FrameCache.PrefixDistance.Length < n)
-        FrameCache.PrefixDistance = new float[n];
+      int n = _speedStepCollection.Count;
+      if (_frameCache.PrefixDistance.Length < n)
+        _frameCache.PrefixDistance = new float[n];
 
       // Origin is at steps[0].Start
-      FrameCache.PrefixDistance[0] = 0f;
+      _frameCache.PrefixDistance[0] = 0f;
 
       for (int i = 1; i < n; i++)
       {
-        double segStart = SpeedStepCollection[i - 1].StartBeat.AbsoluteValue;
-        double segEnd = SpeedStepCollection[i].StartBeat.AbsoluteValue;
+        double segStart = _speedStepCollection[i - 1].StartBeat.AbsoluteValue;
+        double segEnd = _speedStepCollection[i].StartBeat.AbsoluteValue;
         double segLen = segEnd - segStart;
 
-        float speed = EvaluateSpeed(SpeedStepCollection[i - 1], currentBeat);
-        FrameCache.PrefixDistance[i] = FrameCache.PrefixDistance[i - 1] + speed * (float)segLen;
+        float speed = EvaluateSpeed(_speedStepCollection[i - 1], currentBeat);
+        _frameCache.PrefixDistance[i] = _frameCache.PrefixDistance[i - 1] + speed * (float)segLen;
       }
     }
 
     /// <summary>
     /// Returns the visual offset of targetBeat relative to currentBeat.
     /// </summary>
-    public float GetVisualOffset(double currentBeat, double targetBeat)
+    public float GetVisualOffset(double currentBeat, double targetBeat, bool forceRebuild = false)
     {
       if (Math.Abs(currentBeat - targetBeat) < 0.0001f) return 0f;
 
-      if (FrameCache == null) FrameCache = new FrameCache();
-      if (FrameCache.CachedBeat != currentBeat) BakeFrameCache(currentBeat);
+      if (_frameCache == null) _frameCache = new FrameCache();
+      if (_frameCache.CachedBeat != currentBeat && !forceRebuild) BakeFrameCache(currentBeat);
 
-      double laneStart = SpeedStepCollection.Count > 0 ? SpeedStepCollection[0].StartBeat.AbsoluteValue : 0.0;
+      double laneStart = _speedStepCollection.Count > 0 ? _speedStepCollection[0].StartBeat.AbsoluteValue : 0.0;
 
       // Clamp both ends to lane start — no visual meaning before spawn.
       double clampedCurrent = Math.Max(currentBeat, laneStart);
@@ -270,35 +279,35 @@ namespace Winithm.Core.Managers
     /// </summary>
     public float GetSpeedAt(double currentBeat, double beat)
     {
-      if (SpeedStepCollection == null || SpeedStepCollection.Count == 0) return 1f;
+      if (_speedStepCollection == null || _speedStepCollection.Count == 0) return 1f;
       int idx = FindStepIndex(beat);
-      return EvaluateSpeed(SpeedStepCollection[idx], currentBeat);
+      return EvaluateSpeed(_speedStepCollection[idx], currentBeat);
     }
 
     private float DistanceFromOrigin(double currentBeat, double beat)
     {
-      if (SpeedStepCollection.Count == 0) return 0f;
+      if (_speedStepCollection.Count == 0) return 0f;
 
-      double laneStart = SpeedStepCollection[0].StartBeat.AbsoluteValue;
+      double laneStart = _speedStepCollection[0].StartBeat.AbsoluteValue;
       if (beat <= laneStart) return 0f;
 
-      int n = SpeedStepCollection.Count;
+      int n = _speedStepCollection.Count;
 
       // Beat is past the last step — extend with last step's speed.
-      double lastStart = SpeedStepCollection[n - 1].StartBeat.AbsoluteValue;
+      double lastStart = _speedStepCollection[n - 1].StartBeat.AbsoluteValue;
       if (beat >= lastStart)
       {
         double tail = beat - lastStart;
-        float speed = EvaluateSpeed(SpeedStepCollection[n - 1], currentBeat);
-        return FrameCache.PrefixDistance[n - 1] + speed * (float)tail;
+        float speed = EvaluateSpeed(_speedStepCollection[n - 1], currentBeat);
+        return _frameCache.PrefixDistance[n - 1] + speed * (float)tail;
       }
 
       int idx = FindStepIndex(beat);
 
-      double segStart = SpeedStepCollection[idx].StartBeat.AbsoluteValue;
+      double segStart = _speedStepCollection[idx].StartBeat.AbsoluteValue;
       double tail2 = beat - segStart;
-      float speed2 = EvaluateSpeed(SpeedStepCollection[idx], currentBeat);
-      return FrameCache.PrefixDistance[idx] + speed2 * (float)tail2;
+      float speed2 = EvaluateSpeed(_speedStepCollection[idx], currentBeat);
+      return _frameCache.PrefixDistance[idx] + speed2 * (float)tail2;
     }
 
     private static float EvaluateSpeed(SpeedStepData step, double currentBeat)
@@ -308,13 +317,13 @@ namespace Winithm.Core.Managers
 
     public int FindAddIndex(SpeedStepData speedStep)
     {
-      if (SpeedStepCollection.Count == 0) return 0;
+      if (_speedStepCollection.Count == 0) return 0;
 
-      int left = 0, right = SpeedStepCollection.Count - 1;
+      int left = 0, right = _speedStepCollection.Count - 1;
       while (left <= right)
       {
         int mid = left + (right - left) / 2;
-        if (SpeedStepCollection[mid].StartBeat <= speedStep.StartBeat) left = mid + 1;
+        if (_speedStepCollection[mid].StartBeat <= speedStep.StartBeat) left = mid + 1;
         else right = mid - 1;
       }
       return left;
@@ -322,14 +331,14 @@ namespace Winithm.Core.Managers
 
     private int FindStepIndex(double targetBeat)
     {
-      if (SpeedStepCollection.Count == 0) return -1;
-      if (targetBeat < SpeedStepCollection[0].StartBeat.AbsoluteValue) return 0;
+      if (_speedStepCollection.Count == 0) return -1;
+      if (targetBeat < _speedStepCollection[0].StartBeat.AbsoluteValue) return 0;
 
-      int lo = 0, hi = SpeedStepCollection.Count - 1;
+      int lo = 0, hi = _speedStepCollection.Count - 1;
       while (lo < hi)
       {
         int mid = (lo + hi + 1) / 2;
-        if (SpeedStepCollection[mid].StartBeat.AbsoluteValue <= targetBeat) lo = mid;
+        if (_speedStepCollection[mid].StartBeat.AbsoluteValue <= targetBeat) lo = mid;
         else hi = mid - 1;
       }
       return lo;

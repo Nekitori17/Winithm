@@ -197,7 +197,7 @@ namespace Winithm.Core.Data
     private void BubbleStoryboard(StoryboardManager<StoryboardProperty> sb) => OnUpdated?.Invoke(this);
     private void BubbleSpeedStep(SpeedStepManager sd)
     {
-      if (SpeedSteps.SpeedStepCollection.Count == 0)
+      if (SpeedSteps.Count == 0)
       {
         StartBeat = BeatTime.Zero;
         EndBeat = BeatTime.Zero;

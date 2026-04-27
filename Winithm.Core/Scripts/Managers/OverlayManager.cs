@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Winithm.Core.Data;
@@ -8,7 +9,7 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages WindowData collections and monitors nested sub-manager changes.
   /// </summary>
-  public class OverlayManager
+  public class OverlayManager : IEnumerable<OverlayData>
   {
     public event Action<OverlayManager> OnUpdated;
 
@@ -16,7 +17,14 @@ namespace Winithm.Core.Managers
     /// <summary>
     /// Collection of overlays sorted by StartBeat.
     /// </summary>
-    public List<OverlayData> OverlayCollection { get; private set; } = new List<OverlayData>();
+    private List<OverlayData> _overlayCollection = new List<OverlayData>();
+    public int Count => _overlayCollection.Count;
+
+    public IEnumerator<OverlayData> GetEnumerator() => _overlayCollection.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    
+
+    public OverlayData this[int index] => _overlayCollection.ElementAtOrDefault(index);
 
     /// <summary>
     /// Prefix-max of EndBeatEndOut over overlayss for binary search.
@@ -69,13 +77,13 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void Compute()
     {
-      MaxEndBeats = new double[OverlayCollection.Count];
+      MaxEndBeats = new double[_overlayCollection.Count];
 
       double runningMax = double.MinValue;
 
-      for (int i = 0; i < OverlayCollection.Count; i++)
+      for (int i = 0; i < _overlayCollection.Count; i++)
       {
-        var overlay = OverlayCollection[i];
+        var overlay = _overlayCollection[i];
 
         runningMax = Math.Max(runningMax, overlay.EndBeat.AbsoluteValue);
         MaxEndBeats[i] = runningMax; 
@@ -113,8 +121,8 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void AddOverlay(OverlayData overlay)
     {
-      var idx = FindAddIndex(OverlayCollection, overlay);
-      OverlayCollection.Insert(idx, overlay);
+      var idx = FindAddIndex(_overlayCollection, overlay);
+      _overlayCollection.Insert(idx, overlay);
       SubscribeChangeEvent(overlay);
 
       RequestRecompute();
@@ -137,11 +145,11 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return false;
 
-      var overlay = OverlayCollection.FirstOrDefault(o => o.ID == id);
+      var overlay = _overlayCollection.FirstOrDefault(o => o.ID == id);
       if (overlay == default) return false;
 
       UnsubscribeChangeEvent(overlay);
-      OverlayCollection.Remove(overlay);
+      _overlayCollection.Remove(overlay);
 
       RequestRecompute();
       NotifyChanged();
@@ -168,7 +176,7 @@ namespace Winithm.Core.Managers
     {
       if (string.IsNullOrEmpty(id)) return null;
 
-      var result = OverlayCollection.FirstOrDefault(o => o.ID == id);
+      var result = _overlayCollection.FirstOrDefault(o => o.ID == id);
 
       if (result == default) return null;
 
@@ -186,14 +194,14 @@ namespace Winithm.Core.Managers
       return result;
     }
 
-    public IReadOnlyList<OverlayData> GetAllOverlays() => OverlayCollection;
+    public IReadOnlyList<OverlayData> GetAllOverlays() => _overlayCollection;
 
     /// <summary>
     /// Returns all windows sorted by layer for correct render order.
     /// </summary>
     public IReadOnlyList<OverlayData> GetOverlayByLayer()
     {
-      var overlays = new List<OverlayData>(OverlayCollection);
+      var overlays = new List<OverlayData>(_overlayCollection);
       overlays.Sort((a, b) => a.Layer.CompareTo(b.Layer));
       return overlays;
     }

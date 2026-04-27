@@ -1,6 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using Winithm.Core.Common;
+using System.Linq;
 using Winithm.Core.Data;
 
 namespace Winithm.Core.Managers
@@ -16,11 +17,25 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages active component data and tracks property changes.
   /// </summary>
-  public class ComponentManager
+  public class ComponentManager : IEnumerable<KeyValuePair<ComponentType, ComponentData>>
   {
     public event Action<ComponentManager> OnUpdated;
 
-    public Dictionary<ComponentType, ComponentData> ComponentDictionary { get; private set; } = new Dictionary<ComponentType, ComponentData>();
+    private Dictionary<ComponentType, ComponentData> _componentDictionary = 
+    new Dictionary<ComponentType, ComponentData>();
+
+    public int Count => _componentDictionary.Count;
+
+    public IEnumerator<KeyValuePair<ComponentType, ComponentData>> GetEnumerator() => _componentDictionary.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => _componentDictionary.GetEnumerator();
+    
+    public ComponentData this[ComponentType type] => _componentDictionary.TryGetValue(type, out var c) ? c : null;
+    public ComponentData this[int index] => Enumerable.ElementAtOrDefault(_componentDictionary.Values, index);
+
+    public ICollection<ComponentType> Keys => _componentDictionary.Keys;
+    public ICollection<ComponentData> Values => _componentDictionary.Values;
+    
+    public bool TryGetValue(ComponentType type, out ComponentData data) => _componentDictionary.TryGetValue(type, out data);
 
     public ComponentManager()
     {
@@ -62,17 +77,17 @@ namespace Winithm.Core.Managers
 
     public void SetComponent(ComponentType type, ComponentData compData)
     {
-      if (ComponentDictionary.TryGetValue(type, out var comp))
+      if (_componentDictionary.TryGetValue(type, out var comp))
       {
         UnsubscribeChangeEvent(comp);
       }
 
-      ComponentDictionary[type] = compData;
+      _componentDictionary[type] = compData;
       SubscribeChangeEvent(compData);
 
       NotifyChanged();
     }
 
-    public ComponentData GetComponent(ComponentType type) => ComponentDictionary[type];
+    public ComponentData GetComponent(ComponentType type) => _componentDictionary[type];
   }
 }

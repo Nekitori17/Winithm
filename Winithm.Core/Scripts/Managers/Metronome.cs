@@ -1,17 +1,35 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Winithm.Core.Data;
 using Winithm.Core.Common;
-using System;
-using System.Linq;
 
 namespace Winithm.Core.Managers
 {
   /// <summary>
   /// Manages BPM changes and converts between time and beats.
   /// </summary>
-  public class Metronome
+  public class Metronome : IEnumerable<BPMStop>
   {
     public event Action<Metronome> OnUpdated;
+
+    public BaseBPM BaseBPM { get; private set; } = new BaseBPM
+    {
+      BaseOffsetSeconds = 0,
+      InitialBPM = 120,
+      TimeSignature = 4
+    };
+    private List<BPMStop> _bPMStops = new List<BPMStop>();
+
+    public int Count => _bPMStops.Count;
+    public IEnumerator<BPMStop> GetEnumerator() => _bPMStops.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public BPMStop this[int index] => _bPMStops.ElementAtOrDefault(index);
+
+    public float LowestBPM = float.MaxValue;
+    public float HightestBPM = float.MinValue;
 
     private int _updateLockCount = 0;
     private int _minRecalculateIdx = int.MaxValue;
@@ -60,18 +78,6 @@ namespace Winithm.Core.Managers
       }
     }
 
-    public BaseBPM BaseBPM { get; private set; } = new BaseBPM
-    {
-      BaseOffsetSeconds = 0,
-      InitialBPM = 120,
-      TimeSignature = 4
-    };
-    public List<BPMStop> BPMStops { get; private set; } = new List<BPMStop>();
-
-    public int StopCount => BPMStops.Count;
-    public float LowestBPM = float.MaxValue;
-    public float HightestBPM = float.MinValue;
-
     public Metronome()
     {
       BaseBPM.OnInvalidate += (bb) => { RequestRecalculate(0); NotifyChanged(); };
@@ -87,9 +93,9 @@ namespace Winithm.Core.Managers
     {
       if (index < 0) index = 0;
 
-      for (int i = index; i < BPMStops.Count; i++)
+      for (int i = index; i < _bPMStops.Count; i++)
       {
-        var curr = BPMStops[i];
+        var curr = _bPMStops[i];
 
         if (i == 0)
         {
@@ -98,7 +104,7 @@ namespace Winithm.Core.Managers
         }
         else
         {
-          var prev = BPMStops[i - 1];
+          var prev = _bPMStops[i - 1];
           double beatDiff = curr.StartBeat.AbsoluteValue - prev.StartBeat.AbsoluteValue;
           curr.StartTimeSeconds = prev.StartTimeSeconds + (beatDiff / prev.BeatsPerSecond);
         }
@@ -108,16 +114,16 @@ namespace Winithm.Core.Managers
     }
 
     /// <summary>
-    /// Recomputes LowestBPM and HightestBPM by scanning BaseBPM and all BPMStops.
+    /// Recomputes LowestBPM and HightestBPM by scanning BaseBPM and all _bPMStops.
     /// </summary>
     private void RecalculateBPMRange()
     {
       LowestBPM = BaseBPM.InitialBPM;
       HightestBPM = BaseBPM.InitialBPM;
 
-      for (int i = 0; i < BPMStops.Count; i++)
+      for (int i = 0; i < _bPMStops.Count; i++)
       {
-        float bpm = BPMStops[i].BPM;
+        float bpm = _bPMStops[i].BPM;
         if (bpm < LowestBPM) LowestBPM = bpm;
         if (bpm > HightestBPM) HightestBPM = bpm;
       }
@@ -158,7 +164,7 @@ namespace Winithm.Core.Managers
     public int AddBPMStop(BPMStop bPMStop)
     {
       int idx = FindAddIndex(bPMStop);
-      BPMStops.Insert(idx, bPMStop);
+      _bPMStops.Insert(idx, bPMStop);
       SubscribeChangeBPMStops(bPMStop);
 
       RequestRecalculate(idx);
@@ -184,10 +190,10 @@ namespace Winithm.Core.Managers
 
     public bool RemoveBPMStop(BPMStop bPMStop)
     {
-      int idx = BPMStops.IndexOf(bPMStop);
+      int idx = _bPMStops.IndexOf(bPMStop);
       if (idx == -1) return false;
 
-      BPMStops.RemoveAt(idx);
+      _bPMStops.RemoveAt(idx);
       UnSubscribeChangeBPMStops(bPMStop);
       
       RequestRecalculate(idx);
@@ -211,18 +217,6 @@ namespace Winithm.Core.Managers
       return removedCount;
     }
     
-    public float GetBPMAtBeat(double beat)
-    {
-      int idx = FindStopIndex(beat);
-      return idx == -1 ? BaseBPM.InitialBPM : BPMStops[idx].BPM;
-    }
-
-    public int GetTimeSignatureAtBeat(double beat)
-    {
-      int idx = FindStopIndex(beat);
-      return idx == -1 ? BaseBPM.TimeSignature : BPMStops[idx].TimeSignature;
-    }
-
     private void HandleStartBeatChanged(BPMStop bPMStop)
     {
       RemoveBPMStop(bPMStop);
@@ -231,7 +225,7 @@ namespace Winithm.Core.Managers
 
     private void HandleInvalidate(BPMStop bPMStop)
     {
-      int idx = BPMStops.IndexOf(bPMStop);
+      int idx = _bPMStops.IndexOf(bPMStop);
       if (idx == -1) return;
 
       RequestRecalculate(idx);
@@ -249,9 +243,21 @@ namespace Winithm.Core.Managers
         return BaseBPM.BaseOffsetSeconds + (beat / BaseBPM.BeatsPerSecond);
       }
 
-      var stop = BPMStops[idx];
+      var stop = _bPMStops[idx];
       double deltaBeat = beat - stop.StartBeat.AbsoluteValue;
       return stop.StartTimeSeconds + (deltaBeat / stop.BeatsPerSecond);
+    }
+
+    public float GetBPMAtBeat(double beat)
+    {
+      int idx = FindStopIndex(beat);
+      return idx == -1 ? BaseBPM.InitialBPM : _bPMStops[idx].BPM;
+    }
+
+    public int GetTimeSignatureAtBeat(double beat)
+    {
+      int idx = FindStopIndex(beat);
+      return idx == -1 ? BaseBPM.TimeSignature : _bPMStops[idx].TimeSignature;
     }
 
     public double ToBeat(double seconds)
@@ -264,7 +270,7 @@ namespace Winithm.Core.Managers
         return deltaSec * BaseBPM.BeatsPerSecond;
       }
 
-      var stop = BPMStops[idx];
+      var stop = _bPMStops[idx];
       double deltaSeconds = seconds - stop.StartTimeSeconds;
       return stop.StartBeat.AbsoluteValue + (deltaSeconds * stop.BeatsPerSecond);
     }
@@ -279,7 +285,7 @@ namespace Winithm.Core.Managers
     public double GetCurrentBPS(double seconds)
     {
       int idx = FindStopIndexByTime(seconds);
-      return idx == -1 ? BaseBPM.BeatsPerSecond : BPMStops[idx].BeatsPerSecond;
+      return idx == -1 ? BaseBPM.BeatsPerSecond : _bPMStops[idx].BeatsPerSecond;
     }
 
     /// <summary>
@@ -287,13 +293,13 @@ namespace Winithm.Core.Managers
     /// </summary>
     private int FindStopIndex(double beat)
     {
-      if (BPMStops.Count == 0 || beat < BPMStops[0].StartBeat.AbsoluteValue) return -1;
+      if (_bPMStops.Count == 0 || beat < _bPMStops[0].StartBeat.AbsoluteValue) return -1;
 
-      int lo = 0, hi = BPMStops.Count - 1;
+      int lo = 0, hi = _bPMStops.Count - 1;
       while (lo < hi)
       {
         int mid = (lo + hi + 1) / 2;
-        if (BPMStops[mid].StartBeat.AbsoluteValue <= beat) lo = mid;
+        if (_bPMStops[mid].StartBeat.AbsoluteValue <= beat) lo = mid;
         else hi = mid - 1;
       }
       return lo;
@@ -304,13 +310,13 @@ namespace Winithm.Core.Managers
     /// </summary>
     private int FindStopIndexByTime(double seconds)
     {
-      if (BPMStops.Count == 0 || seconds < BPMStops[0].StartTimeSeconds) return -1;
+      if (_bPMStops.Count == 0 || seconds < _bPMStops[0].StartTimeSeconds) return -1;
 
-      int lo = 0, hi = BPMStops.Count - 1;
+      int lo = 0, hi = _bPMStops.Count - 1;
       while (lo < hi)
       {
         int mid = (lo + hi + 1) / 2;
-        if (BPMStops[mid].StartTimeSeconds <= seconds) lo = mid;
+        if (_bPMStops[mid].StartTimeSeconds <= seconds) lo = mid;
         else hi = mid - 1;
       }
       return lo;
@@ -318,14 +324,14 @@ namespace Winithm.Core.Managers
 
     public int FindAddIndex(BPMStop bPMStop)
     {
-      if (BPMStops.Count == 0) return 0;
+      if (_bPMStops.Count == 0) return 0;
 
-      int left = 0, right = BPMStops.Count - 1;
+      int left = 0, right = _bPMStops.Count - 1;
       while (left <= right)
       {
         int mid = left + (right - left) / 2;
-        if (BPMStops[mid].StartBeat == bPMStop.StartBeat) return mid;
-        if (BPMStops[mid].StartBeat < bPMStop.StartBeat) left = mid + 1;
+        if (_bPMStops[mid].StartBeat == bPMStop.StartBeat) return mid;
+        if (_bPMStops[mid].StartBeat < bPMStop.StartBeat) left = mid + 1;
         else right = mid - 1;
       }
       return left;

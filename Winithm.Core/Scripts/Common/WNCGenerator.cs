@@ -35,10 +35,10 @@ namespace Winithm.Core.Common
       sb.AppendLine();
 
       // [OVERLAYS]
-      if (data.Overlays.OverlayCollection.Count > 0)
+      if (data.Overlays.Count > 0)
       {
         sb.AppendLine("[OVERLAYS]");
-        foreach (var overlay in data.Overlays.OverlayCollection)
+        foreach (var overlay in data.Overlays)
         {
           string initParams = "";
           foreach (var p in overlay.InitParams.OrderBy(kv => int.TryParse(kv.Key, out int i) ? i : int.MaxValue))
@@ -49,7 +49,7 @@ namespace Winithm.Core.Common
           sb.AppendLine($"  Affects UI: {ParserUtils.FormatIntBool(overlay.AffectsUI)}");
           sb.AppendLine($"  Layer: {overlay.Layer}");
           if (overlay.StoryboardEvents != null)
-            foreach (var kvp in overlay.StoryboardEvents.EventCollection)
+            foreach (var kvp in overlay.StoryboardEvents)
               foreach (var evt in kvp.Value)
                 sb.AppendLine(
                   StoryboardManager<string>
@@ -60,15 +60,15 @@ namespace Winithm.Core.Common
       }
 
       // [COMPONENTS]
-      if (data.Components.ComponentDictionary.Count > 0)
+      if (data.Components.Count > 0)
       {
         sb.AppendLine("[COMPONENTS]");
-        foreach (var comp in data.Components.ComponentDictionary)
+        foreach (var comp in data.Components)
         {
           sb.AppendLine($"* {comp.Key} {ParserUtils.FormatFloat(comp.Value.InitX)} {ParserUtils.FormatFloat(comp.Value.InitY)} {ParserUtils.FormatFloat(comp.Value.InitScale)} {ParserUtils.FormatFloat(comp.Value.InitAlpha)}");
 
           if (comp.Value.StoryboardEvents != null)
-            foreach (var kvp in comp.Value.StoryboardEvents.EventCollection)
+            foreach (var kvp in comp.Value.StoryboardEvents)
               foreach (var evt in kvp.Value)
                 sb.AppendLine(
                   StoryboardManager<StoryboardProperty>.GenerateEventLine(evt, kvp.Key, "")
@@ -78,15 +78,15 @@ namespace Winithm.Core.Common
       }
 
       // [THEME_CHANNELS]
-      if (data.ThemeChannels.ThemeChannelCollection.Count > 0)
+      if (data.ThemeChannels.Count > 0)
       {
         sb.AppendLine("[THEME_CHANNELS]");
-        foreach (var tc in data.ThemeChannels.ThemeChannelCollection.Values)
+        foreach (var tc in data.ThemeChannels.Values)
         {
           sb.AppendLine($"+ {tc.ID} {ParserUtils.FormatFloat(tc.InitR)} {ParserUtils.FormatFloat(tc.InitG)} {ParserUtils.FormatFloat(tc.InitB)} {ParserUtils.FormatFloat(tc.InitA)} {ParserUtils.FormatFloat(tc.InitNoteA)}");
           sb.AppendLine($"  Name: {tc.Name ?? ""}");
           if (tc.StoryboardEvents != null)
-            foreach (var kvp in tc.StoryboardEvents.EventCollection)
+            foreach (var kvp in tc.StoryboardEvents)
               foreach (var evt in kvp.Value)
                 sb.AppendLine(
                   StoryboardManager<StoryboardProperty>.GenerateEventLine(evt, kvp.Key, "")
@@ -96,16 +96,16 @@ namespace Winithm.Core.Common
       }
 
       // [GROUPS]
-      if (data.Groups.GroupCollection.Count > 0)
+      if (data.Groups.Count > 0)
       {
         sb.AppendLine("[GROUPS]");
-        foreach (var g in data.Groups.GroupCollection.Values)
+        foreach (var g in data.Groups.Values)
         {
           sb.AppendLine($"+ {g.ID} {ParserUtils.FormatFloat(g.InitX)} {ParserUtils.FormatFloat(g.InitY)} {ParserUtils.FormatFloat(g.InitScaleX)} {ParserUtils.FormatFloat(g.InitScaleY)} {ParserUtils.FormatFloat(g.InitRotation)}");
           sb.AppendLine($"  Name: {g.Name ?? ""}");
           sb.AppendLine($"  Group: {g.ParentGroupID ?? ""}");
           if (g.StoryboardEvents != null)
-            foreach (var kvp in g.StoryboardEvents.EventCollection)
+            foreach (var kvp in g.StoryboardEvents)
               foreach (var evt in kvp.Value)
                 sb.AppendLine(
                   StoryboardManager<StoryboardProperty>.GenerateEventLine(evt, kvp.Key, "")
@@ -115,10 +115,10 @@ namespace Winithm.Core.Common
       }
 
       // [WINDOWS]
-      if (data.Windows.WindowCollection.Count > 0)
+      if (data.Windows.Count > 0)
       {
         sb.AppendLine("[WINDOWS]");
-        foreach (var w in data.Windows.WindowCollection)
+        foreach (var w in data.Windows)
         {
           sb.AppendLine($"+ {w.ID} {ParserUtils.FormatFloat(w.InitX)} {ParserUtils.FormatFloat(w.InitY)} {ParserUtils.FormatFloat(w.InitScaleX)} {ParserUtils.FormatFloat(w.InitScaleY)} {ParserUtils.FormatFloat(w.InitR)} {ParserUtils.FormatFloat(w.InitG)} {ParserUtils.FormatFloat(w.InitB)} {ParserUtils.FormatFloat(w.InitA)} {ParserUtils.FormatFloat(w.InitNoteA)}");
           sb.AppendLine($"  Name: {w.Name ?? ""}");
@@ -131,23 +131,23 @@ namespace Winithm.Core.Common
 
           // Window-level storyboard events
           if (w.StoryboardEvents != null)
-            foreach (var kvp in w.StoryboardEvents.EventCollection)
+            foreach (var kvp in w.StoryboardEvents)
               foreach (var evt in kvp.Value)
                 sb.AppendLine(
                   StoryboardManager<StoryboardProperty>.GenerateEventLine(evt, kvp.Key, "")
                 );
 
           // Notes
-          foreach (var nss in w.Notes.NoteCollection)
+          foreach (var nss in w.Notes)
             foreach (var n in nss.Value)
               sb.AppendLine($"  # {n.ID} {n.Type} {n.StartBeat} {ParserUtils.FormatDouble(n.Length)} {ParserUtils.FormatFloat(n.X)} {ParserUtils.FormatFloat(n.Width)} {nss.Key} {n.FakeType}");
 
           // SpeedSteps
-          foreach (var ss in w.SpeedSteps.SpeedStepCollection)
+          foreach (var ss in w.SpeedSteps)
           {
             sb.AppendLine($"  | {ss.ID} {ss.StartBeat} {ParserUtils.FormatFloat(ss.Multiplier)}");
             if (ss.StoryboardEvents != null)
-              foreach (var kvp in ss.StoryboardEvents.EventCollection)
+              foreach (var kvp in ss.StoryboardEvents)
                 foreach (var evt in kvp.Value)
                   sb.AppendLine(
                     StoryboardManager<StoryboardProperty>.GenerateEventLine(evt, kvp.Key, "", 4)

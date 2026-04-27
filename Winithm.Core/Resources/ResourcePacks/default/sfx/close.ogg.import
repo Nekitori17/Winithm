@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/close.ogg-3358a93d5cf32c6472ab7061db895eb3.oggstr"
+
+[deps]
+
+source_file="res://Winithm.Core/Resources/ResourcePacks/default/sfx/close.ogg"
+dest_files=[ "res://.import/close.ogg-3358a93d5cf32c6472ab7061db895eb3.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

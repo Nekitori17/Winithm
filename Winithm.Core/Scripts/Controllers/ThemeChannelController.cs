@@ -16,7 +16,7 @@ namespace Winithm.Core.Controllers
     {
       _themeManager = manager ?? new ThemeChannelManager();
 
-      foreach (var tc in _themeManager.ThemeChannelCollection.Values)
+      foreach (var tc in _themeManager)
       {
         _lastStates[tc.ID] = (-1f, new Color(tc.InitR, tc.InitG, tc.InitB, tc.InitA), tc.InitNoteA);
       }
@@ -61,7 +61,7 @@ namespace Winithm.Core.Controllers
     )
     {
       if (tc.StoryboardEvents == null 
-        || !tc.StoryboardEvents.EventCollection.TryGetValue(prop, out var events)
+        || !tc.StoryboardEvents.TryGetValue(prop, out var events)
       ) return defaultValue;
 
       return tc.StoryboardEvents.Evaluate(prop, beat, new AnyValue(defaultValue), _force).X;
