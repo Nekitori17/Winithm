@@ -97,7 +97,7 @@ namespace Winithm.Core.Managers
       {
         var window = _windowCollection[i];
         
-        runningMax = Math.Max(runningMax, window.EndBeatEndOut);
+        runningMax = Math.Max(runningMax, window.EndOutEndBeat);
         MaxEndBeats[i] = runningMax;
 
         runningCombo += window.Notes.TotalComboCount;

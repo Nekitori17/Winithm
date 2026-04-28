@@ -102,10 +102,12 @@ namespace Winithm.Core.Data
     /// <summary>
     /// Pre-computed animation timestamps.
     /// </summary>
-    public double EndBeatStartIn = double.NaN;
-    public double EndBeatEndOut = double.NaN;
-    public double StartBeatEndOut = double.NaN;
-    public double EndBeatUnresponsive = double.NaN;
+    public double StartInStartBeat = double.NaN;
+    public double StartInEndBeat = double.NaN;
+    public double EndOutStartBeat = double.NaN;
+    public double EndOutEndBeat = double.NaN;
+    public double UnresponsiveStartBeat = double.NaN;
+    public double UnresponsiveEndBeat = double.NaN;
 
     public WindowData()
     {
@@ -127,8 +129,11 @@ namespace Winithm.Core.Data
       double startBeatInSecs = metronome.ToSeconds(StartBeat);
       double endBeatInSecs = metronome.ToSeconds(EndBeat);
 
-      EndBeatStartIn = metronome.ToBeat(startBeatInSecs + 0.2);
-      EndBeatEndOut = metronome.ToBeat(endBeatInSecs + 0.2);
+      StartInStartBeat = StartBeat.AbsoluteValue;
+      StartInEndBeat = metronome.ToBeat(startBeatInSecs + 0.2);
+
+      EndOutStartBeat = EndBeat.AbsoluteValue;
+      EndOutEndBeat = metronome.ToBeat(endBeatInSecs + 0.2);
     }
 
     /// <summary>
@@ -139,9 +144,10 @@ namespace Winithm.Core.Data
     {
       double endBeatInSecs = metronome.ToSeconds(EndBeat);
 
-      EndBeatUnresponsive = metronome.ToBeat(endBeatInSecs + 0.2);
-      StartBeatEndOut = metronome.ToBeat(endBeatInSecs + 1);
-      EndBeatEndOut = metronome.ToBeat(endBeatInSecs + 1.2);
+      UnresponsiveStartBeat = EndBeat.AbsoluteValue;
+      UnresponsiveEndBeat = metronome.ToBeat(endBeatInSecs + 0.2);
+      EndOutStartBeat = metronome.ToBeat(endBeatInSecs + 1);
+      EndOutEndBeat = metronome.ToBeat(endBeatInSecs + 1.2);
     }
 
     public WindowData DeepClone(ObjectFactory objectFactory, BeatTime? offset)
