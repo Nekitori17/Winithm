@@ -331,7 +331,7 @@ namespace Winithm.Core.Controllers
     {
       Note noteVisual = _notePool.Get();
 
-      Control parentLayer = (note.Type == NoteType.Focus)
+      Node2D parentLayer = (note.Type == NoteType.Focus)
         ? state.WindowVisual.FocusNoteLayer
         : state.WindowVisual.NoteLayer;
 
@@ -440,32 +440,32 @@ namespace Winithm.Core.Controllers
       switch (side)
       {
         case NoteSide.Bottom:
-          noteVisual.RectPosition = new Vector2(
+          noteVisual.Position = new Vector2(
             windowSize.x * lateralPosition,
             windowSize.y - headOffsetPx
           );
-          noteVisual.RectRotation = 0f;
+          noteVisual.RotationDegrees = 0f;
           break;
         case NoteSide.Top:
-          noteVisual.RectPosition = new Vector2(
+          noteVisual.Position = new Vector2(
             windowSize.x * lateralPosition,
             headOffsetPx
           );
-          noteVisual.RectRotation = 180f;
+          noteVisual.RotationDegrees = 180f;
           break;
         case NoteSide.Right:
-          noteVisual.RectPosition = new Vector2(
+          noteVisual.Position = new Vector2(
             windowSize.x - headOffsetPx,
             windowSize.y * lateralPosition
           );
-          noteVisual.RectRotation = -90f;
+          noteVisual.RotationDegrees = -90f;
           break;
         case NoteSide.Left:
-          noteVisual.RectPosition = new Vector2(
+          noteVisual.Position = new Vector2(
             headOffsetPx,
             windowSize.y * lateralPosition
           );
-          noteVisual.RectRotation = 90f;
+          noteVisual.RotationDegrees = 90f;
           break;
       }
 

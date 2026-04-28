@@ -6,7 +6,7 @@ using Winithm.Core.Managers;
 
 namespace Winithm.Core.Behaviors
 {
-  public class Note : Control, IPoolable
+  public class Note : Node2D, IPoolable
   {
     // --- Dirty tracking ---
     // Stores the last state to avoid redundant visual updates (dirty tracking)
@@ -18,16 +18,16 @@ namespace Winithm.Core.Behaviors
     private NoteState _lastState = new NoteState();
 
     // --- Child references (assigned in _Ready) ---
-    // References to UI nodes assigned during initialization
-    private Control _headContainer;
-    private TextureRect _headLeft;
-    private TextureRect _headCenter;
-    private TextureRect _headRight;
-    private TextureRect _headOverlay;
-    private Control _bodyContainer;
-    private TextureRect _bodyLeft;
-    private TextureRect _bodyCenter;
-    private TextureRect _bodyRight;
+    // References to scene nodes assigned during initialization
+    private Node2D _headContainer;
+    private Sprite _headLeft;
+    private Sprite _headCenter;
+    private Sprite _headRight;
+    private Sprite _headOverlay;
+    private Node2D _bodyContainer;
+    private Sprite _bodyLeft;
+    private Sprite _bodyCenter;
+    private Sprite _bodyRight;
 
     // --- Properties set by NoteManager ---
     // Configurable properties typically managed by NoteManager
@@ -45,16 +45,16 @@ namespace Winithm.Core.Behaviors
     // Initialize node references and perform initial visual update
     public override void _Ready()
     {
-      _headContainer = GetNode<Control>("Head");
-      _headLeft = GetNode<TextureRect>("Head/Left");
-      _headCenter = GetNode<TextureRect>("Head/Center");
-      _headRight = GetNode<TextureRect>("Head/Right");
-      _headOverlay = GetNode<TextureRect>("Head/CenterOverlay");
+      _headContainer = GetNode<Node2D>("Head");
+      _headLeft = GetNode<Sprite>("Head/Left");
+      _headCenter = GetNode<Sprite>("Head/Center");
+      _headRight = GetNode<Sprite>("Head/Right");
+      _headOverlay = GetNode<Sprite>("Head/CenterOverlay");
 
-      _bodyContainer = GetNode<Control>("Body");
-      _bodyLeft = GetNode<TextureRect>("Body/Left");
-      _bodyCenter = GetNode<TextureRect>("Body/Center");
-      _bodyRight = GetNode<TextureRect>("Body/Right");
+      _bodyContainer = GetNode<Node2D>("Body");
+      _bodyLeft = GetNode<Sprite>("Body/Left");
+      _bodyCenter = GetNode<Sprite>("Body/Center");
+      _bodyRight = GetNode<Sprite>("Body/Right");
 
       UpdateVisual();
     }
@@ -142,22 +142,20 @@ namespace Winithm.Core.Behaviors
       if (headDirty)
       {
         // Update head component layout
-        _headContainer.RectSize = new Vector2(headW, headH);
-        _headContainer.RectPosition = new Vector2(-headW / 2f, -headH);
-        _headContainer.RectPivotOffset = new Vector2(headW / 2f, headH);
+        _headContainer.Position = new Vector2(-headW / 2f, -headH);
 
-        _headLeft.RectSize = new Vector2(headH, headH);
-        _headLeft.RectPosition = new Vector2(0f, 0f);
+        _headLeft.Scale = PixelScale(_headLeft, headH, headH);
+        _headLeft.Position = new Vector2(0f, 0f);
 
-        _headCenter.RectSize = new Vector2(headCW, headH);
-        _headCenter.RectPosition = new Vector2(headH, 0f);
+        _headCenter.Scale = PixelScale(_headCenter, headCW, headH);
+        _headCenter.Position = new Vector2(headH, 0f);
 
-        _headRight.RectSize = new Vector2(headH, headH);
-        _headRight.RectPosition = new Vector2(headW - headH, 0f);
+        _headRight.Scale = PixelScale(_headRight, headH, headH);
+        _headRight.Position = new Vector2(headW - headH, 0f);
 
         float overlaySize = headH * NOTE_OVERLAY_RATIO;
-        _headOverlay.RectSize = new Vector2(overlaySize, overlaySize);
-        _headOverlay.RectPosition = new Vector2(headW / 2f - overlaySize / 2f, headH / 2f - overlaySize / 2f);
+        _headOverlay.Scale = PixelScale(_headOverlay, overlaySize, overlaySize);
+        _headOverlay.Position = new Vector2(headW / 2f - overlaySize / 2f, headH / 2f - overlaySize / 2f);
       }
 
       if (bodyDirty)
@@ -166,18 +164,16 @@ namespace Winithm.Core.Behaviors
         float bodyW = Math.Max(headW * BODY_TO_HEAD_RATIO, headH * 2f);
         float bodyCW = bodyW - headH * 2f;
 
-        _bodyContainer.RectSize = new Vector2(bodyW, BodyHeight);
-        _bodyContainer.RectPosition = new Vector2(-bodyW / 2f, -BodyHeight - headH);
-        _bodyContainer.RectPivotOffset = new Vector2(bodyW / 2f, BodyHeight);
+        _bodyContainer.Position = new Vector2(-bodyW / 2f, -BodyHeight - headH);
 
-        _bodyLeft.RectSize = new Vector2(headH, BodyHeight);
-        _bodyLeft.RectPosition = new Vector2(0f, 0f);
+        _bodyLeft.Scale = PixelScale(_bodyLeft, headH, BodyHeight);
+        _bodyLeft.Position = new Vector2(0f, 0f);
 
-        _bodyCenter.RectSize = new Vector2(bodyCW, BodyHeight);
-        _bodyCenter.RectPosition = new Vector2(headH, 0f);
+        _bodyCenter.Scale = PixelScale(_bodyCenter, bodyCW, BodyHeight);
+        _bodyCenter.Position = new Vector2(headH, 0f);
 
-        _bodyRight.RectSize = new Vector2(headH, BodyHeight);
-        _bodyRight.RectPosition = new Vector2(bodyW - headH, 0f);
+        _bodyRight.Scale = PixelScale(_bodyRight, headH, BodyHeight);
+        _bodyRight.Position = new Vector2(bodyW - headH, 0f);
       }
 
       // Save current state for next dirty check
@@ -185,6 +181,18 @@ namespace Winithm.Core.Behaviors
       _lastState.Width = Width;
       _lastState.NoteSize = NoteSize;
       _lastState.BodyHeight = BodyHeight;
+    }
+
+    // Converts desired pixel dimensions to a scale vector relative to the sprite's texture size
+    private static Vector2 PixelScale(Sprite sprite, float pixelW, float pixelH)
+    {
+      Texture tex = sprite.Texture;
+      if (tex == null) return Vector2.One;
+      Vector2 size = tex.GetSize();
+      return new Vector2(
+        size.x > 0 ? pixelW / size.x : 1f,
+        size.y > 0 ? pixelH / size.y : 1f
+      );
     }
   }
 }
