@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Winithm.Core.Behaviors;
 using Winithm.Core.Common;
 using Winithm.Core.Data;
-using Winithm.Core.Logic;
+using Winithm.Core.Managers;
 
 namespace Winithm.Core.Controllers
 {
@@ -11,11 +11,13 @@ namespace Winithm.Core.Controllers
   public class WindowController : Node
   {
 
-    protected TimeManager _timeManager;
-    protected GroupManager _groupManager;
-    protected ThemeChannelManager _themeManager;
-    protected NoteManager _noteManager;
+    protected AudioController _audioController;
+    protected GroupController _groupController;
+    protected ThemeChannelController _themeController;
+    protected NoteController _noteController;
+    protected WindowManager _windowManager;
 
+    private Control _playfield;
     private PackedScene _windowScene;
 
     [Export] public Vector2 ScreenSize = new Vector2(1280, 720);
@@ -26,70 +28,50 @@ namespace Winithm.Core.Controllers
 
     [Export] public float FocusablePulseFrequency = 10f;
 
-    private List<WindowData> _windowDataList = new List<WindowData>();
-    private Dictionary<string, Window> _activeWindows = new Dictionary<string, Window>();
+    private class WindowState
+    {
+      public Window Visual;
+      public WindowData Data;
+      public ulong FrameSessionToken = 0;
+    }
 
-    private Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>> _cursors
-      = new Dictionary<string, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>>();
+    private Dictionary<string, WindowState> _windowStates = new Dictionary<string, WindowState>();
 
-    private float _lastUpdateBeat = -1f;
+    private double _lastUpdateBeat = -1f;
+    private int _renderCursor = 0;
+    private ulong _frameSessionToken = 1;
 
-    private ObjectPool<Window> _windowPool;
+    private NodePool<Window> _windowPool;
 
-    public override void _Ready()
+    public WindowController(
+      Control playfield,
+      WindowManager windowManager,
+      AudioController audioController,
+      GroupController groupController,
+      ThemeChannelController themeController,
+      NoteController noteController
+    )
     {
       if (_windowScene == null)
         _windowScene = GD.Load<PackedScene>("res://Winithm.Core/Resources/Sprites/Window.tscn");
 
+      _playfield = playfield;
       _windowPool = new NodePool<Window>(this, _windowScene);
+
+      _audioController = audioController;
+      _groupController = groupController;
+      _themeController = themeController;
+      _noteController = noteController;
+      _windowManager = windowManager;
+
+      _windowStates.Clear();
+      _renderCursor = 0;
+      _frameSessionToken = 0;
+      _lastUpdateBeat = -1f;
     }
 
-    public void InjectManagers(
-      TimeManager timeManager,
-      GroupManager groupManager,
-      ThemeChannelManager themeManager,
-      NoteManager noteManager
-    )
+    public void Update(double currentBeat)
     {
-      _timeManager = timeManager;
-      _groupManager = groupManager;
-      _themeManager = themeManager;
-      _noteManager = noteManager;
-    }
-
-    public void LoadWindows(List<WindowData> windows)
-    {
-      foreach (var window in _activeWindows.Values)
-      {
-        _windowPool.Release(window);
-      }
-      _activeWindows.Clear();
-      _cursors.Clear();
-
-      _windowDataList = windows ?? new List<WindowData>();
-
-      foreach (var wd in _windowDataList)
-      {
-        // Pre-compute ms timestamps from Metronome
-        if (_timeManager != null)
-        {
-          wd.PreComputeAnimation(_timeManager.Metronome);
-        }
-
-        var propCursors = new Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor>();
-        if (wd.StoryboardEvents != null)
-        {
-          foreach (var prop in wd.StoryboardEvents.Keys)
-            propCursors[prop] = new StoryboardEvaluator.Cursor();
-        }
-        _cursors[wd.ID] = propCursors;
-      }
-    }
-
-    public void Update()
-    {
-      if (_timeManager == null || _windowDataList == null) return;
-      float currentBeat = _timeManager.CurrentBeat;
       if (_lastUpdateBeat == currentBeat) return;
 
       ForceUpdate(currentBeat, false);
@@ -97,188 +79,274 @@ namespace Winithm.Core.Controllers
       _lastUpdateBeat = currentBeat;
     }
 
-    public void ForceUpdate(float currentBeat, bool _force = true)
+    public void ForceUpdate(double currentBeat, bool _force = true)
     {
-      if (_timeManager == null || _windowDataList == null) return;
-      float currentBPS = _timeManager.GetCurrentBPS();
+      if (_audioController == null || _windowManager == null) return;
 
-      foreach (var wd in _windowDataList)
+      bool isBackward = currentBeat < _lastUpdateBeat;
+      var maxEnds = _windowManager.MaxEndBeats;
+      int windowCount = _windowManager.Count;
+
+      _frameSessionToken++;
+
+      if (isBackward)
       {
-        float lifeCycleScale = CalculateLifeCycleScale(wd, currentBeat, currentBPS);
+        _renderCursor = FindRenderCursor(maxEnds, currentBeat);
+      }
+      else
+      {
+        while (_renderCursor < windowCount && maxEnds[_renderCursor] < currentBeat)
+        {
+          _renderCursor++;
+        }
+      }
+
+      for (int i = _renderCursor; i < windowCount; i++)
+      {
+        var windowData = _windowManager[i];
+
+        if (windowData.StartBeat.AbsoluteValue > currentBeat) break;
+
+        float lifeCycleScale = CalculateLifeCycleScale(windowData, currentBeat);
         bool shouldBeActive = lifeCycleScale > 0.001f;
 
-        bool isActive = _activeWindows.TryGetValue(wd.ID, out Window w);
-
-        if (!shouldBeActive && isActive)
+        bool isActive = _windowStates.TryGetValue(windowData.ID, out WindowState state);
+        if (!shouldBeActive)
         {
-          _windowPool.Release(w);
-          _activeWindows.Remove(wd.ID);
-          _noteManager.UnregisterWindow(wd.ID);
-
           continue;
         }
 
+
+        Window windowVisual;
         if (!isActive)
         {
           if (_windowScene == null) continue;
 
-          w = _windowPool.Get();
-          w.Name = string.IsNullOrEmpty(wd.ID) ? "Window" : wd.ID;
-          w.Pivot = wd.Anchor;
-          w.Title = wd.Title;
-          w.Borderless = wd.Borderless;
-          w.TitleBarColor = TitleBarColor;
-          w.TitleTextColor = TitleTextColor;
+          windowVisual = _windowPool.Get();
+          windowVisual.Name = string.IsNullOrEmpty(windowData.ID) ? "Window" : windowData.ID;
+          windowVisual.Pivot = windowData.Anchor;
+          windowVisual.Title = windowData.Title;
+          windowVisual.Borderless = windowData.Borderless;
+          windowVisual.TitleBarColor = TitleBarColor;
+          windowVisual.TitleTextColor = TitleTextColor;
 
-          _activeWindows[wd.ID] = w;
-          _noteManager.RegisterWindow(wd.ID, wd, w);
+          state = new WindowState { Visual = windowVisual, Data = windowData };
 
-          if (w.GetParent() != this)
+          _windowStates[windowData.ID] = state;
+          _noteController.RegisterWindow(windowData.ID, windowData, windowVisual);
+
+          if (windowVisual.GetParent() != _playfield)
           {
-            w.GetParent()?.RemoveChild(w);
-            AddChild(w);
+            windowVisual.GetParent()?.RemoveChild(windowVisual);
+            _playfield.AddChild(windowVisual);
           }
 
-          MoveChild(w, wd.Layer);
+          windowVisual.ZIndex = windowData.Layer;
+        }
+        else
+        {
+          windowVisual = state.Visual;
         }
 
-        var cursors = _cursors[wd.ID];
+        state.FrameSessionToken = _frameSessionToken;
 
-        float x = EvaluateProperty(wd, StoryboardProperty.X, currentBeat, wd.InitX, cursors);
-        float y = EvaluateProperty(wd, StoryboardProperty.Y, currentBeat, wd.InitY, cursors);
-        float scaleX = EvaluateProperty(wd, StoryboardProperty.ScaleX, currentBeat, wd.InitScaleX, cursors);
-        float scaleY = EvaluateProperty(wd, StoryboardProperty.ScaleY, currentBeat, wd.InitScaleY, cursors);
+        float x = EvaluateProperty(
+          windowData, StoryboardProperty.X, currentBeat, windowData.InitX, _force
+        );
+        float y = EvaluateProperty(
+          windowData, StoryboardProperty.Y, currentBeat, windowData.InitY, _force
+        );
+        float scaleX = EvaluateProperty(
+          windowData, StoryboardProperty.ScaleX, currentBeat, windowData.InitScaleX, _force
+        );
+        float scaleY = EvaluateProperty(
+          windowData, StoryboardProperty.ScaleY, currentBeat, windowData.InitScaleY, _force
+        );
 
-        if (wd.StoryboardEvents != null && wd.StoryboardEvents.TryGetValue(StoryboardProperty.Title, out var titleEvents) && titleEvents.Count > 0)
+        if (windowData.StoryboardEvents != null && windowData.StoryboardEvents.TryGetValue(StoryboardProperty.Title, out var titleEvents) && titleEvents.Count > 0)
         {
-          var titleVal = StoryboardEvaluator.Evaluate(titleEvents, currentBeat, new AnyValue(wd.Title), GetCursor(cursors, StoryboardProperty.Title));
-          if (titleVal.Type == AnyValueType.String) w.Title = titleVal.StringValue;
+          var titleVal = windowData.StoryboardEvents.Evaluate(
+            StoryboardProperty.Title, currentBeat, new AnyValue(windowData.Title), _force
+          );
+          if (titleVal.Type == AnyValueType.String) windowVisual.Title = titleVal.StringValue;
         }
 
         float animScale = Mathf.Lerp(0.95f, 1.0f, lifeCycleScale);
 
         Vector2 finalPos = new Vector2(x, y);
         Vector2 finalScale = new Vector2(scaleX, scaleY) * animScale;
-        if (_groupManager != null && !string.IsNullOrEmpty(wd.GroupID))
+
+        if (_groupController != null && !string.IsNullOrEmpty(windowData.GroupID))
         {
           var gNode = _force ?
-            _groupManager.ForceGetGroupNode(wd.GroupID, currentBeat)
-            : _groupManager.GetGroupNode(wd.GroupID, currentBeat);
+            _groupController.ForceGetGroupNode(windowData.GroupID, currentBeat)
+            : _groupController.GetGroupNode(windowData.GroupID, currentBeat);
 
           if (gNode != null)
           {
-            // Calculate actual physical position based on Group's rotation, scale, and position (Orbiting)
             Transform2D gTrans = gNode.GlobalTransform;
             finalPos = gTrans * finalPos;
 
-            // Scale visually expands/shrinks the window dimensions (WindowBody)
             finalScale.x *= gNode.GlobalScale.x;
             finalScale.y *= gNode.GlobalScale.y;
           }
         }
 
-        w.RectPosition = finalPos;
-        w.RectRotation = 0f; // Window remains fully upright, bypassing structural tilt
-        w.WindowSize = finalScale;
+        windowVisual.Position = finalPos;
+        windowVisual.RotationDegrees = 0f;
+        windowVisual.WindowSize = finalScale;
 
-        Color finalWindowColor = w.WindowColor;
-        float finalNoteA = w.NoteOpacity;
+        Color finalWindowColor = windowVisual.WindowColor;
+        float finalNoteA = windowVisual.NoteOpacity;
 
-        if (_themeManager != null && !string.IsNullOrEmpty(wd.ThemeChannelID) && _themeManager.HasThemeChannel(wd.ThemeChannelID))
+        if (_themeController != null && !string.IsNullOrEmpty(windowData.ThemeChannelID) && _themeController.HasThemeChannel(windowData.ThemeChannelID))
         {
-          var themeColor = _themeManager.GetThemeColor(wd.ThemeChannelID, currentBeat, w.WindowColor);
-          finalWindowColor = themeColor.WindowColor;
-          finalNoteA = themeColor.NoteA;
+          var themeColor = _themeController.GetThemeColor(windowData.ThemeChannelID, currentBeat);
+          if (themeColor.HasValue)
+          {
+            finalWindowColor = themeColor.Value.WindowColor;
+            finalNoteA = themeColor.Value.NoteA;
+          }
         }
         else
         {
-          float r = EvaluateProperty(wd, StoryboardProperty.ColorR, currentBeat, wd.InitR, cursors);
-          float b = EvaluateProperty(wd, StoryboardProperty.ColorB, currentBeat, wd.InitB, cursors);
-          float g = EvaluateProperty(wd, StoryboardProperty.ColorG, currentBeat, wd.InitG, cursors);
-          float a = EvaluateProperty(wd, StoryboardProperty.ColorA, currentBeat, wd.InitA, cursors);
-          float noteA = EvaluateProperty(wd, StoryboardProperty.NoteA, currentBeat, wd.InitNoteA, cursors);
+          float r = EvaluateProperty(
+            windowData, StoryboardProperty.ColorR, currentBeat, windowData.InitR, _force
+          );
+          float g = EvaluateProperty(
+            windowData, StoryboardProperty.ColorG, currentBeat, windowData.InitG, _force
+          );
+          float b = EvaluateProperty(
+            windowData, StoryboardProperty.ColorB, currentBeat, windowData.InitB, _force
+          );
+          float a = EvaluateProperty(
+            windowData, StoryboardProperty.ColorA, currentBeat, windowData.InitA, _force
+          );
+          float noteA = EvaluateProperty(
+            windowData, StoryboardProperty.NoteA, currentBeat, windowData.InitNoteA, _force
+          );
 
           finalWindowColor = new Color(r, g, b, a);
           finalNoteA = noteA;
         }
 
-        w.WindowColor = finalWindowColor;
-        w.NoteOpacity = finalNoteA;
-        w.Modulate = new Color(1, 1, 1, lifeCycleScale);
+        windowVisual.WindowColor = finalWindowColor;
+        windowVisual.NoteOpacity = finalNoteA;
+        windowVisual.Modulate = new Color(1, 1, 1, lifeCycleScale);
 
-        w.ScreenSize = ScreenSize;
-        w.PlayerAreaSize = PlayerAreaSize;
+        windowVisual.ScreenSize = ScreenSize;
+        windowVisual.PlayerAreaSize = PlayerAreaSize;
 
-
-        if (wd.UnFocus)
-          AnimateFocusableOverlay(w, wd, currentBeat);
+        if (windowData.UnFocus)
+          AnimateFocusableOverlay(windowVisual, windowData, currentBeat);
         else
         {
-          w.UnFocusOverlayOpacity = 0f;
-          w.UnFocus = false;
+          windowVisual.UnFocusOverlayOpacity = 0f;
+          windowVisual.UnFocus = false;
         }
 
-        if (wd.Unresponsive)
-          AnimateUnresponsiveOverlay(w, wd, currentBeat);
+        if (windowData.Unresponsive)
+          AnimateUnresponsiveOverlay(windowVisual, windowData, currentBeat);
         else
         {
-          w.UnresponsiveOverlayOpacity = 0f;
-          w.IsNotRespondingTitle = false;
+          windowVisual.UnresponsiveOverlayOpacity = 0f;
+          windowVisual.IsNotRespondingTitle = false;
         }
 
-        w.UpdateVisual();
+        windowVisual.UpdateVisual();
+      }
+
+      CollectStaleWindows();
+    }
+
+    private void CollectStaleWindows()
+    {
+      var staleIds = new List<string>();
+      foreach (var kvp in _windowStates)
+      {
+        if (kvp.Value.FrameSessionToken != _frameSessionToken)
+        {
+          staleIds.Add(kvp.Key);
+        }
+      }
+
+      foreach (var id in staleIds)
+      {
+        _windowPool.Release(_windowStates[id].Visual);
+        _windowStates.Remove(id);
+        _noteController.UnregisterWindow(id);
       }
     }
 
-    private void AnimateFocusableOverlay(Window w, WindowData wd, float currentBeat)
+    private int FindRenderCursor(double[] maxEnds, double currentBeat)
     {
-      if (currentBeat < wd.FocusableStartBeat)
+      if (maxEnds == null || maxEnds.Length == 0) return 0;
+      int left = 0, right = maxEnds.Length - 1;
+      int best = maxEnds.Length;
+
+      while (left <= right)
       {
-        w.UnFocusOverlayOpacity = Window.UNFOCUS_OVERLAY_TINT;
-        w.UnFocus = true;
+        int mid = left + (right - left) / 2;
+        if (maxEnds[mid] >= currentBeat)
+        {
+          best = mid;
+          right = mid - 1;
+        }
+        else
+        {
+          left = mid + 1;
+        }
+      }
+      return best;
+    }
+
+    private void AnimateFocusableOverlay(
+      Window windowVisual, WindowData windowData, double currentBeat
+    )
+    {
+      if (currentBeat < windowData.FocusableStartBeat)
+      {
+        windowVisual.UnFocusOverlayOpacity = Window.UNFOCUS_OVERLAY_TINT;
+        windowVisual.UnFocus = true;
         return;
       }
-
-      // Focus pulse: deterministic sin wave based on beat for perfect scrub rendering
-      if (currentBeat >= wd.FocusableStartBeat && currentBeat <= wd.FocusableEndBeat)
-      {
-        float sinVal = Mathf.Sin(currentBeat * FocusablePulseFrequency * Mathf.Pi);
-        w.UnFocusOverlayOpacity = sinVal > 0 ? Window.UNFOCUS_OVERLAY_TINT : 0f;
-        w.UnFocus = true;
+      else if (currentBeat < windowData.FocusableEndBeat)
+      { // Focus pulse: deterministic sin wave based on beat for perfect scrub rendering
+        float sinVal = Mathf.Sin((float)currentBeat * FocusablePulseFrequency * Mathf.Pi);
+        windowVisual.UnFocusOverlayOpacity = sinVal > 0 ? Window.UNFOCUS_OVERLAY_TINT : 0f;
+        windowVisual.UnFocus = true;
       }
-      
-
-      if (currentBeat > wd.FocusableEndBeat)
+      else
       {
-        w.UnFocusOverlayOpacity = 0f;
-        w.UnFocus = false;
+        windowVisual.UnFocusOverlayOpacity = 0f;
+        windowVisual.UnFocus = false;
       }
     }
 
-    private void AnimateUnresponsiveOverlay(Window w, WindowData wd, float currentBeat)
+    private void AnimateUnresponsiveOverlay(
+      Window windowVisual, WindowData windowData, double currentBeat
+    )
     {
-      if (currentBeat < wd.EndBeat.AbsoluteValue)
+      if (currentBeat < windowData.UnresponsiveStartBeat)
       {
-        w.UnresponsiveOverlayOpacity = 0f;
-        w.IsNotRespondingTitle = false;
-        return;
+        windowVisual.UnresponsiveOverlayOpacity = 0f;
+        windowVisual.IsNotRespondingTitle = false;
       }
-
-      w.IsNotRespondingTitle = true;
-
-      if (currentBeat >= wd.EndBeatUnresponsive)
+      else if (currentBeat < windowData.UnresponsiveEndBeat)
       {
-        w.UnresponsiveOverlayOpacity = 1f;
-        return;
+        windowVisual.IsNotRespondingTitle = true;
+
+        double t =
+          (currentBeat - windowData.UnresponsiveStartBeat)
+          / (windowData.UnresponsiveEndBeat - windowData.UnresponsiveStartBeat);
+
+        windowVisual.UnresponsiveOverlayOpacity =
+          (float)EasingFunctions.Evaluate(EasingType.CubicOut, t);
       }
-
-      if (currentBeat >= wd.EndBeat.AbsoluteValue && currentBeat <= wd.EndBeatUnresponsive)
+      else
       {
-        float t =
-          (currentBeat - wd.EndBeat.AbsoluteValue)
-          / (wd.EndBeatUnresponsive - wd.EndBeat.AbsoluteValue);
-        w.UnresponsiveOverlayOpacity = EasingFunctions.Evaluate(EasingType.CubicOut, t);
-        return;
+        windowVisual.IsNotRespondingTitle = true;
+        windowVisual.UnresponsiveOverlayOpacity = 1f;
       }
     }
 
@@ -288,70 +356,76 @@ namespace Winithm.Core.Controllers
     /// </summary>
     public void SetUnresponsive(string windowId)
     {
-      var wd = _windowDataList.Find(w => w.ID == windowId);
-      if (wd == null || wd.Unresponsive) return;
+      if (!_windowStates.TryGetValue(windowId, out var state)) return;
+      var windowData = state.Data;
+      if (windowData.Unresponsive) return;
 
-      wd.Unresponsive = true;
+      windowData.Unresponsive = true;
 
-      if (_timeManager != null)
+      if (_audioController != null)
       {
-        wd.ComputeAnimationWhenUnresponsive(_timeManager.Metronome);
+        windowData.ComputeAnimationWhenUnresponsive(_audioController.Metronome);
       }
     }
 
     public void SetStartFocusable(string windowId, float currentBeat)
     {
-      var wd = _windowDataList.Find(w => w.ID == windowId);
-      if (wd == null || wd.UnFocus) return;
+      if (!_windowStates.TryGetValue(windowId, out var state)) return;
+      var windowData = state.Data;
+      if (windowData.UnFocus) return;
 
-      wd.UnFocus = true;
-      wd.FocusableStartBeat = currentBeat;
+      windowData.UnFocus = true;
+      windowData.FocusableStartBeat = currentBeat;
     }
 
     public void SetEndFocusable(string windowId, float currentBeat)
     {
-      var wd = _windowDataList.Find(w => w.ID == windowId);
-      if (wd == null || !wd.UnFocus) return;
+      if (!_windowStates.TryGetValue(windowId, out var state)) return;
+      var windowData = state.Data;
+      if (!windowData.UnFocus) return;
 
-      wd.FocusableEndBeat = currentBeat;
+      windowData.FocusableEndBeat = currentBeat;
     }
 
     /// <summary>
     /// Lifecycle scale for spawn/despawn animations.
     /// Purely beat-driven interpolation using accurate pre-computed animation bounds.
     /// </summary>
-    protected float CalculateLifeCycleScale(WindowData wd, float currentBeat, float bps)
+    protected float CalculateLifeCycleScale(WindowData windowData, double currentBeat)
     {
-      if (currentBeat < wd.StartBeat.AbsoluteValue) return 0f;
-      if (currentBeat > wd.EndBeatEndOut) return 0f;
+      if (currentBeat < windowData.StartInStartBeat) return 0f;
+      if (currentBeat > windowData.EndOutEndBeat) return 0f;
 
       // Spawn fade-in
-      if (currentBeat < wd.EndBeatStartIn)
+      if (currentBeat < windowData.StartInEndBeat)
       {
-        float t = (currentBeat - wd.StartBeat.AbsoluteValue) / (wd.EndBeatStartIn - wd.StartBeat.AbsoluteValue);
-        return EasingFunctions.Evaluate(EasingType.CubicOut, t);
+        double t = (currentBeat - windowData.StartInStartBeat) / (windowData.StartInEndBeat - windowData.StartInStartBeat);
+        return (float)EasingFunctions.Evaluate(EasingType.CubicOut, t);
       }
 
       // Despawn fade-out
-      if (currentBeat >= wd.StartBeatEndOut)
+      if (currentBeat >= windowData.EndOutStartBeat)
       {
-        float t = (currentBeat - wd.StartBeatEndOut) / (wd.EndBeatEndOut - wd.StartBeatEndOut);
-        return 1f - EasingFunctions.Evaluate(EasingType.CubicIn, t);
+        double t = (currentBeat - windowData.EndOutStartBeat) / (windowData.EndOutEndBeat - windowData.EndOutStartBeat);
+        return (float)(1f - EasingFunctions.Evaluate(EasingType.CubicIn, t));
       }
 
       return 1f;
     }
 
-    protected StoryboardEvaluator.Cursor GetCursor(Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor> cursors, StoryboardProperty prop)
+    protected float EvaluateProperty(
+      WindowData windowData,
+      StoryboardProperty propType,
+      double currentBeat,
+      float defaultValue,
+      bool force
+    )
     {
-      if (cursors.TryGetValue(prop, out var cursor)) return cursor;
-      return null;
-    }
+      if (windowData.StoryboardEvents == null || !windowData.StoryboardEvents.TryGetValue(propType, out _)) return defaultValue;
 
-    protected float EvaluateProperty(WindowData wd, StoryboardProperty propType, float beat, float defaultValue, Dictionary<StoryboardProperty, StoryboardEvaluator.Cursor> cursors)
-    {
-      if (wd.StoryboardEvents == null || !wd.StoryboardEvents.TryGetValue(propType, out var events)) return defaultValue;
-      return StoryboardEvaluator.Evaluate(events, beat, new AnyValue(defaultValue), GetCursor(cursors, propType)).X;
+      return windowData.StoryboardEvents.Evaluate(
+        propType, currentBeat, new AnyValue(defaultValue), force
+      ).X;
     }
   }
 }

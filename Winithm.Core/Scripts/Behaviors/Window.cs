@@ -1,9 +1,10 @@
 using Godot;
 using Winithm.Core.Constants;
 using Winithm.Core.Interfaces;
+using static Godot.Control;
 namespace Winithm.Core.Behaviors
 {
-  public class Window : Control, IPoolable
+  public class Window : Node2D, IPoolable
   {
     // --- Dirty tracking ---
     struct WindowState
