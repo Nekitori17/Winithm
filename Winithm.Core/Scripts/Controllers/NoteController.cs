@@ -56,8 +56,8 @@ namespace Winithm.Core.Controllers
       public HashSet<NoteData> ActiveHolds = new HashSet<NoteData>();
       public List<NoteData> PendingRemovals = new List<NoteData>();
 
-      public int AutoFireSessionToken = 0;
-      public int FrameSessionToken = 0;
+      public ulong AutoFireSessionToken = 1;
+      public ulong FrameSessionToken = 1;
       public double LastBeat = double.MinValue;
     }
 

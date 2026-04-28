@@ -55,10 +55,10 @@ namespace Winithm.Core.Data
     public bool IsEvaluated = false;
 
     /// <summary>Gets or sets the session token for auto-fired notes.</summary>
-    public int AutoFiredSessionToken = -1;
+    public ulong AutoFiredSessionToken = 0;
 
     /// <summary>Gets or sets the session token for the last processed frame.</summary>
-    public int LastSeenFrameSessionToken = -1;
+    public ulong LastSeenFrameSessionToken = 0;
 
     /// <summary>Gets or sets whether the hold interaction is active.</summary>
     public bool IsHoldActive = false;
