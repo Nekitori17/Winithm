@@ -331,7 +331,7 @@ namespace Winithm.Core.Controllers
     {
       Note noteVisual = _notePool.Get();
 
-      Node2D parentLayer = (note.Type == NoteType.Focus)
+      Node parentLayer = (note.Type == NoteType.Focus)
         ? state.WindowVisual.FocusNoteLayer
         : state.WindowVisual.NoteLayer;
 
