@@ -156,12 +156,12 @@ namespace Winithm.Core.Common
             string[] parts = center.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
             {
-              meta.Illustration.IconCenterX = ParserUtils.ParseFloat(parts[0]);
-              meta.Illustration.IconCenterY = ParserUtils.ParseFloat(parts[1]);
+              meta.Illustration.IconCenterX = ParserUtils.TryParseFloat(parts[0], out float x) ? x : 0.5f;
+              meta.Illustration.IconCenterY = ParserUtils.TryParseFloat(parts[1], out float y) ? y : 0.5f;
             }
           }
           else if (ParserUtils.TryParseProperty(trimmed, "Icon Size:", out string size))
-            meta.Illustration.IconSize = ParserUtils.ParseFloat(size);
+            meta.Illustration.IconSize = ParserUtils.TryParseFloat(size, out float s) ? s : 1f;
           break;
       }
     }
@@ -191,7 +191,7 @@ namespace Winithm.Core.Common
       else if (ParserUtils.TryParseProperty(trimmed, "Level:", out string level))
         current.Level = level;
       else if (ParserUtils.TryParseProperty(trimmed, "Constant:", out string constant))
-        current.Constant = ParserUtils.ParseFloat(constant);
+        current.Constant = ParserUtils.TryParseFloat(constant, out float c) ? c : 1f;
 
       return current;
     }
