@@ -33,6 +33,9 @@ namespace Winithm.Core.Data
     private int _layer = 0;
     public int Layer { get => _layer; set { if (_layer == value) return; _layer = value; OnUpdated?.Invoke(this); } }
 
+    private int _subLayer = 0;
+    public int SubLayer { get => _subLayer; set { if (_subLayer == value) return; _subLayer = value; OnUpdated?.Invoke(this); } }
+
     /// <summary>Shader uniform definitions.</summary>
     public Dictionary<string, ShaderParamDef> ShaderParams { get; } = new Dictionary<string, ShaderParamDef>();
 

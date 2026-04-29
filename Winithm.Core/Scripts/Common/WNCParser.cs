@@ -180,7 +180,11 @@ namespace Winithm.Core.Common
       else if (ParserUtils.TryParseProperty(trimmed, "Affects UI:", out string affectsUI))
         current.AffectsUI = ParserUtils.ParseIntBool(affectsUI);
       else if (ParserUtils.TryParseProperty(trimmed, "Layer:", out string layer))
-      { int.TryParse(layer, out int lyr); current.Layer = lyr; }
+      {
+        string [] parts = layer.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 1) current.Layer = int.TryParse(parts[0], out int l) ? l : 0;
+        if (parts.Length >= 2) current.SubLayer = int.TryParse(parts[1], out int sl) ? Math.Abs(sl) : 0;
+      }
       else if (trimmed.StartsWith("/ "))
       {
         var evt = StoryboardManager<string>.ParseEventLine(trimmed, out var type, out string rawType);
@@ -376,7 +380,11 @@ namespace Winithm.Core.Common
           ParserUtils.TryParseIntBool(parts[1], out bool uf) ? uf : false;
       }
       else if (ParserUtils.TryParseProperty(trimmed, "Layer:", out string layer))
-      { int.TryParse(layer, out int lyr); current.Layer = lyr; }
+      {
+        string[] parts = layer.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 1) current.Layer = int.TryParse(parts[0], out int l) ? l : 0;
+        if (parts.Length >= 2) current.SubLayer = int.TryParse(parts[1], out int sl) ? Math.Abs(sl) : 0;
+      }
       else if (ParserUtils.TryParseProperty(trimmed, "Anchor:", out string anchor))
       {
         string[] parts = anchor.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);

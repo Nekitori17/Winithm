@@ -141,7 +141,7 @@ namespace Winithm.Core.Controllers
             _playfield.AddChild(windowVisual);
           }
 
-          windowVisual.ZIndex = windowData.Layer;
+          windowVisual.ZIndex = LayerUtils.ComposeLayerIndex(windowData.Layer, windowData.SubLayer);
         }
         else
         {

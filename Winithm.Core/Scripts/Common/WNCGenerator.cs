@@ -47,7 +47,7 @@ namespace Winithm.Core.Common
           sb.AppendLine($"  Name: {overlay.Name ?? ""}");
           sb.AppendLine($"  Shader: {overlay.ShaderFile}");
           sb.AppendLine($"  Affects UI: {ParserUtils.FormatIntBool(overlay.AffectsUI)}");
-          sb.AppendLine($"  Layer: {overlay.Layer}");
+          sb.AppendLine($"  Layer: {overlay.Layer} {overlay.SubLayer}");
           if (overlay.StoryboardEvents != null)
             foreach (var kvp in overlay.StoryboardEvents)
               foreach (var evt in kvp.Value)
@@ -125,7 +125,7 @@ namespace Winithm.Core.Common
           sb.AppendLine($"  Title: {w.Title ?? ""}");
           sb.AppendLine($"  Flags: {ParserUtils.FormatIntBool(w.Borderless)} {ParserUtils.FormatIntBool(w.UnFocus)}");
           sb.AppendLine($"  Anchor: {ParserUtils.FormatFloat(w.Anchor.x)} {ParserUtils.FormatFloat(w.Anchor.y)}");
-          sb.AppendLine($"  Layer: {w.Layer}");
+          sb.AppendLine($"  Layer: {w.Layer} {w.SubLayer}");
           sb.AppendLine($"  Group: {w.GroupID ?? ""}");
           sb.AppendLine($"  Theme Channel: {w.ThemeChannelID ?? ""}");
 
