@@ -11,7 +11,7 @@ namespace Winithm.Core.Controllers
   public class WindowController : Node
   {
 
-    protected AudioController _audioController;
+    protected Metronome _metronome;
     protected GroupController _groupController;
     protected ThemeChannelController _themeController;
     protected NoteController _noteController;
@@ -46,7 +46,7 @@ namespace Winithm.Core.Controllers
     public WindowController(
       Control playfield,
       WindowManager windowManager,
-      AudioController audioController,
+      Metronome metronome,
       GroupController groupController,
       ThemeChannelController themeController,
       NoteController noteController
@@ -58,7 +58,7 @@ namespace Winithm.Core.Controllers
       _playfield = playfield;
       _windowPool = new NodePool<Window>(this, _windowScene);
 
-      _audioController = audioController;
+      _metronome = metronome;
       _groupController = groupController;
       _themeController = themeController;
       _noteController = noteController;
@@ -81,7 +81,7 @@ namespace Winithm.Core.Controllers
 
     public void ForceUpdate(double currentBeat, bool _force = true)
     {
-      if (_audioController == null || _windowManager == null) return;
+      if (_metronome == null || _windowManager == null) return;
 
       bool isBackward = currentBeat < _lastUpdateBeat;
       var maxEnds = _windowManager.MaxEndBeats;
@@ -362,9 +362,9 @@ namespace Winithm.Core.Controllers
 
       windowData.Unresponsive = true;
 
-      if (_audioController != null)
+      if (_metronome != null)
       {
-        windowData.ComputeAnimationWhenUnresponsive(_audioController.Metronome);
+        windowData.ComputeAnimationWhenUnresponsive(_metronome);
       }
     }
 

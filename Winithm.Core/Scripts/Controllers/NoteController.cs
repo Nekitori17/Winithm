@@ -35,7 +35,7 @@ namespace Winithm.Core.Controllers
     private const float OFF_SCREEN_MARGIN_FACTOR = 3f;
 
     private PackedScene _noteScene;
-    private AudioController _audioController;
+    private Metronome _metronome;
     private NodePool<Note> _notePool;
     private double _lastBeat = double.MinValue;
 
@@ -65,10 +65,10 @@ namespace Winithm.Core.Controllers
     // Initialization
     // =============================================
 
-    public NoteController(AudioController audioController, bool autoplay = false)
+    public NoteController(Metronome metronome, bool autoplay = false)
     {
       Autoplay = autoplay;
-      _audioController = audioController;
+      _metronome = metronome;
       _noteScene = GD.Load<PackedScene>("res://Winithm.Core/Resources/Sprites/Note.tscn");
       _notePool = new NodePool<Note>(this, _noteScene);
     }
@@ -154,7 +154,7 @@ namespace Winithm.Core.Controllers
       Vector2 playerAreaSize = state.WindowVisual.PlayerAreaSize;
       Vector2 windowSize = state.WindowVisual.WindowSize;
 
-      double beatsPerSecond = _audioController.Metronome.GetCurrentBPS(_audioController.CurrentTime);
+      double beatsPerSecond = _metronome.GetCurrentBPS(currentBeat);
       float pixelsPerBeat =
         NOTE_SPEED_PIXELS_PER_SEC * PlayerNoteSpeed / (float)(
           beatsPerSecond > 0f ? beatsPerSecond : 2f
@@ -523,7 +523,7 @@ namespace Winithm.Core.Controllers
         if (note.IsHoldActive) { evalCursor++; continue; }
         if (note.StartBeat.AbsoluteValue > currentBeat) break;
 
-        double elapsedMs = _audioController.Metronome.ToDeltaMilliSeconds(
+        double elapsedMs = _metronome.ToDeltaMilliSeconds(
           note.StartBeat.AbsoluteValue, currentBeat
         );
 
@@ -658,7 +658,7 @@ namespace Winithm.Core.Controllers
             NoteData note = noteList[i];
             if (note.IsEvaluated || note.Type != type || !note.IsHittable) continue;
 
-            double offsetMs = _audioController.Metronome.ToDeltaMilliSeconds(
+            double offsetMs = _metronome.ToDeltaMilliSeconds(
               note.StartBeat.AbsoluteValue, currentBeat
             );
 
@@ -743,7 +743,7 @@ namespace Winithm.Core.Controllers
             bool typeMatches = note.Type == type || (type == NoteType.Tap && note.Type == NoteType.Hold);
             if (!typeMatches) continue;
 
-            double offsetMs = _audioController.Metronome.ToDeltaMilliSeconds(
+            double offsetMs = _metronome.ToDeltaMilliSeconds(
               note.StartBeat.AbsoluteValue, currentBeat
             );
 
