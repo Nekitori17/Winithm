@@ -1,3 +1,4 @@
+using Godot;
 using System;
 using System.Collections.Generic;
 using Winithm.Core.Managers;
@@ -61,8 +62,7 @@ namespace Winithm.Core.Data
 
       Illustration.Illustrator = other.Illustration.Illustrator;
       Illustration.IllustrationPath = other.Illustration.IllustrationPath;
-      Illustration.IconCenterX = other.Illustration.IconCenterX;
-      Illustration.IconCenterY = other.Illustration.IconCenterY;
+      Illustration.IconCenter = other.Illustration.IconCenter;
       Illustration.IconSize = other.Illustration.IconSize;
 
       Charts.Clear();
@@ -111,10 +111,8 @@ namespace Winithm.Core.Data
     public string IllustrationPath = "illustration.png";
     private string _illustrator = "Noname";
     public string Illustrator { get => _illustrator; set { if (_illustrator == value) return; _illustrator = value; OnUpdated?.Invoke(this); } }
-    private float _iconCenterX = 0.5f;
-    public float IconCenterX { get => _iconCenterX; set { if (_iconCenterX == value) return; _iconCenterX = value; OnUpdated?.Invoke(this); } }
-    private float _iconCenterY = 0.5f;
-    public float IconCenterY { get => _iconCenterY; set { if (_iconCenterY == value) return; _iconCenterY = value; OnUpdated?.Invoke(this); } }
+    private Vector2 _iconCenter = new Vector2(0.5f, 0.5f);
+    public Vector2 IconCenter { get => _iconCenter; set { if (_iconCenter == value) return; _iconCenter = value; OnUpdated?.Invoke(this); } }
     private float _iconSize = 1f;
     public float IconSize { get => _iconSize; set { if (_iconSize == value) return; _iconSize = value; OnUpdated?.Invoke(this); } }
   }

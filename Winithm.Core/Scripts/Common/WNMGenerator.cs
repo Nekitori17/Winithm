@@ -46,7 +46,7 @@ namespace Winithm.Core.Common
       sb.AppendLine("* Illustration");
       sb.AppendLine($"  Illustrator: {data.Illustration.Illustrator}");
       sb.AppendLine($"  Path: {data.Illustration.IllustrationPath}");
-      sb.AppendLine($"  Icon Center: {ParserUtils.FormatFloat(data.Illustration.IconCenterX)} {ParserUtils.FormatFloat(data.Illustration.IconCenterY)}");
+      sb.AppendLine($"  Icon Center: {ParserUtils.FormatFloat(data.Illustration.IconCenter.x)} {ParserUtils.FormatFloat(data.Illustration.IconCenter.y)}");
       sb.AppendLine($"  Icon Size: {ParserUtils.FormatFloat(data.Illustration.IconSize)}");
       sb.AppendLine();
 

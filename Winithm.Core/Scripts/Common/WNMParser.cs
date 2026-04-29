@@ -156,8 +156,10 @@ namespace Winithm.Core.Common
             string[] parts = center.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
             {
-              meta.Illustration.IconCenterX = ParserUtils.TryParseFloat(parts[0], out float x) ? x : 0.5f;
-              meta.Illustration.IconCenterY = ParserUtils.TryParseFloat(parts[1], out float y) ? y : 0.5f;
+              float IconCenterX = ParserUtils.TryParseFloat(parts[0], out float x) ? x : 0.5f;
+              float IconCenterY = ParserUtils.TryParseFloat(parts[1], out float y) ? y : 0.5f;
+
+              meta.Illustration.IconCenter = new Vector2(IconCenterX, IconCenterY);
             }
           }
           else if (ParserUtils.TryParseProperty(trimmed, "Icon Size:", out string size))
