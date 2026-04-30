@@ -12,7 +12,7 @@ namespace Winithm.Core.Controllers
     private ThemeChannelManager _themeManager;
     private readonly Dictionary<string, (double LastBeat, Color Color, float NoteAlpha)> _lastStates = new Dictionary<string, (double, Color, float)>();
 
-    public ThemeChannelController(ThemeChannelManager manager)
+    public void Initialize(ThemeChannelManager manager)
     {
       _themeManager = manager ?? new ThemeChannelManager();
 

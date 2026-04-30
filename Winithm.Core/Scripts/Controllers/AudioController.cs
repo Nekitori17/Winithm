@@ -29,7 +29,7 @@ namespace Winithm.Core.Controllers
     public double CurrentBeat => Metronome.ToBeat(_currentTime);
     public double CurrentTimeMs => _currentTime * 1000d;
 
-    public AudioController(Metronome metronome)
+    public void Initialize(Metronome metronome)
     {
       Metronome = metronome;
       AddChild(_player);

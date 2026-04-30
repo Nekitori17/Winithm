@@ -10,7 +10,6 @@ namespace Winithm.Core.Controllers
   [Tool]
   public class WindowController : Node
   {
-
     protected Metronome _metronome;
     protected GroupController _groupController;
     protected ThemeChannelController _themeController;
@@ -43,7 +42,7 @@ namespace Winithm.Core.Controllers
 
     private NodePool<Window> _windowPool;
 
-    public WindowController(
+    public void Initialize(
       Control playfield,
       WindowManager windowManager,
       Metronome metronome,
@@ -55,19 +54,20 @@ namespace Winithm.Core.Controllers
       if (_windowScene == null)
         _windowScene = GD.Load<PackedScene>("res://Winithm.Core/Resources/Sprites/Window.tscn");
 
-      _playfield = playfield;
       _windowPool = new NodePool<Window>(this, _windowScene);
+
+      _windowStates.Clear();
+      _renderCursor = 0;
+      _frameSessionToken = 0;
+      _lastUpdateBeat = -1f;
+
+      _playfield = playfield;
 
       _metronome = metronome;
       _groupController = groupController;
       _themeController = themeController;
       _noteController = noteController;
       _windowManager = windowManager;
-
-      _windowStates.Clear();
-      _renderCursor = 0;
-      _frameSessionToken = 0;
-      _lastUpdateBeat = -1f;
     }
 
     public void Update(double currentBeat)

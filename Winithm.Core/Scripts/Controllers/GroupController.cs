@@ -13,7 +13,7 @@ namespace Winithm.Core.Controllers
     private readonly Dictionary<string, Node2D> _groupNodes = new Dictionary<string, Node2D>();
     private readonly Dictionary<string, double> _lastUpdateBeat = new Dictionary<string, double>();
 
-    public GroupController(GroupManager manager)
+    public void Initialize(GroupManager manager)
     {
       _groupManager = manager ?? new GroupManager();
 

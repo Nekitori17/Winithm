@@ -65,7 +65,7 @@ namespace Winithm.Core.Controllers
     // Initialization
     // =============================================
 
-    public NoteController(Metronome metronome, bool autoplay = false)
+    public void Initialize(Metronome metronome, bool autoplay = false)
     {
       Autoplay = autoplay;
       _metronome = metronome;
