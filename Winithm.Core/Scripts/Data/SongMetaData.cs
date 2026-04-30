@@ -90,6 +90,7 @@ namespace Winithm.Core.Data
     public event Action<AudioResource> OnUpdated;
 
     public string SongPath = "song.mp3";
+    public AudioStream SongStream;
 
     private double _previewStart = 0;
     public double PreviewStart { get => _previewStart; set { if (_previewStart == value) return; _previewStart = value; OnUpdated?.Invoke(this); } }
@@ -109,6 +110,8 @@ namespace Winithm.Core.Data
     public event Action<IllustrationResource> OnUpdated;
 
     public string IllustrationPath = "illustration.png";
+    public Texture IllustrationTexture; 
+
     private string _illustrator = "Noname";
     public string Illustrator { get => _illustrator; set { if (_illustrator == value) return; _illustrator = value; OnUpdated?.Invoke(this); } }
     private Vector2 _iconCenter = new Vector2(0.5f, 0.5f);

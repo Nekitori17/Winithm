@@ -14,6 +14,8 @@ namespace Winithm.Core.Common
     /// <summary>Parse a .wnm metadata file.</summary>
     public static SongMetaData Parse(string filePath)
     {
+      var songFolder = System.IO.Path.GetDirectoryName(filePath) ?? "";
+
       var data = new SongMetaData();
       var file = new File();
       file.Open(filePath, File.ModeFlags.Read);
@@ -53,7 +55,7 @@ namespace Winithm.Core.Common
               ParseMetadataLine(line, data);
               break;
             case "RESOURCES":
-              ParseResourceLine(line, data, ref currentResource);
+              ParseResourceLine(line, data, ref currentResource, songFolder);
               break;
             case "CHARTS":
               currentChart = ParseChartReferenceLine(line, data.Charts, currentChart);
@@ -89,7 +91,9 @@ namespace Winithm.Core.Common
       if (ParserUtils.TryParseProperty(trimmed, "Tags:", out string tags)) meta.Tags = tags;
     }
 
-    private static void ParseResourceLine(string line, SongMetaData meta, ref string currentResource)
+    private static void ParseResourceLine(
+      string line, SongMetaData meta, ref string currentResource, string songFolder
+    )
     {
       string trimmed = line.TrimStart();
 
@@ -119,8 +123,11 @@ namespace Winithm.Core.Common
       switch (currentResource)
       {
         case "Song":
-          if (ParserUtils.TryParseProperty(trimmed, "Path:", out string songPath))
+          if (ParserUtils.TryParseProperty(trimmed, "Path:", out string songPath)) 
+          {
             meta.Audio.SongPath = songPath;
+            meta.Audio.SongStream = GD.Load<AudioStream>(songFolder.PlusFile(songPath));
+          }
           if (ParserUtils.TryParseProperty(trimmed, "Preview Range:", out string previewRange))
           {
             string[] parts = previewRange.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -149,8 +156,12 @@ namespace Winithm.Core.Common
         case "Illustration":
           if (ParserUtils.TryParseProperty(trimmed, "Illustrator:", out string illustrator))
             meta.Illustration.Illustrator = illustrator;
-          else if (ParserUtils.TryParseProperty(trimmed, "Path:", out string illPath))
+          else if (ParserUtils.TryParseProperty(trimmed, "Path:", out string illPath)) 
+          {
             meta.Illustration.IllustrationPath = illPath;
+            meta.Illustration.IllustrationTexture = 
+              GD.Load<Texture>(songFolder.PlusFile(illPath));
+          }
           else if (ParserUtils.TryParseProperty(trimmed, "Icon Center:", out string center))
           {
             string[] parts = center.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
