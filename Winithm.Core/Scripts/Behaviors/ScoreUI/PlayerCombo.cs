@@ -147,7 +147,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     public void SetGrade(Scoring.Grade grade)
     {
-      if (_statusLabel != null) _statusLabel.Text = Scoring.GradeNames[grade];
+      if (_statusLabel != null) _statusLabel.Text = $"RANK: {Scoring.GradeNames[grade]}";
     }
 
     public void DrainPauseBar() => _pauseState = PauseAnimState.Draining;
