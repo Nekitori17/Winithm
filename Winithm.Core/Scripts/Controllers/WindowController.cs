@@ -259,6 +259,17 @@ namespace Winithm.Core.Controllers
       CollectStaleWindows();
     }
 
+    public int GetTotalNotePassedInDestroyedWindows(double currentBeat)
+    {
+      if (_windowManager == null || _windowManager.Count == 0) return 0;
+      
+      var maxEnds = _windowManager.MaxEndBeats;
+      int cursor = FindRenderCursor(maxEnds, currentBeat);
+      
+      if (cursor <= 0) return 0;
+      return _windowManager.PrefixCombo[cursor - 1];
+    }
+
     private void CollectStaleWindows()
     {
       var staleIds = new List<string>();
