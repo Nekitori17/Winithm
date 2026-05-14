@@ -21,5 +21,13 @@ namespace Winithm.Core.Constants
       { HitResultType.Bad, 0.1f },
       { HitResultType.Miss, 0f },
     };
+
+    public static readonly Dictionary<HitResultType, string> HitResultNames = new Dictionary<HitResultType, string>
+    {
+      { HitResultType.Perfect, "Sharp" },
+      { HitResultType.Good, "Clear" },
+      { HitResultType.Bad, "Blur" },
+      { HitResultType.Miss, "Lost" },
+    };
   }
 }
