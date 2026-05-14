@@ -39,7 +39,7 @@ namespace Winithm.Core.Controllers
     private Control _playerComboTransform;
     private PlayerCombo _playerCombo;
     private Control _playerScoreTransform;
-    private Control _playerScore;
+    private PlayerScore _playerScore;
 
     private double _lastUpdateBeat;
 
@@ -62,7 +62,7 @@ namespace Winithm.Core.Controllers
       _playerCombo = _playerComboTransform?.GetNodeOrNull<PlayerCombo>("PlayerCombo");
 
       _playerScoreTransform = GetNodeOrNull<Control>("PlayerScoreTransform");
-      _playerScore = _playerScoreTransform?.GetNodeOrNull<Control>("PlayerScore");
+      _playerScore = _playerScoreTransform?.GetNodeOrNull<PlayerScore>("PlayerScore");
 
       _font30 = GetNodeOrNull<Label>("SongInfoTransform/SongInfo/Name")?.GetFont("font") as DynamicFont;
       _font20 = GetNodeOrNull<Label>("SongInfoTransform/SongInfo/BPM")?.GetFont("font") as DynamicFont;
@@ -125,6 +125,9 @@ namespace Winithm.Core.Controllers
     public void SetGrade(Scoring.Grade grade) => _playerCombo?.SetGrade(grade);
     public void DrainPauseBar() => _playerCombo?.DrainPauseBar();
     public void FillPauseBar() => _playerCombo?.FillPauseBar();
+
+    public void SetScore(int score, bool instant = false) => _playerScore?.SetScore(score, instant);
+    public void SetAccuracy(float accuracy) => _playerScore?.SetAccuracy(accuracy);
 
     private void UpdateComponentStoryboard(
       ComponentType compType,
