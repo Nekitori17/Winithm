@@ -42,9 +42,10 @@ namespace Winithm.Core.Controllers
 
       if (_streamStarted && _player.Playing)
       {
-        // DSP-anchored time to correct drift. (Stream + Offset = Clock)
-        _currentTime = _seekPositionAtPlay
-          + (AudioServer.GetTimeSinceLastMix() - _dspTimeAtPlay)
+        // Get playback position with DSP sync
+        _currentTime = _player.GetPlaybackPosition()
+          + AudioServer.GetTimeSinceLastMix()
+          - AudioServer.GetOutputLatency()
           - _audioOffset;
       }
       else
