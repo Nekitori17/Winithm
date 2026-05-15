@@ -42,7 +42,7 @@ namespace Winithm.Core.Controllers
     private Dictionary<string, WindowNoteState> _windowStates = new Dictionary<string, WindowNoteState>();
     private List<(string WindowId, NoteData Note)> _activeHoldsCache = new List<(string, NoteData)>();
 
-    private class WindowNoteState
+    public class WindowNoteState
     {
       public WindowData WindowData;
       public Window WindowVisual;
@@ -102,6 +102,12 @@ namespace Winithm.Core.Controllers
 
       _windowStates.Remove(windowId);
     }
+
+    /// <summary>
+    /// Returns a read-only dictionary of registered window states.
+    /// </summary>
+    public IReadOnlyDictionary<string, WindowNoteState> GetRegisteredWindowStates() => _windowStates;
+
 
     public override void _ExitTree()
     {
@@ -656,7 +662,6 @@ namespace Winithm.Core.Controllers
       return total;
     }
 
-    // TODO: Move two Methods to HitController
     // =============================================
     // Hit Evaluation API
     // =============================================
