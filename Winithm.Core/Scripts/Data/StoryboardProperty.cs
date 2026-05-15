@@ -18,6 +18,7 @@ namespace Winithm.Core.Data
     ColorG,
     ColorB,
     ColorA,
+    Alpha,
     NoteA,
     Speed,
     Title

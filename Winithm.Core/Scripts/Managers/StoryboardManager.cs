@@ -95,6 +95,7 @@ namespace Winithm.Core.Managers
         case "Color_G": return StoryboardProperty.ColorG;
         case "Color_B": return StoryboardProperty.ColorB;
         case "Color_A": return StoryboardProperty.ColorA;
+        case "Alpha": return StoryboardProperty.Alpha;
         case "Note_A": return StoryboardProperty.NoteA;
         case "Title": return StoryboardProperty.Title;
         case "Speed": return StoryboardProperty.Speed;
@@ -117,6 +118,7 @@ namespace Winithm.Core.Managers
         case StoryboardProperty.ColorG: return "Color_G";
         case StoryboardProperty.ColorB: return "Color_B";
         case StoryboardProperty.ColorA: return "Color_A";
+        case StoryboardProperty.Alpha: return "Alpha";
         case StoryboardProperty.NoteA: return "Note_A";
         case StoryboardProperty.Title: return "Title";
         case StoryboardProperty.Speed: return "Speed";
