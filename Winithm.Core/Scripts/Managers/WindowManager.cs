@@ -37,6 +37,16 @@ namespace Winithm.Core.Managers
     public int[] PrefixCombo { get; private set; } = Array.Empty<int>();
 
     /// <summary>
+    /// Total note count across all windows.
+    /// </summary>
+    public int TotalNoteCount { get; private set; } = 0;
+
+    /// <summary>
+    /// Total hittable note count across all windows.
+    /// </summary>
+    public int TotalHittableNoteCount { get; private set; } = 0;
+
+    /// <summary>
     /// Total combo count across all windows.
     /// </summary>
     public int TotalComboCount { get; private set; } = 0;
@@ -87,6 +97,9 @@ namespace Winithm.Core.Managers
     /// </summary>
     public void Compute()
     {
+      TotalNoteCount = 0;
+      TotalHittableNoteCount = 0;
+      TotalComboCount = 0;
       MaxEndBeats = new double[_windowCollection.Count];
       PrefixCombo = new int[_windowCollection.Count];
       
@@ -96,6 +109,9 @@ namespace Winithm.Core.Managers
       for (int i = 0; i < _windowCollection.Count; i++)
       {
         var window = _windowCollection[i];
+
+        TotalNoteCount += window.Notes.TotalNoteCount;
+        TotalHittableNoteCount += window.Notes.TotalHittableNoteCount;
         
         runningMax = Math.Max(runningMax, window.EndOutEndBeat);
         MaxEndBeats[i] = runningMax;

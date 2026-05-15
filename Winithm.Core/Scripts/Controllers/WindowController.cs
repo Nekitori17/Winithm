@@ -268,7 +268,7 @@ namespace Winithm.Core.Controllers
       CollectStaleWindows();
     }
 
-    public int GetTotalNotePassedInDestroyedWindows(double currentBeat)
+    public int GetTotalComboPassedInDestroyedWindows(double currentBeat)
     {
       if (_windowManager == null || _windowManager.Count == 0) return 0;
       

@@ -627,7 +627,7 @@ namespace Winithm.Core.Controllers
       }
     }
 
-    public int GetTotalNotePassedInActivingWindows(double currentBeat)
+    public int GetTotalComboPassedInActivingWindows(double currentBeat)
     {
       int total = 0;
       foreach (var state in _windowStates.Values)

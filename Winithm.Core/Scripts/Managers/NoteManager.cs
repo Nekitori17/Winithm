@@ -45,7 +45,10 @@ namespace Winithm.Core.Managers
     public bool TryGetValue(NoteSide side, out List<NoteData> data) => _noteCollection.TryGetValue(side, out data);
 
     public Dictionary<NoteSide, double[]> MaxEndBeats { get; private set; } = new Dictionary<NoteSide, double[]>();
-    /// <summary>Sorted beats where combo increments occur (Hold → end beat, others → start beat).</summary>
+    /// <summary>Sorted beats where combo increments occur (Hold → end beat, others → start beat).</summary> 
+    
+    public int TotalNoteCount { get; private set; } = 0;
+    public int TotalHittableNoteCount { get; private set; } = 0;
     public double[] ComboEventBeats { get; private set; } = Array.Empty<double>();
     /// <summary>Prefix-sum of combo values aligned with ComboEventBeats.</summary>
     public int[] ComboPrefixSum { get; private set; } = Array.Empty<int>();
@@ -168,6 +171,8 @@ namespace Winithm.Core.Managers
       {
         ExpectedStartFocusBeat = BeatTime.Max;
         ExpectedEndCloseBeat = BeatTime.Max;
+        TotalNoteCount = 0;
+        TotalHittableNoteCount = 0;
         TotalComboCount = 0;
         MaxEndBeats.Clear();
         ComboEventBeats = Array.Empty<double>();
@@ -175,6 +180,7 @@ namespace Winithm.Core.Managers
         return;
       }
 
+      TotalNoteCount = 0;
       BeatTime prevExpectedEndCloseBeat = ExpectedEndCloseBeat;
       BeatTime prevWindowEndBeat = _windowData.EndBeat;
 
@@ -183,6 +189,8 @@ namespace Winithm.Core.Managers
 
       foreach (var notes in _noteCollection.Values)
       {
+        TotalNoteCount += notes.Count;
+
         foreach (NoteData note in notes)
         {
           if (note.Type == NoteType.Focus && note.IsHittable)
@@ -201,6 +209,7 @@ namespace Winithm.Core.Managers
       }
 
       _windowData.EndBeat = ExpectedEndCloseBeat;
+      TotalHittableNoteCount = 0;
       TotalComboCount = 0;
 
       var comboEvents = new List<(double beat, int combo)>();
@@ -225,6 +234,8 @@ namespace Winithm.Core.Managers
             && note.IsHittable
           )
           {
+            TotalHittableNoteCount++;
+
             if (note.Type == NoteType.Hold)
             {
               comboEvents.Add((note.StartBeat.AbsoluteValue + note.Length, 2));
