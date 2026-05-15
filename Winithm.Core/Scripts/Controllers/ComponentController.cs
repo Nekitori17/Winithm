@@ -145,15 +145,18 @@ namespace Winithm.Core.Controllers
         StoryboardProperty.Alpha, currentBeat, new AnyValue(targetCompData.InitAlpha), force
       ).X;
 
-      if (compType == ComponentType.Combo)
-      {
-        GD.Print($"[Storyboard] Combo Alpha at beat {currentBeat}: {a} (InitAlpha: {targetCompData.InitAlpha}, events: {targetCompData.StoryboardEvents.Count})");
-      }
-
       float viewScale = Mathf.Abs(Mathf.Min(
         ScreenSize.x / Visual.DESIGN_RESOLUTION.x,
         ScreenSize.y / Visual.DESIGN_RESOLUTION.y
       ));
+
+      // Calculate the pivot point based on the child's anchor position
+      // This ensures that when the full-screen parent is scaled, it scales 
+      Vector2 pivot = new Vector2(
+        targetControl.AnchorLeft * ScreenSize.x,
+        targetControl.AnchorTop * ScreenSize.y
+      );
+      transformControl.RectPivotOffset = pivot;
 
       transformControl.RectPosition = new Vector2(x * viewScale, y * viewScale);
       transformControl.RectScale = new Vector2(scale, scale);
