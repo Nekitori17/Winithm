@@ -7,7 +7,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
   {
     public struct LastState
     {
-      public Vector2 ScreenSize, IconCenter;
+      public Vector2 IconCenter;
       public Color TextColor, TextOutLineColor;
       public string SongName;
       public float BPM, IconSize;
@@ -31,11 +31,6 @@ namespace Winithm.Core.Behaviors.ScoreUI
     private Label _bpm;
     private AtlasTexture _atlasTex;
 
-    private readonly Vector2 BASE_ICON_POS = new Vector2(25f, -100f);
-    private readonly Vector2 BASE_ICON_SIZE = new Vector2(75f, 75f);
-    private readonly Vector2 BASE_NAME_POS = new Vector2(110f, -100f);
-    private readonly Vector2 BASE_BPM_POS = new Vector2(110f, -50f);
-
     public override void _Ready()
     {
       _icon = GetNode<TextureRect>("Icon");
@@ -47,7 +42,6 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     public void UpdateVisual()
     {
-      bool isLayoutDirty = ScreenSize != _lastState.ScreenSize;
       bool isColorDirty = 
         TextColor != _lastState.TextColor 
         || TextOutLineColor != _lastState.TextOutLineColor;
@@ -57,28 +51,9 @@ namespace Winithm.Core.Behaviors.ScoreUI
                          IconCenter != _lastState.IconCenter ||
                          IconSize != _lastState.IconSize;
 
-      if (isLayoutDirty) UpdateLayout();
       if (isColorDirty) UpdateColor();
       if (isInfoDirty) UpdateInfo();
       if (isIconDirty) UpdateIcon();
-    }
-
-    private void UpdateLayout()
-    {
-      if (_icon == null || _name == null || _bpm == null) return;
-
-      float viewScale = Mathf.Abs(Mathf.Min(
-        ScreenSize.x / Visual.DESIGN_RESOLUTION.x,
-        ScreenSize.y / Visual.DESIGN_RESOLUTION.y
-      ));
-
-      _icon.RectPosition = BASE_ICON_POS * viewScale;
-      _icon.RectSize = BASE_ICON_SIZE * viewScale;
-
-      _name.RectPosition = BASE_NAME_POS * viewScale;
-      _bpm.RectPosition = BASE_BPM_POS * viewScale;
-
-      _lastState.ScreenSize = ScreenSize;
     }
 
     private void UpdateColor()

@@ -7,7 +7,6 @@ namespace Winithm.Core.Behaviors.ScoreUI
   {
     public struct LastState
     {
-      public Vector2 ScreenSize;
       public Color TextColor, TextOutLineColor;
     }
 
@@ -89,31 +88,11 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     public void UpdateVisual()
     {
-      bool isLayoutDirty = ScreenSize != _lastState.ScreenSize;
       bool isColorDirty =
         TextColor != _lastState.TextColor
         || TextOutLineColor != _lastState.TextOutLineColor;
 
-      if (isLayoutDirty) UpdateLayout();
       if (isColorDirty) UpdateColor();
-    }
-
-    private void UpdateLayout()
-    {
-      float viewScale = Mathf.Abs(Mathf.Min(
-        ScreenSize.x / Visual.DESIGN_RESOLUTION.x,
-        ScreenSize.y / Visual.DESIGN_RESOLUTION.y
-      ));
-
-      if (_comboLabel != null) _comboLabel.RectPosition = BASE_COMBO_POS * viewScale;
-      if (_statusLabel != null) _statusLabel.RectPosition = BASE_STATUS_POS * viewScale;
-      if (_pauseControl != null)
-      {
-        _pauseControl.RectPosition = BASE_PAUSE_POS * viewScale;
-        _pauseControl.RectSize = new Vector2(15f, 75f) * viewScale;
-      }
-
-      _lastState.ScreenSize = ScreenSize;
     }
 
     private void UpdateColor()

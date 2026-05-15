@@ -13,29 +13,9 @@ namespace Winithm.Core.Behaviors
     private float _startDigitValue = 0f;
     private float _currentDigitValue = 0f;
 
-    private DynamicFont _digitFont;
-    private const int BASE_FONT_SIZE = 35;
-    private readonly Vector2 BASE_MIN_SIZE = new Vector2(22f, 46f);
-
     public override void _Ready()
     {
       _vbox = GetNodeOrNull<VBoxContainer>("VBoxContainer");
-      Label lbl = _vbox?.GetNodeOrNull<Label>("0");
-      if (lbl != null)
-      {
-        _digitFont = lbl.GetFont("font") as DynamicFont;
-      }
-    }
-
-    public void UpdateLayout(float viewScale)
-    {
-      RectMinSize = BASE_MIN_SIZE * viewScale;
-      RectSize = RectMinSize;
-
-      if (_digitFont != null)
-      {
-        _digitFont.Size = Mathf.Max(1, (int)(BASE_FONT_SIZE * viewScale));
-      }
     }
 
     public override void _Process(float delta)

@@ -27,11 +27,6 @@ namespace Winithm.Core.Controllers
 
     private LastState _lastState;
 
-    private DynamicFont _font30;
-    private DynamicFont _font20;
-    private DynamicFont _font35;
-    private DynamicFont _font25;
-
     private Control _songInfoTransform;
     private SongInfo _songInfo;
     private Control _chartInfoTransform;
@@ -63,11 +58,6 @@ namespace Winithm.Core.Controllers
 
       _playerScoreTransform = GetNodeOrNull<Control>("PlayerScoreTransform");
       _playerScore = _playerScoreTransform?.GetNodeOrNull<PlayerScore>("PlayerScore");
-
-      _font30 = GetNodeOrNull<Label>("SongInfoTransform/SongInfo/Name")?.GetFont("font") as DynamicFont;
-      _font20 = GetNodeOrNull<Label>("SongInfoTransform/SongInfo/BPM")?.GetFont("font") as DynamicFont;
-      _font35 = GetNodeOrNull<Label>("ChartInfoTransform/ChartInfo/Difficult")?.GetFont("font") as DynamicFont;
-      _font25 = GetNodeOrNull<Label>("PlayerComboTransform/PlayerCombo/Status")?.GetFont("font") as DynamicFont;
 
       UpdateLayout();
     }
@@ -152,8 +142,13 @@ namespace Winithm.Core.Controllers
         StoryboardProperty.Scale, currentBeat, new AnyValue(targetCompData.InitScale), force
       ).X;
       float a = targetCompData.StoryboardEvents.Evaluate(
-        StoryboardProperty.ColorA, currentBeat, new AnyValue(targetCompData.InitAlpha), force
+        StoryboardProperty.Alpha, currentBeat, new AnyValue(targetCompData.InitAlpha), force
       ).X;
+
+      if (compType == ComponentType.Combo)
+      {
+        GD.Print($"[Storyboard] Combo Alpha at beat {currentBeat}: {a} (InitAlpha: {targetCompData.InitAlpha}, events: {targetCompData.StoryboardEvents.Count})");
+      }
 
       float viewScale = Mathf.Abs(Mathf.Min(
         ScreenSize.x / Visual.DESIGN_RESOLUTION.x,
@@ -172,26 +167,15 @@ namespace Winithm.Core.Controllers
         ScreenSize.y / Visual.DESIGN_RESOLUTION.y
       ));
 
-      if (_font30 != null) _font30.Size = Mathf.Max(1, (int)(30 * viewScale));
-      if (_font20 != null) _font20.Size = Mathf.Max(1, (int)(20 * viewScale));
-      if (_font35 != null) _font35.Size = Mathf.Max(1, (int)(35 * viewScale));
-      if (_font25 != null) _font25.Size = Mathf.Max(1, (int)(25 * viewScale));
+      // Use RectScale on each component — this uniformly scales all
+      // internal positions, sizes, fonts, and clip areas without
+      // fighting Godot's layout system.
+      Vector2 scale = new Vector2(viewScale, viewScale);
 
-      if (_songInfo != null)
-      {
-        _songInfo.ScreenSize = ScreenSize;
-        _songInfo.UpdateVisual();
-      }
-      if (_chartInfo != null)
-      {
-        _chartInfo.ScreenSize = ScreenSize;
-        _chartInfo.UpdateVisual();
-      }
-      if (_playerCombo != null)
-      {
-        _playerCombo.ScreenSize = ScreenSize;
-        _playerCombo.UpdateVisual();
-      }
+      if (_songInfo != null) _songInfo.RectScale = scale;
+      if (_chartInfo != null) _chartInfo.RectScale = scale;
+      if (_playerCombo != null) _playerCombo.RectScale = scale;
+      if (_playerScore != null) _playerScore.RectScale = scale;
 
       _lastState.ScreenSize = ScreenSize;
     }

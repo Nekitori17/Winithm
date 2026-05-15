@@ -7,7 +7,6 @@ namespace Winithm.Core.Behaviors.ScoreUI
   {
     public struct LastState
     {
-      public Vector2 ScreenSize;
       public string DifficultText;
       public Color TextColor, TextOutLineColor;
     }
@@ -20,7 +19,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
     private LastState _lastState = new LastState();
 
     private Label _difficult;
-    private readonly Vector2 BASE_DIFFICULT_POS = new Vector2(-25f, -90.5f);
+    private readonly Vector2 BASE_DIFFICULT_POS = new Vector2(-130f, -90.5f);
 
     public override void _Ready()
     {
@@ -35,29 +34,13 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     public void UpdateVisual()
     {
-      bool isLayoutDirty = ScreenSize != _lastState.ScreenSize;
       bool isColorDirty = 
         TextColor != _lastState.TextColor 
         || TextOutLineColor != _lastState.TextOutLineColor;
       bool isInfoDirty = DifficultText != _lastState.DifficultText;
 
-      if (isLayoutDirty) UpdateLayout();
       if (isColorDirty) UpdateColor();
       if (isInfoDirty) UpdateInfo();
-    }
-
-    private void UpdateLayout()
-    {
-      if (_difficult == null) return;
-
-      float viewScale = Mathf.Abs(Mathf.Min(
-        ScreenSize.x / Visual.DESIGN_RESOLUTION.x,
-        ScreenSize.y / Visual.DESIGN_RESOLUTION.y
-      ));
-
-      _difficult.RectPosition = BASE_DIFFICULT_POS * viewScale;
-
-      _lastState.ScreenSize = ScreenSize;
     }
 
     private void UpdateColor()

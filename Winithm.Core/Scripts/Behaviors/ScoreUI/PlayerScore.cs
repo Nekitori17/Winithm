@@ -8,7 +8,6 @@ namespace Winithm.Core.Behaviors.ScoreUI
   {
     public struct LastState
     {
-      public Vector2 ScreenSize;
       public Color TextColor, TextOutLineColor;
     }
 
@@ -20,9 +19,6 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     private HBoxContainer _scoreContainer;
     private Label _accuracyLabel;
-
-    private readonly Vector2 BASE_SCORE_POS = new Vector2(-25f, 25f);
-    private readonly Vector2 BASE_ACCURACY_POS = new Vector2(-25f, 75f);
 
     private Queue<int> _scoreQueue = new Queue<int>();
     private float _scoreAnimTimer = 0f;
@@ -62,45 +58,11 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     public void UpdateVisual()
     {
-      bool isLayoutDirty = ScreenSize != _lastState.ScreenSize;
       bool isColorDirty =
         TextColor != _lastState.TextColor
         || TextOutLineColor != _lastState.TextOutLineColor;
 
-      if (isLayoutDirty) UpdateLayout();
       if (isColorDirty) UpdateColor();
-    }
-
-    private void UpdateLayout()
-    {
-      float viewScale = Mathf.Abs(Mathf.Min(
-        ScreenSize.x / Visual.DESIGN_RESOLUTION.x,
-        ScreenSize.y / Visual.DESIGN_RESOLUTION.y
-      ));
-
-      if (_scoreContainer != null)
-      {
-        _scoreContainer.RectPosition = BASE_SCORE_POS * viewScale;
-        _scoreContainer.RectScale = new Vector2(viewScale, viewScale);
-      }
-
-      if (_accuracyLabel != null)
-      {
-        _accuracyLabel.RectPosition = BASE_ACCURACY_POS * viewScale;
-      }
-
-      if (_scoreContainer != null)
-      {
-        foreach (Node child in _scoreContainer.GetChildren())
-        {
-          if (child is DigitRoller roller)
-          {
-            roller.UpdateLayout(viewScale);
-          }
-        }
-      }
-
-      _lastState.ScreenSize = ScreenSize;
     }
 
     private void UpdateColor()
