@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using Winithm.Core.Common;
 using Winithm.Core.Interfaces;
@@ -88,19 +89,10 @@ namespace Winithm.Core.Data
     public bool Unresponsive { get => _unresponsive; set { if (_unresponsive == value) return; _unresponsive = value; OnUnResponsiveChanged?.Invoke(this); } }
 
     /// <summary>
-    /// Gets or sets whether the window is currently focusable for player interaction.
+    /// List of focusable periods. Each period has a Start and End beat.
+    /// A period with End == double.NaN means it is currently active (not yet ended).
     /// </summary>
-    public bool Focusable = false;
-
-    /// <summary>
-    /// The beat at which this window becomes focusable.
-    /// </summary>
-    public double FocusableStartBeat = double.NaN;
-
-    /// <summary>
-    /// The beat at which this window stops being focusable.
-    /// </summary>
-    public double FocusableEndBeat = double.NaN;
+    public List<(double Start, double End)> FocusablePeriods = new List<(double, double)>();
 
     /// <summary>
     /// Pre-computed animation timestamps.
