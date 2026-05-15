@@ -57,7 +57,7 @@ namespace Winithm.Core.Behaviors
     private static readonly Texture _minTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/minimize.svg");
     private static readonly DynamicFont _font = new DynamicFont
     {
-      FontData = GD.Load<DynamicFontData>("res://Winithm.Core/Resources/Fonts/Quicksand-Regular.ttf"),
+      FontData = GD.Load<DynamicFontData>("res://Winithm.Core/Resources/Fonts/Quicksand.ttf"),
       UseFilter = true
     };
 
@@ -220,12 +220,13 @@ namespace Winithm.Core.Behaviors
       bool showMin = w >= iconWidth + threeBtns;
 
       int fontSize = (int)(h * 0.55f);
-      if (_font.Size != fontSize) _font.Size = fontSize;
+      bool fontReady = _font?.FontData != null;
+      if (fontReady && _font.Size != fontSize) _font.Size = fontSize;
 
       string titleText =
-        IsNotRespondingTitle ? Title + " (Not Responding)" : Title;
+        IsNotRespondingTitle ? (Title ?? "") + " (Not Responding)" : (Title ?? "");
       string displayTitle = "";
-      if (showClose)
+      if (showClose && fontReady && titleText.Length > 0)
       {
         float avail = w - iconWidth - threeBtns - 10f;
 
