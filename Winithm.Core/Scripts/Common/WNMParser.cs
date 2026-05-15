@@ -14,7 +14,9 @@ namespace Winithm.Core.Common
     /// <summary>Parse a .wnm metadata file.</summary>
     public static SongMetaData Parse(string filePath)
     {
-      var songFolder = System.IO.Path.GetDirectoryName(filePath) ?? "";
+      // Use Godot-safe path extraction to preserve res:// prefix (System.IO.Path breaks it on Windows)
+      int lastSlash = filePath.LastIndexOf('/');
+      var songFolder = lastSlash >= 0 ? filePath.Substring(0, lastSlash) : "";
 
       var data = new SongMetaData();
       var file = new File();
