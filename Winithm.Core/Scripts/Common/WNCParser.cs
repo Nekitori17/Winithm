@@ -76,19 +76,19 @@ namespace Winithm.Core.Common
               ParseChartMetadataLine(trimmed, data.ChartMetadata);
               break;
             case "OVERLAYS":
-              ParseOverlayLine(trimmed, data.Overlays, currentOverlay, data.ObjectFactory);
+              ParseOverlayLine(trimmed, data.Overlays, ref currentOverlay, data.ObjectFactory);
               break;
             case "COMPONENTS":
-              ParseComponentLine(trimmed, data.Components, currentComponent, data.ObjectFactory);
+              ParseComponentLine(trimmed, data.Components, ref currentComponent, data.ObjectFactory);
               break;
             case "THEME_CHANNELS":
-              ParseThemeChannelLine(trimmed, data.ThemeChannels, currentTheme, data.ObjectFactory);
+              ParseThemeChannelLine(trimmed, data.ThemeChannels, ref currentTheme, data.ObjectFactory);
               break;
             case "GROUPS":
-              ParseGroupLine(trimmed, data.Groups, currentGroup, data.ObjectFactory);
+              ParseGroupLine(trimmed, data.Groups, ref currentGroup, data.ObjectFactory);
               break;
             case "WINDOWS":
-              ParseWindowLine(trimmed, data.Windows, currentWindow, currentSpeedStep, data.ObjectFactory);
+              ParseWindowLine(trimmed, data.Windows, ref currentWindow, ref currentSpeedStep, data.ObjectFactory);
               break;
             default:
               GD.PushWarning($"Unknown section: {currentSection}");
@@ -138,7 +138,7 @@ namespace Winithm.Core.Common
     // ── OVERLAYS ──
 
     private static void ParseOverlayLine(
-      string trimmed, OverlayManager overlays, OverlayData current, ObjectFactory factory
+      string trimmed, OverlayManager overlays, ref OverlayData current, ObjectFactory factory
     )
     {
       if (trimmed.StartsWith("+ "))
@@ -178,7 +178,7 @@ namespace Winithm.Core.Common
       else if (ParserUtils.TryParseProperty(trimmed, "Shader:", out string shader))
         current.ShaderFile = shader;
       else if (ParserUtils.TryParseProperty(trimmed, "Affects UI:", out string affectsUI))
-        current.AffectsUI = ParserUtils.ParseIntBool(affectsUI);
+        current.AffectsUI = ParserUtils.TryParseIntBool(affectsUI, out bool afui) ? afui : false;
       else if (ParserUtils.TryParseProperty(trimmed, "Layer:", out string layer))
       {
         string [] parts = layer.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -197,7 +197,7 @@ namespace Winithm.Core.Common
     // ── COMPONENTS ──
 
     private static void ParseComponentLine(
-        string trimmed, ComponentManager components, ComponentData current, ObjectFactory factory)
+        string trimmed, ComponentManager components, ref ComponentData current, ObjectFactory factory)
     {
       if (trimmed.StartsWith("* "))
       {
@@ -238,7 +238,7 @@ namespace Winithm.Core.Common
     // ── THEME CHANNELS ──
 
     private static void ParseThemeChannelLine(
-        string trimmed, ThemeChannelManager themes, ThemeChannelData current, ObjectFactory factory)
+        string trimmed, ThemeChannelManager themes, ref ThemeChannelData current, ObjectFactory factory)
     {
       if (trimmed.StartsWith("+ "))
       {
@@ -279,7 +279,7 @@ namespace Winithm.Core.Common
 
     // ── GROUPS ──
 
-    private static void ParseGroupLine(string trimmed, GroupManager groups, GroupData current, ObjectFactory factory)
+    private static void ParseGroupLine(string trimmed, GroupManager groups, ref GroupData current, ObjectFactory factory)
     {
       if (trimmed.StartsWith("+ "))
       {
@@ -325,8 +325,8 @@ namespace Winithm.Core.Common
     private static void ParseWindowLine(
         string trimmed,
         WindowManager windows,
-        WindowData current,
-        SpeedStepData currentSpeedStep,
+        ref WindowData current,
+        ref SpeedStepData currentSpeedStep,
         ObjectFactory factory
     )
     {
