@@ -238,7 +238,16 @@ namespace Winithm.Core.Controllers
         windowVisual.PlayerAreaSize = PlayerAreaSize;
 
         if (windowData.UnFocus)
-          AnimateFocusableOverlay(windowVisual, windowData, currentBeat);
+        {
+          bool isFocusableNow = IsFocusableAt(windowData.ID, currentBeat);
+          if (isFocusableNow)
+            AnimateFocusableOverlay(windowVisual, windowData, currentBeat);
+          else
+          {
+            windowVisual.UnFocusOverlayOpacity = Window.UNFOCUS_OVERLAY_TINT;
+            windowVisual.UnFocus = true;
+          }
+        }
         else
         {
           windowVisual.UnFocusOverlayOpacity = 0f;
@@ -315,23 +324,10 @@ namespace Winithm.Core.Controllers
       Window windowVisual, WindowData windowData, double currentBeat
     )
     {
-      if (currentBeat < windowData.FocusableStartBeat)
-      {
-        windowVisual.UnFocusOverlayOpacity = Window.UNFOCUS_OVERLAY_TINT;
-        windowVisual.UnFocus = true;
-        return;
-      }
-      else if (currentBeat < windowData.FocusableEndBeat)
-      { // Focus pulse: deterministic sin wave based on beat for perfect scrub rendering
-        float sinVal = Mathf.Sin((float)currentBeat * FocusablePulseFrequency * Mathf.Pi);
-        windowVisual.UnFocusOverlayOpacity = sinVal > 0 ? Window.UNFOCUS_OVERLAY_TINT : 0f;
-        windowVisual.UnFocus = true;
-      }
-      else
-      {
-        windowVisual.UnFocusOverlayOpacity = 0f;
-        windowVisual.UnFocus = false;
-      }
+      // Focus pulse: deterministic sin wave based on beat for perfect scrub rendering
+      float sinVal = Mathf.Sin((float)currentBeat * FocusablePulseFrequency * Mathf.Pi);
+      windowVisual.UnFocusOverlayOpacity = sinVal > 0 ? Window.UNFOCUS_OVERLAY_TINT : 0f;
+      windowVisual.UnFocus = true;
     }
 
     private void AnimateUnresponsiveOverlay(
@@ -379,24 +375,70 @@ namespace Winithm.Core.Controllers
       }
     }
 
-    public void SetStartFocusable(string windowId, float currentBeat)
+    public void AddStartFocusable(string windowId, double currentBeat)
     {
       if (!_windowStates.TryGetValue(windowId, out var state)) return;
       var windowData = state.Data;
-      if (windowData.UnFocus) return;
 
       windowData.UnFocus = true;
-      windowData.FocusableStartBeat = currentBeat;
+      windowData.FocusablePeriods.Add((currentBeat, double.NaN));
     }
 
-    public void SetEndFocusable(string windowId, float currentBeat)
+    public void AddEndFocusable(string windowId, double currentBeat)
     {
       if (!_windowStates.TryGetValue(windowId, out var state)) return;
       var windowData = state.Data;
       if (!windowData.UnFocus) return;
 
-      windowData.FocusableEndBeat = currentBeat;
+      var periods = windowData.FocusablePeriods;
+
+      // Active period (End == NaN) is always the last one,
+      // since we always close before opening a new period.
+      int last = periods.Count - 1;
+      if (last >= 0 && double.IsNaN(periods[last].End))
+      {
+        periods[last] = (periods[last].Start, currentBeat);
+        windowData.UnFocus = false;
+      }
     }
+
+    /// <summary>
+    /// Binary search O(log n) for the last period where Start <= beat,
+    /// then checks containment. Periods are sorted by Start (appended chronologically).
+    /// Stateless — safe for scrubbing in any direction.
+    /// </summary>
+    public bool IsFocusableAt(string windowId, double currentBeat)
+    {
+      if (!_windowStates.TryGetValue(windowId, out var state)) return false;
+      var periods = state.Data.FocusablePeriods;
+
+      int count = periods.Count;
+      if (count == 0) return false;
+
+      // Binary search: find largest index where Start <= currentBeat
+      int lo = 0, hi = count - 1, candidate = -1;
+      while (lo <= hi)
+      {
+        int mid = lo + ((hi - lo) >> 1);
+        if (periods[mid].Start <= currentBeat)
+        {
+          candidate = mid;
+          lo = mid + 1;
+        }
+        else
+        {
+          hi = mid - 1;
+        }
+      }
+
+      if (candidate < 0) return false;
+
+      double end = periods[candidate].End;
+      return double.IsNaN(end) || currentBeat <= end;
+    }
+
+    /// <summary>Returns the IDs of all currently active (rendered) windows.</summary>
+    public IEnumerable<string> GetActiveWindowIds() => _windowStates.Keys;
 
     /// <summary>
     /// Lifecycle scale for spawn/despawn animations.
