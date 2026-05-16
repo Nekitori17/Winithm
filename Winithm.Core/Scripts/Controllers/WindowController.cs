@@ -2,6 +2,7 @@ using Godot;
 using System.Collections.Generic;
 using Winithm.Core.Behaviors;
 using Winithm.Core.Common;
+using Winithm.Core.Constants;
 using Winithm.Core.Data;
 using Winithm.Core.Managers;
 
@@ -192,9 +193,14 @@ namespace Winithm.Core.Controllers
           }
         }
 
-        windowVisual.Position = finalPos;
+        float viewScale = Mathf.Abs(Mathf.Min(
+          PlayerAreaSize.x / Visual.DESIGN_RESOLUTION.x,
+          PlayerAreaSize.y / Visual.DESIGN_RESOLUTION.y
+        ));
+
+        windowVisual.Position = finalPos * viewScale;
         windowVisual.RotationDegrees = 0f;
-        windowVisual.WindowSize = finalScale;
+        windowVisual.WindowSize = finalScale * viewScale;
 
         Color finalWindowColor = windowVisual.WindowColor;
         float finalNoteA = windowVisual.NoteOpacity;
