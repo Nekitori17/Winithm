@@ -102,11 +102,14 @@ namespace Winithm.Client.Managers
           Rect2 workArea = GetWorkArea();
           OS.WindowPosition = workArea.Position;
           OS.WindowSize = workArea.Size;
+          OS.WindowMaximized = false;
           OS.WindowBorderless = true;
           OS.WindowResizable = false;
           break;
         case DesktopDisplayMode.Windowed:
+          OS.WindowPosition = Vector2.Zero;
           OS.WindowFullscreen = false;
+          OS.WindowMaximized = true;
           OS.WindowBorderless = false;
           OS.WindowResizable = true;
           break;
