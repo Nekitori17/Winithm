@@ -185,15 +185,17 @@ namespace Winithm.Core.Controllers
         NoteSide side = sideEntry.Key;
         var noteList = sideEntry.Value;
 
-        float viewportLengthPx = IsVerticalSide(side) ? windowSize.y : windowSize.x;
+        float viewportLengthPx = IsVerticalSide(side) ? windowSize.y * viewportScale : windowSize.x * viewportScale;
+
+        int evalCursor = state.EvalCursors[side];
         int renderCursor = state.RenderCursors[side];
 
-        // Pull cursor backward using precomputed MaxEndBeats (binary search)
+        // Move cursor backwards if currentBeat rewound
         renderCursor = SyncCursorBackward(
           state, side, renderCursor, currentBeat, pixelsPerBeat, viewportScale, offScreenMarginPx
         );
 
-        // Advance cursor past notes whose tail left the screen
+        // Advance render cursor for notes that are far behind viewport
         renderCursor = SyncCursorForward(
           state, noteList, renderCursor, currentBeat, pixelsPerBeat, viewportScale, offScreenMarginPx
         );
@@ -207,10 +209,11 @@ namespace Winithm.Core.Controllers
         {
           NoteData note = noteList[i];
 
-          if (ShouldSkipRendering(note, currentBeat)) continue;
-
           double noteStartBeat = note.StartBeat.AbsoluteValue;
           double noteEndBeat = noteStartBeat + note.Length;
+
+          // Hold notes should disappear immediately when playback reaches their tail
+          if (note.Type == NoteType.Hold && currentBeat >= noteEndBeat) continue;
 
           float headOffsetPx = state.WindowData.SpeedSteps.GetVisualOffset(
             currentBeat, noteStartBeat
@@ -246,25 +249,6 @@ namespace Winithm.Core.Controllers
     private bool IsVerticalSide(NoteSide side)
     {
       return side == NoteSide.Top || side == NoteSide.Bottom;
-    }
-
-    /// <summary>
-    /// Skip rendering for notes that have already been consumed or are behind playback,
-    /// except for active hold notes whose tail hasn't passed yet.
-    /// </summary>
-    private bool ShouldSkipRendering(NoteData note, double currentBeat)
-    {
-      bool isConsumed = Autoplay || note.IsEvaluated || !note.IsHittable;
-      if (!isConsumed) return false;
-
-      double noteStartBeat = note.StartBeat.AbsoluteValue;
-      double noteEndBeat = noteStartBeat + note.Length;
-
-      // Active hold: keep rendering until tail passes
-      if (note.Type == NoteType.Hold && currentBeat <= noteEndBeat) return false;
-
-      // Note head is behind playback
-      return currentBeat > noteStartBeat;
     }
 
     // =============================================
@@ -405,6 +389,11 @@ namespace Winithm.Core.Controllers
     {
       Vector2 playerAreaSize = state.WindowVisual.PlayerAreaSize;
       Vector2 windowSize = state.WindowVisual.WindowSize;
+      float viewportScale = Math.Min(
+        playerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
+        playerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
+      );
+      Vector2 scaledWindowSize = windowSize * viewportScale;
 
       float headHeight = 
         noteVisual.NoteSize * Mathf.Min(
@@ -424,8 +413,8 @@ namespace Winithm.Core.Controllers
 
       // Width depends on whether the note sits on a vertical or horizontal edge
       float noteWidth = IsVerticalSide(side)
-        ? windowSize.x * note.Width
-        : windowSize.y * note.Width;
+        ? scaledWindowSize.x * note.Width
+        : scaledWindowSize.y * note.Width;
 
       noteVisual.Width = noteWidth;
       noteVisual.NoteSize = PlayerNoteSize;
@@ -440,36 +429,36 @@ namespace Winithm.Core.Controllers
       // Highlight notes sharing the same start beat (chords)
       ApplyChordHighlight(state, note, noteVisual);
 
-      // Lateral position: center of note width, offset by X within remaining space
-      float lateralPosition = note.Width / 2f + note.X * (1f - note.Width);
+      // Lateral position: Note X is the start coordinate (0 to 1). The note is drawn centered at (X + Width/2)
+      float lateralPosition = note.X + note.Width / 2f;
 
       switch (side)
       {
         case NoteSide.Bottom:
           noteVisual.Position = new Vector2(
-            windowSize.x * lateralPosition,
-            windowSize.y - headOffsetPx
+            scaledWindowSize.x * lateralPosition,
+            scaledWindowSize.y - headOffsetPx
           );
           noteVisual.RotationDegrees = 0f;
           break;
         case NoteSide.Top:
           noteVisual.Position = new Vector2(
-            windowSize.x * lateralPosition,
+            scaledWindowSize.x * lateralPosition,
             headOffsetPx
           );
           noteVisual.RotationDegrees = 180f;
           break;
         case NoteSide.Right:
           noteVisual.Position = new Vector2(
-            windowSize.x - headOffsetPx,
-            windowSize.y * lateralPosition
+            scaledWindowSize.x - headOffsetPx,
+            scaledWindowSize.y * lateralPosition
           );
           noteVisual.RotationDegrees = -90f;
           break;
         case NoteSide.Left:
           noteVisual.Position = new Vector2(
             headOffsetPx,
-            windowSize.y * lateralPosition
+            scaledWindowSize.y * lateralPosition
           );
           noteVisual.RotationDegrees = 90f;
           break;

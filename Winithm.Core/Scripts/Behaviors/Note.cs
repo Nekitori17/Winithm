@@ -56,6 +56,15 @@ namespace Winithm.Core.Behaviors
       _bodyCenter = GetNode<Sprite>("Body/Center");
       _bodyRight = GetNode<Sprite>("Body/Right");
 
+      _headLeft.Centered = false;
+      _headCenter.Centered = false;
+      _headRight.Centered = false;
+      _headOverlay.Centered = false;
+
+      _bodyLeft.Centered = false;
+      _bodyCenter.Centered = false;
+      _bodyRight.Centered = false;
+
       UpdateVisual();
     }
 
