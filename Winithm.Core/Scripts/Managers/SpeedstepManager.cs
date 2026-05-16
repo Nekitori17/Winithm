@@ -244,7 +244,7 @@ namespace Winithm.Core.Managers
         double segEnd = _speedStepCollection[i].StartBeat.AbsoluteValue;
         double segLen = segEnd - segStart;
 
-        float speed = EvaluateSpeed(_speedStepCollection[i - 1], currentBeat);
+        float speed = EvaluateSpeed(_speedStepCollection[i], currentBeat);
         _frameCache.PrefixDistance[i] = _frameCache.PrefixDistance[i - 1] + speed * (float)segLen;
       }
     }
@@ -269,9 +269,7 @@ namespace Winithm.Core.Managers
       float distCurrent = DistanceFromOrigin(currentBeat, clampedCurrent);
       float distTarget = DistanceFromOrigin(currentBeat, clampedTarget);
 
-      return (targetBeat >= currentBeat)
-        ? (distTarget - distCurrent)
-        : -(distTarget - distCurrent);
+      return distTarget - distCurrent;
     }
 
     /// <summary>
@@ -280,8 +278,16 @@ namespace Winithm.Core.Managers
     public float GetSpeedAt(double currentBeat, double beat)
     {
       if (_speedStepCollection == null || _speedStepCollection.Count == 0) return 1f;
+
+      int n = _speedStepCollection.Count;
+      double lastStart = _speedStepCollection[n - 1].StartBeat.AbsoluteValue;
+      if (beat >= lastStart)
+      {
+        return EvaluateSpeed(_speedStepCollection[n - 1], currentBeat);
+      }
+
       int idx = FindStepIndex(beat);
-      return EvaluateSpeed(_speedStepCollection[idx], currentBeat);
+      return EvaluateSpeed(_speedStepCollection[idx + 1], currentBeat);
     }
 
     private float DistanceFromOrigin(double currentBeat, double beat)
@@ -306,7 +312,7 @@ namespace Winithm.Core.Managers
 
       double segStart = _speedStepCollection[idx].StartBeat.AbsoluteValue;
       double tail2 = beat - segStart;
-      float speed2 = EvaluateSpeed(_speedStepCollection[idx], currentBeat);
+      float speed2 = EvaluateSpeed(_speedStepCollection[idx + 1], currentBeat);
       return _frameCache.PrefixDistance[idx] + speed2 * (float)tail2;
     }
 
