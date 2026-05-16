@@ -14,11 +14,7 @@ namespace Winithm.Client.Behaviors.Gameplay
     public GameplayAspectMode AspectMode
     {
       get => _aspectMode;
-      set
-      {
-        _aspectMode = value;
-        ApplyAspectMode();
-      }
+      set => SetAspectMode(value);
     }
 
     private Control _gameArea;
@@ -32,8 +28,21 @@ namespace Winithm.Client.Behaviors.Gameplay
       _gameArea = GetNode<Control>("PlayerArea");
             
       Connect("item_rect_changed", this, nameof(ApplyAspectMode));
-            
+
+      AspectMode = GameplayAspectMode.Expand;       
+    }
+
+    public void SetAspectMode(GameplayAspectMode mode)
+    {
+      _aspectMode = mode;
       ApplyAspectMode();
+    }
+
+    public void ToggleAspectMode()
+    {
+      SetAspectMode(AspectMode == GameplayAspectMode.Expand
+          ? GameplayAspectMode.Ratio16_9
+          : GameplayAspectMode.Expand);
     }
 
     private void ApplyAspectMode()
