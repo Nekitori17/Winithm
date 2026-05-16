@@ -59,7 +59,7 @@ namespace Winithm.Client.Managers
     public override void _Ready()
     {
       Instance = this;
-      SetDesktopDisplayMode(DesktopDisplayMode.Windowed);
+      DisplayMode = DesktopDisplayMode.Windowed;
     }
 
     private Rect2 GetWorkArea()
