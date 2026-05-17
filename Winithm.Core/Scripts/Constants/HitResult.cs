@@ -7,11 +7,11 @@ namespace Winithm.Core.Constants
   {
     public static readonly Dictionary<HitResultType, double> TimmingWindowMs = new Dictionary<HitResultType, double>
     {
-      { HitResultType.Perfect, 65 },
-      { HitResultType.Good, 125 },
-      { HitResultType.Bad, 175 },
+      { HitResultType.Perfect, 75 },
+      { HitResultType.Good, 150 },
+      { HitResultType.Bad, 200 },
       // Miss is not a timing window, but a flag for notes that were not hit.
-      { HitResultType.Miss, 175 },
+      { HitResultType.Miss, 200 },
     };
 
     public static readonly Dictionary<HitResultType, float> ResultWeight = new Dictionary<HitResultType, float>
