@@ -201,3 +201,18 @@ custom_colors/font_outline_modulate = Color( 0, 0, 0, 1 )
 custom_fonts/font = SubResource( 4 )
 text = "All Perfect"
 uppercase = true
+
+[node name="ProgessBar" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 0.015
+
+[node name="BarBody" type="ColorRect" parent="ProgessBar"]
+anchor_top = 0.25
+anchor_right = 1.0
+anchor_bottom = 0.75
+
+[node name="BarHead" type="ColorRect" parent="ProgessBar"]
+anchor_left = 0.99
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color( 0, 0, 0, 1 )

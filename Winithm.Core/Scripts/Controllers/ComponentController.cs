@@ -18,10 +18,12 @@ namespace Winithm.Core.Controllers
     private struct LastState
     {
       public Vector2 ScreenSize;
+      public float SongProgressPercent;
       public Color TextColor, TextOutLineColor;
     }
 
     [Export] public Vector2 ScreenSize = Visual.DESIGN_RESOLUTION;
+    [Export] public float SongProgressPercent = 0f;
     [Export] public Color TextColor = Colors.White;
     [Export] public Color TextOutLineColor = Colors.Black;
 
@@ -35,6 +37,10 @@ namespace Winithm.Core.Controllers
     private PlayerCombo _playerCombo;
     private Control _playerScoreTransform;
     private PlayerScore _playerScore;
+
+    private Control _progressBar;
+    private ColorRect _barBody;
+    private ColorRect _barHead;
 
     private double _lastUpdateBeat;
 
@@ -59,6 +65,10 @@ namespace Winithm.Core.Controllers
       _playerScoreTransform = GetNodeOrNull<Control>("PlayerScoreTransform");
       _playerScore = _playerScoreTransform?.GetNodeOrNull<PlayerScore>("PlayerScore");
 
+      _progressBar = GetNodeOrNull<Control>("ProgessBar");
+      _barBody = _progressBar?.GetNodeOrNull<ColorRect>("BarBody");
+      _barHead = _progressBar?.GetNodeOrNull<ColorRect>("BarHead");
+
       UpdateLayout();
     }
 
@@ -75,9 +85,13 @@ namespace Winithm.Core.Controllers
       bool isColorDirty =
         _lastState.TextColor != TextColor 
         || _lastState.TextOutLineColor != TextOutLineColor;
+      bool isProgressDirty = _lastState.SongProgressPercent != SongProgressPercent;
 
       if (isLayoutDirty) UpdateLayout();
       if (isColorDirty) UpdateColor();
+      if (isProgressDirty || _force) UpdateProgressBar();
+
+      _lastState.SongProgressPercent = SongProgressPercent;
 
       if (_songInfo != null && _songMetaData != null && _metronome != null)
       {
@@ -204,8 +218,24 @@ namespace Winithm.Core.Controllers
         _playerCombo.UpdateVisual();
       }
 
+      if (_barBody != null) _barBody.Color = TextColor;
+      if (_barHead != null) _barHead.Color = TextOutLineColor;
+
       _lastState.TextColor = TextColor;
       _lastState.TextOutLineColor = TextOutLineColor;
+    }
+    private void UpdateProgressBar()
+    {
+      if (_barBody != null)
+      {
+        _barBody.AnchorRight = SongProgressPercent;
+      }
+
+      if (_barHead != null)
+      {
+        _barHead.AnchorRight = SongProgressPercent;
+        _barHead.AnchorLeft = Mathf.Max(0f, SongProgressPercent - 0.01f);
+      }
     }
   }
 }
