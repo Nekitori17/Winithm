@@ -4,54 +4,65 @@ namespace Winithm.Core.Behaviors
 {
   public class DigitRoller : Control
   {
-    private VBoxContainer _vbox;
+    private Control _container;
+    private Label _templateLabel;
     private int _targetDigit = 0;
 
-    private float _animTimer = 0f;
-    private float _animDuration = 0f;
-
-    private float _startDigitValue = 0f;
-    private float _currentDigitValue = 0f;
+    private float _currentY = 0f;
+    private float _targetY = 0f;
+    private const float ITEM_HEIGHT = 41f;
 
     public override void _Ready()
     {
-      _vbox = GetNodeOrNull<VBoxContainer>("VBoxContainer");
+      _container = GetNodeOrNull<Control>("VBoxContainer");
+      if (_container != null && _container.GetChildCount() > 0)
+      {
+        var firstChild = _container.GetChild<Label>(0);
+        _templateLabel = (Label)firstChild.Duplicate();
+
+        // Clean up any extra children if they exist
+        for (int i = _container.GetChildCount() - 1; i > 0; i--)
+        {
+          var child = _container.GetChild(i);
+          _container.RemoveChild(child);
+          child.QueueFree();
+        }
+      }
     }
 
     public override void _Process(float delta)
     {
-      if (_animTimer > 0f && _vbox != null)
+      if (_container == null) return;
+
+      // Smooth damp towards the target Y position
+      if (Mathf.Abs(_currentY - _targetY) > 0.01f)
       {
-        _animTimer -= delta;
-        if (_animTimer <= 0f)
-        {
-          _animTimer = 0f;
-          _currentDigitValue = _targetDigit;
-        }
-        else
-        {
-          float t = 1f - (_animTimer / _animDuration);
-          t = t * t * (3f - 2f * t); // smoothstep
-          _currentDigitValue = Mathf.Lerp(_startDigitValue, _targetDigit, t);
-        }
+        _currentY = Mathf.Lerp(_currentY, _targetY, 15f * delta);
+      }
+      else
+      {
+        _currentY = _targetY;
       }
 
-      if (_vbox != null)
+      _container.RectPosition = new Vector2(_container.RectPosition.x, _currentY);
+
+      // Culling logic: If we've passed at least one full item height, cull the top item
+      while (_currentY <= -ITEM_HEIGHT && _container.GetChildCount() > 1)
       {
-        int index = Mathf.Clamp(Mathf.FloorToInt(_currentDigitValue), 0, 9);
-        int nextIndex = Mathf.Clamp(index + 1, 0, 9);
-        float remainder = _currentDigitValue - index;
+        var topChild = _container.GetChild<Control>(0);
+        _container.RemoveChild(topChild);
+        topChild.QueueFree();
 
-        Label lbl1 = _vbox.GetNodeOrNull<Label>(index.ToString());
-        Label lbl2 = _vbox.GetNodeOrNull<Label>(nextIndex.ToString());
-
-        if (lbl1 != null && lbl2 != null)
+        // Shift all remaining children UP by ITEM_HEIGHT in their local space
+        foreach (Control child in _container.GetChildren())
         {
-          float y1 = lbl1.RectPosition.y;
-          float y2 = lbl2.RectPosition.y;
-          float y = Mathf.Lerp(y1, y2, remainder);
-          _vbox.RectPosition = new Vector2(_vbox.RectPosition.x, -y);
+          child.RectPosition = new Vector2(child.RectPosition.x, child.RectPosition.y - ITEM_HEIGHT);
         }
+
+        // Shift the container DOWN by ITEM_HEIGHT to perfectly counteract the visual jump
+        _currentY += ITEM_HEIGHT;
+        _targetY += ITEM_HEIGHT;
+        _container.RectPosition = new Vector2(_container.RectPosition.x, _currentY);
       }
     }
 
@@ -60,28 +71,63 @@ namespace Winithm.Core.Behaviors
       if (digit < 0) digit = 0;
       if (digit > 9) digit = 9;
 
-      if (_targetDigit == digit && _animTimer <= 0f) return;
-
+      if (_targetDigit == digit && !instant) return;
       _targetDigit = digit;
+
+      if (_container == null || _templateLabel == null) return;
 
       if (instant)
       {
-        _animTimer = 0f;
-        _currentDigitValue = digit;
+        // Remove all children except the last one
+        for (int i = 0; i < _container.GetChildCount() - 1; i++)
+        {
+          var child = _container.GetChild(0);
+          _container.RemoveChild(child);
+          child.QueueFree();
+        }
+
+        var remainingChild = _container.GetChild<Label>(0);
+        remainingChild.Text = digit.ToString();
+        remainingChild.RectPosition = new Vector2(remainingChild.RectPosition.x, 0);
+
+        _currentY = 0f;
+        _targetY = 0f;
+        _container.RectPosition = new Vector2(_container.RectPosition.x, 0);
       }
       else
       {
-        _startDigitValue = _currentDigitValue;
-        float distance = Mathf.Abs(_targetDigit - _startDigitValue);
-        _animDuration = Mathf.Max(0.01f, distance * 0.1f);
-        _animTimer = _animDuration;
+        // Add a new label at the bottom
+        Label newLabel = (Label)_templateLabel.Duplicate();
+        newLabel.Text = digit.ToString();
+        
+        int currentIndex = _container.GetChildCount();
+        
+        // Ensure new label has correct Y position relative to the previous one
+        float newLocalY = 0f;
+        if (currentIndex > 0)
+        {
+          var lastChild = _container.GetChild<Control>(currentIndex - 1);
+          newLocalY = lastChild.RectPosition.y + ITEM_HEIGHT;
+        }
+
+        newLabel.RectPosition = new Vector2(newLabel.RectPosition.x, newLocalY);
+        _container.AddChild(newLabel);
+
+        // Move the target Y up by one item height to scroll to the newly added label
+        _targetY -= ITEM_HEIGHT;
       }
     }
 
     public void UpdateColor(Color textColor, Color outlineColor)
     {
-      if (_vbox == null) return;
-      foreach (Node child in _vbox.GetChildren())
+      if (_templateLabel != null)
+      {
+        _templateLabel.AddColorOverride("font_color", textColor);
+        _templateLabel.AddColorOverride("font_outline_modulate", outlineColor);
+      }
+
+      if (_container == null) return;
+      foreach (Node child in _container.GetChildren())
       {
         if (child is Label lbl)
         {

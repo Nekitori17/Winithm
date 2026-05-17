@@ -20,10 +20,6 @@ namespace Winithm.Core.Behaviors.ScoreUI
     private HBoxContainer _scoreContainer;
     private Label _accuracyLabel;
 
-    private Queue<int> _scoreQueue = new Queue<int>();
-    private float _scoreAnimTimer = 0f;
-    private int _currentDisplayedScore = 0;
-
     public override void _Ready()
     {
       _scoreContainer = GetNodeOrNull<HBoxContainer>("Score");
@@ -33,27 +29,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     public override void _Process(float delta)
     {
-      if (_scoreAnimTimer > 0f)
-      {
-        _scoreAnimTimer -= delta;
-      }
-      else if (_scoreQueue.Count > 0)
-      {
-        int nextScore = _scoreQueue.Dequeue();
-
-        int maxDiff = 0;
-        string currStr = _currentDisplayedScore.ToString("D7");
-        string nextStr = nextScore.ToString("D7");
-        for (int i = 0; i < 7; i++)
-        {
-          int diff = Mathf.Abs(currStr[i] - nextStr[i]);
-          if (diff > maxDiff) maxDiff = diff;
-        }
-
-        _scoreAnimTimer = maxDiff * 0.1f;
-        _currentDisplayedScore = nextScore;
-        ApplyScoreToRollers(nextScore, false);
-      }
+      // No longer need to manage a queue, DigitRoller handles seamless updates natively
     }
 
     public void UpdateVisual()
@@ -95,17 +71,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     public void SetScore(int score, bool instant)
     {
-      if (instant)
-      {
-        _scoreQueue.Clear();
-        _scoreAnimTimer = 0f;
-        _currentDisplayedScore = score;
-        ApplyScoreToRollers(score, true);
-      }
-      else
-      {
-        _scoreQueue.Enqueue(score);
-      }
+      ApplyScoreToRollers(score, instant);
     }
 
     private void ApplyScoreToRollers(int score, bool instant)
