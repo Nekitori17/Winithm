@@ -1,4 +1,5 @@
 using System;
+using Godot;
 
 namespace Winithm.Core.Common
 {
@@ -25,6 +26,19 @@ namespace Winithm.Core.Common
       if (layer > 9999) layer = 9999;
       if (subLayer < 0) subLayer = 0;
       if (subLayer > 99999) subLayer = 99999;
+    }
+  }
+
+  public static class AudioStreamUtils
+  {
+    public static void ClampStreamLoop(AudioStream stream)
+    {
+      if (stream is AudioStreamSample sample)
+        sample.LoopMode = AudioStreamSample.LoopModeEnum.Disabled;
+      else if (stream is AudioStreamOGGVorbis ogg)
+        ogg.Loop = false;
+      else if (stream is AudioStreamMP3 mp3)
+        mp3.Loop = false;
     }
   }
 }

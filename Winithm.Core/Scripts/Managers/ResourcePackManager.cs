@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using Winithm.Core.Common;
 using Winithm.Core.Data;
 
 namespace Winithm.Core.Managers
@@ -190,7 +191,9 @@ namespace Winithm.Core.Managers
         string fileNameWOExt = System.IO.Path.GetFileNameWithoutExtension(fileName);
 
         NoteType noteType = Enum.TryParse<NoteType>(fileNameWOExt, true, out var nt) ? nt : NoteType.Tap;
-        resourcePack.SFX[noteType] = GD.Load<AudioStream>(filePath);
+        var audioStream = GD.Load<AudioStream>(filePath);
+        AudioStreamUtils.ClampStreamLoop(audioStream);
+        resourcePack.SFX[noteType] = audioStream;
       }
       
       dir.ListDirEnd();

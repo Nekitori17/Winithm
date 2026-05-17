@@ -128,7 +128,9 @@ namespace Winithm.Core.Common
           if (ParserUtils.TryParseProperty(trimmed, "Path:", out string songPath)) 
           {
             meta.Audio.SongPath = songPath;
-            meta.Audio.SongStream = GD.Load<AudioStream>(songFolder.PlusFile(songPath));
+            var audioStream = GD.Load<AudioStream>(songFolder.PlusFile(songPath));
+            AudioStreamUtils.ClampStreamLoop(audioStream);
+            meta.Audio.SongStream = audioStream;
           }
           if (ParserUtils.TryParseProperty(trimmed, "Preview Range:", out string previewRange))
           {
