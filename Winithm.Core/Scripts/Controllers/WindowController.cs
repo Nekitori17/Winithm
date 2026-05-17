@@ -2,7 +2,6 @@ using Godot;
 using System.Collections.Generic;
 using Winithm.Core.Behaviors;
 using Winithm.Core.Common;
-using Winithm.Core.Constants;
 using Winithm.Core.Data;
 using Winithm.Core.Managers;
 
@@ -193,9 +192,9 @@ namespace Winithm.Core.Controllers
           }
         }
 
-        Vector2 viewScale =  new Vector2(
-          PlayerAreaSize.x / Visual.DESIGN_RESOLUTION.x,
-          PlayerAreaSize.y / Visual.DESIGN_RESOLUTION.y
+        Vector2 viewScale = new Vector2(
+          PlayerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
+          PlayerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
         );
 
         windowVisual.Position = finalPos * viewScale.Abs();
@@ -250,7 +249,7 @@ namespace Winithm.Core.Controllers
             AnimateFocusableOverlay(windowVisual, windowData, currentBeat);
           else
           {
-            windowVisual.UnFocusOverlayOpacity = Window.UNFOCUS_OVERLAY_TINT;
+            windowVisual.UnFocusOverlayOpacity = Window.UNFOCUS_OVERLAY_TINT.a;
             windowVisual.UnFocus = true;
           }
         }
@@ -277,10 +276,10 @@ namespace Winithm.Core.Controllers
     public int GetTotalComboPassedInDestroyedWindows(double currentBeat)
     {
       if (_windowManager == null || _windowManager.Count == 0) return 0;
-      
+
       var maxEnds = _windowManager.MaxEndBeats;
       int cursor = FindRenderCursor(maxEnds, currentBeat);
-      
+
       if (cursor <= 0) return 0;
       return _windowManager.PrefixCombo[cursor - 1];
     }
@@ -332,7 +331,7 @@ namespace Winithm.Core.Controllers
     {
       // Focus pulse: deterministic sin wave based on beat for perfect scrub rendering
       float sinVal = Mathf.Sin((float)currentBeat * FocusablePulseFrequency * Mathf.Pi);
-      float opacityVal = Mathf.Lerp(0, Window.UNFOCUS_OVERLAY_TINT, sinVal);
+      float opacityVal = Mathf.Lerp(0, Window.UNFOCUS_OVERLAY_TINT.a, sinVal);
       windowVisual.UnFocusOverlayOpacity = opacityVal;
       windowVisual.UnFocus = true;
     }
@@ -354,13 +353,14 @@ namespace Winithm.Core.Controllers
           (currentBeat - windowData.UnresponsiveStartBeat)
           / (windowData.UnresponsiveEndBeat - windowData.UnresponsiveStartBeat);
 
-        windowVisual.UnresponsiveOverlayOpacity =
-          (float)EasingFunctions.Evaluate(EasingType.CubicOut, t);
+        float easingVal = (float)EasingFunctions.Evaluate(EasingType.CubicOut, t);
+        float opacityVal = Mathf.Lerp(0, Window.UNRESPONSIVE_OVERLAY_TINT.a, easingVal);
+        windowVisual.UnresponsiveOverlayOpacity = opacityVal;
       }
       else
       {
         windowVisual.IsNotRespondingTitle = true;
-        windowVisual.UnresponsiveOverlayOpacity = 1f;
+        windowVisual.UnresponsiveOverlayOpacity = Window.UNRESPONSIVE_OVERLAY_TINT.a;
       }
     }
 

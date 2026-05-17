@@ -138,11 +138,14 @@ namespace Winithm.Core.Data
     public void ComputeAnimationWhenUnresponsive(Metronome metronome)
     {
       double endBeatInSecs = metronome.ToSeconds(EndBeat);
+      double missTimingWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
+
+      double secsAfterCloseNoteMissed = endBeatInSecs + (missTimingWindowMs / 1000.0);
 
       UnresponsiveStartBeat = EndBeat.AbsoluteValue;
-      UnresponsiveEndBeat = metronome.ToBeat(endBeatInSecs + 0.2);
-      EndOutStartBeat = metronome.ToBeat(endBeatInSecs + 1);
-      EndOutEndBeat = metronome.ToBeat(endBeatInSecs + 1.2);
+      UnresponsiveEndBeat = metronome.ToBeat(secsAfterCloseNoteMissed + 0.5);
+      EndOutStartBeat = metronome.ToBeat(secsAfterCloseNoteMissed + 1);
+      EndOutEndBeat = metronome.ToBeat(secsAfterCloseNoteMissed + 1);
     }
 
     public WindowData DeepClone(ObjectFactory objectFactory, BeatTime? offset)

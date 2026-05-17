@@ -62,7 +62,8 @@ namespace Winithm.Core.Behaviors
     };
 
     public static readonly float TITLE_BAR_HEIGHT_RATIO = 0.0375f;
-    public static readonly float UNFOCUS_OVERLAY_TINT = 0.75f;
+    public static readonly Color UNFOCUS_OVERLAY_TINT = new Color(0.25f, 0.25f, 0.25f, 0.5f);
+    public static readonly Color UNRESPONSIVE_OVERLAY_TINT = new Color(1f, 1f, 1f, 0.75f);
     internal float TitleBarHeight { get; private set; }
 
     public override void _Ready()
@@ -302,22 +303,27 @@ namespace Winithm.Core.Behaviors
 
     private void OnUnfocusOverlayDraw()
     {
+      Color unfocusColor = new Color(UNFOCUS_OVERLAY_TINT)
+      {
+        a = UnFocusOverlayOpacity
+      };
+
       UnfocusOverlay.DrawRect(
         new Rect2(Vector2.Zero, UnfocusOverlay.RectSize),
-        new Color(
-          UNFOCUS_OVERLAY_TINT,
-          UNFOCUS_OVERLAY_TINT,
-          UNFOCUS_OVERLAY_TINT,
-          UnFocusOverlayOpacity
-        )
+        unfocusColor
       );
     }
 
     private void OnUnresponsiveOverlayDraw()
     {
+      Color unresponsiveColor = new Color(UNFOCUS_OVERLAY_TINT)
+      {
+        a = UnresponsiveOverlayOpacity
+      };
+
       UnresponsiveOverlay.DrawRect(
         new Rect2(Vector2.Zero, UnresponsiveOverlay.RectSize),
-        new Color(1f, 1f, 1f, UnresponsiveOverlayOpacity)
+        unresponsiveColor
       );
     }
 
