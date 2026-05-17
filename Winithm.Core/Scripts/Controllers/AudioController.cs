@@ -28,6 +28,7 @@ namespace Winithm.Core.Controllers
     public double CurrentTime => _currentTime;
     public double CurrentBeat => Metronome.ToBeat(_currentTime);
     public double CurrentTimeMs => _currentTime * 1000d;
+    public double Length => _player.Stream != null ? (double)_player.Stream.GetLength() : 0d;
 
     public void Initialize(Metronome metronome)
     {
