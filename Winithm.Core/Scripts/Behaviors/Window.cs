@@ -72,10 +72,10 @@ namespace Winithm.Core.Behaviors
       _windowBody = GetNode<Control>("WindowBody");
       _windowFrame = GetNode<Control>("Frame");
 
-      NoteLayer = CreateLayer("NoteLayer");
-      UnfocusOverlay = CreateLayer("UnfocusOverlay");
-      FocusNoteLayer = CreateLayer("FocusNoteLayer");
-      UnresponsiveOverlay = CreateLayer("UnresponsiveOverlay");
+      NoteLayer = GetNode<Control>("WindowBody/NoteLayer");
+      UnfocusOverlay = GetNode<Control>("WindowBody/UnfocusOverlay");
+      FocusNoteLayer = GetNode<Control>("WindowBody/FocusNoteLayer");
+      UnresponsiveOverlay = GetNode<Control>("WindowBody/UnresponsiveOverlay");
 
       _titleBar.Connect("draw", this, nameof(OnTitleBarDraw));
       _windowBody.Connect("draw", this, nameof(OnWindowBodyDraw));
@@ -325,20 +325,6 @@ namespace Winithm.Core.Behaviors
         new Rect2(Vector2.Zero, UnresponsiveOverlay.RectSize),
         unresponsiveColor
       );
-    }
-
-    // --- Helpers ---
-
-    private Control CreateLayer(string name)
-    {
-      var layer = new Control
-      {
-        Name = name,
-        MouseFilter = MouseFilterEnum.Ignore
-      };
-      layer.SetAnchorsAndMarginsPreset(LayoutPreset.Wide);
-      _windowBody.AddChild(layer);
-      return layer;
     }
   }
 }
