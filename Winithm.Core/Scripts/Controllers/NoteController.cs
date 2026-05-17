@@ -332,7 +332,7 @@ namespace Winithm.Core.Controllers
       }
 
       // Newer notes render on top
-      parentLayer.MoveChild(noteVisual, -1);
+      parentLayer.MoveChild(noteVisual, parentLayer.GetChildCount() - 1);
 
       state.NoteVisualMap[note] = noteVisual;
       return noteVisual;
