@@ -429,8 +429,9 @@ namespace Winithm.Core.Controllers
       // Highlight notes sharing the same start beat (chords)
       ApplyChordHighlight(state, note, noteVisual);
 
-      // Lateral position: Note X is the start coordinate (0 to 1). The note is drawn centered at (X + Width/2)
-      float lateralPosition = note.X + note.Width / 2f;
+      // Lateral position: Note X is a proportion of the available free space (0 to 1).
+      // Left edge = X * (1 - Width). The note is drawn centered at (Left edge + Width/2)
+      float lateralPosition = note.X * (1f - note.Width) + note.Width / 2f;
 
       switch (side)
       {
