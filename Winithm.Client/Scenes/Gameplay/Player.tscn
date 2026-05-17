@@ -13,3 +13,16 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="ScoreUI" parent="." instance=ExtResource( 1 )]
+
+[node name="ControllerRack" type="Node" parent="."]
+
+[node name="Debug" type="Label" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+align = 1
+valign = 1
+uppercase = true
