@@ -39,7 +39,7 @@ namespace Winithm.Core.Behaviors
     public ResourcePack ResourcePack = ResourcePackManager.Instance.GetActiveResourcePack();
 
     public static readonly float BODY_TO_HEAD_RATIO = 0.9f;
-    public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.025f;
+    public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.015f;
     public static readonly float NOTE_OVERLAY_RATIO = 1.2f;
 
     // Initialize node references and perform initial visual update
