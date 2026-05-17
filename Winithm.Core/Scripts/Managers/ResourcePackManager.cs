@@ -195,6 +195,8 @@ namespace Winithm.Core.Managers
         AudioStreamUtils.ClampStreamLoop(audioStream);
         resourcePack.SFX[noteType] = audioStream;
       }
+
+      if (!resourcePack.SFX.ContainsKey(NoteType.Hold)) resourcePack.SFX[NoteType.Hold] = resourcePack.SFX[NoteType.Tap];
       
       dir.ListDirEnd();
     }
