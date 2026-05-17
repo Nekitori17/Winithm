@@ -193,14 +193,14 @@ namespace Winithm.Core.Controllers
           }
         }
 
-        float viewScale = Mathf.Abs(Mathf.Min(
+        Vector2 viewScale =  new Vector2(
           PlayerAreaSize.x / Visual.DESIGN_RESOLUTION.x,
           PlayerAreaSize.y / Visual.DESIGN_RESOLUTION.y
-        ));
+        );
 
-        windowVisual.Position = finalPos * viewScale;
+        windowVisual.Position = finalPos * viewScale.Abs();
         windowVisual.RotationDegrees = 0f;
-        windowVisual.WindowSize = finalScale * viewScale;
+        windowVisual.WindowSize = finalScale * viewScale.Abs();
 
         Color finalWindowColor = windowVisual.WindowColor;
         float finalNoteA = windowVisual.NoteOpacity;
