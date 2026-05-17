@@ -60,6 +60,9 @@ namespace Winithm.Core.Data
     /// <summary>Gets or sets the session token for the last processed frame.</summary>
     public ulong LastSeenFrameSessionToken = 0;
 
+    /// <summary>Gets or sets the session token for consumed notes.</summary>
+    public ulong ConsumedSessionToken = 0;
+
     /// <summary>Gets or sets whether the hold interaction is active.</summary>
     public bool IsHoldActive = false;
 

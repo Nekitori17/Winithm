@@ -58,6 +58,7 @@ namespace Winithm.Core.Controllers
 
       public ulong AutoFireSessionToken = 1;
       public ulong FrameSessionToken = 1;
+      public ulong ConsumeSessionToken = 1;
       public double LastBeat = double.MinValue;
     }
 
@@ -157,6 +158,9 @@ namespace Winithm.Core.Controllers
 
       bool isBackward = currentBeat < state.LastBeat;
 
+      if (isBackward)
+        state.ConsumeSessionToken++;
+
       ProcessActiveHoldNotes(windowId, state, currentBeat);
 
       Vector2 playerAreaSize = state.WindowVisual.PlayerAreaSize;
@@ -169,7 +173,7 @@ namespace Winithm.Core.Controllers
         );
 
       float noteHeadHeight = PlayerNoteSize * Mathf.Min(
-        playerAreaSize.x, 
+        playerAreaSize.x,
         playerAreaSize.y
       ) * Note.NOTE_HEAD_HEIGHT_RATIO;
 
@@ -213,6 +217,9 @@ namespace Winithm.Core.Controllers
 
           double noteStartBeat = note.StartBeat.AbsoluteValue;
           double noteEndBeat = noteStartBeat + note.Length;
+
+          // Skip consumed notes
+          if (note.ConsumedSessionToken == state.ConsumeSessionToken) continue;
 
           // Hold notes should disappear immediately when playback reaches their tail
           if (note.Type == NoteType.Hold && currentBeat >= noteEndBeat) continue;
@@ -347,6 +354,7 @@ namespace Winithm.Core.Controllers
       {
         if (state.NoteVisualMap.TryGetValue(note, out var noteVisual))
         {
+          note.ConsumedSessionToken = state.ConsumeSessionToken;
           ReturnToPool(noteVisual);
           state.NoteVisualMap.Remove(note);
         }
@@ -397,7 +405,7 @@ namespace Winithm.Core.Controllers
       );
       Vector2 scaledWindowSize = windowSize * viewportScale;
 
-      float headHeight = 
+      float headHeight =
         noteVisual.NoteSize * Mathf.Min(
           playerAreaSize.x, playerAreaSize.y
         ) * Note.NOTE_HEAD_HEIGHT_RATIO;
