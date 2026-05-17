@@ -26,7 +26,7 @@ namespace Winithm.Core.Controllers
     [Export] public Color TitleBarColor = Colors.Coral;
     [Export] public Color TitleTextColor = Colors.Black;
 
-    [Export] public float FocusablePulseFrequency = 10f;
+    [Export] public float FocusablePulseFrequency = 5f;
 
     private class WindowState
     {
@@ -332,7 +332,8 @@ namespace Winithm.Core.Controllers
     {
       // Focus pulse: deterministic sin wave based on beat for perfect scrub rendering
       float sinVal = Mathf.Sin((float)currentBeat * FocusablePulseFrequency * Mathf.Pi);
-      windowVisual.UnFocusOverlayOpacity = sinVal > 0 ? Window.UNFOCUS_OVERLAY_TINT : 0f;
+      float opacityVal = Mathf.Lerp(0, Window.UNFOCUS_OVERLAY_TINT, sinVal);
+      windowVisual.UnFocusOverlayOpacity = opacityVal;
       windowVisual.UnFocus = true;
     }
 
