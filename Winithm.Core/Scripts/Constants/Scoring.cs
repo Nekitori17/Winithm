@@ -29,24 +29,14 @@ namespace Winithm.Core.Constants
       { Grade.F, 0 }
     };
 
-    public static readonly Dictionary<int, Grade> MinimumScoreToGrade = new Dictionary<int, Grade>
-    {
-      { 1_000_000, Grade.FC },
-      { 950_000, Grade.S },
-      { 875_000, Grade.A },
-      { 800_000, Grade.B },
-      { 700_000, Grade.C },
-      { 500_000, Grade.D },
-      { 0, Grade.F }
-    };
-
     public static Grade GetGrade(int score)
     {
-      if (score >= 1_000_000) return Grade.FC;
-      if (score >= 950_000) return Grade.S;
-      if (score >= 875_000) return Grade.A;
-      if (score >= 800_000) return Grade.B;
-      if (score >= 700_000) return Grade.C;
+      if (score >= GradeMinimumScore[Grade.AP]) return Grade.AP;
+      if (score >= GradeMinimumScore[Grade.FC]) return Grade.FC;
+      if (score >= GradeMinimumScore[Grade.S]) return Grade.S;
+      if (score >= GradeMinimumScore[Grade.A]) return Grade.A;
+      if (score >= GradeMinimumScore[Grade.B]) return Grade.B;
+      if (score >= GradeMinimumScore[Grade.C]) return Grade.C;
       if (score >= 500_000) return Grade.D;
       return Grade.F;
     }
