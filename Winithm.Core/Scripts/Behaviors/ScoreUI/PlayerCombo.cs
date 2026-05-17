@@ -35,7 +35,8 @@ namespace Winithm.Core.Behaviors.ScoreUI
     private const float PAUSE_DURATION = 0.5f;
 
     private float _comboColorTimer = 0f;
-    private const float COMBO_COLOR_DURATION = 0.25f;
+    private const float COMBO_COLOR_DURATION = 0.15f;
+    private int _currentComboValue = -1;
 
     public override void _Ready()
     {
@@ -124,7 +125,11 @@ namespace Winithm.Core.Behaviors.ScoreUI
     public void SetCombo(int combo, bool instant)
     {
       if (_comboLabel != null) _comboLabel.Text = $"x{combo}";
+      if (combo == _currentComboValue) return;
+      _currentComboValue = combo;
+
       if (instant) return;
+
       _comboColorTimer = COMBO_COLOR_DURATION;
     }
 
