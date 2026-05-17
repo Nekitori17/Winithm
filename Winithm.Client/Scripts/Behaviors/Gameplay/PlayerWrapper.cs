@@ -29,7 +29,7 @@ namespace Winithm.Client.Behaviors.Gameplay
             
       Connect("item_rect_changed", this, nameof(ApplyAspectMode));
 
-      AspectMode = GameplayAspectMode.Ratio16_9;       
+      AspectMode = GameplayAspectMode.Expand;       
     }
 
     public void SetAspectMode(GameplayAspectMode mode)
