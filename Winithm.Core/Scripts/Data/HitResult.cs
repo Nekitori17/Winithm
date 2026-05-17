@@ -61,6 +61,8 @@ namespace Winithm.Core.Data
         weight = Constants.HitResult.ResultWeight[HitResultType.Miss];
       }
 
+      if (note.Type == NoteType.Hold) weight *= 2f;
+
       return new HitResult { Weight = weight, OffsetMs = offsetMs, Note = note, Type = type };
     }
 
