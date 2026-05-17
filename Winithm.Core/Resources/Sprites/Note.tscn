@@ -17,17 +17,24 @@ script = ExtResource( 1 )
 visible = false
 
 [node name="Left" type="Sprite" parent="Body"]
+centered = false
 
 [node name="Center" type="Sprite" parent="Body"]
+centered = false
 
 [node name="Right" type="Sprite" parent="Body"]
+centered = false
 
 [node name="Head" type="Node2D" parent="."]
 
 [node name="Left" type="Sprite" parent="Head"]
+centered = false
 
 [node name="Center" type="Sprite" parent="Head"]
+centered = false
 
 [node name="Right" type="Sprite" parent="Head"]
+centered = false
 
 [node name="CenterOverlay" type="Sprite" parent="Head"]
+centered = false
