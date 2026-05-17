@@ -1,7 +1,6 @@
 using Godot;
-using Winithm.Core.Constants;
+using Winithm.Core;
 using Winithm.Core.Interfaces;
-using static Godot.Control;
 namespace Winithm.Core.Behaviors
 {
   public class Window : Node2D, IPoolable
@@ -135,8 +134,8 @@ namespace Winithm.Core.Behaviors
       if (layoutDirty)
       {
         float viewScale = Mathf.Abs(Mathf.Min(
-          PlayerAreaSize.x / Visual.DESIGN_RESOLUTION.x,
-          PlayerAreaSize.y / Visual.DESIGN_RESOLUTION.y
+          PlayerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
+          PlayerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
         ));
 
         Vector2 scaledSize = WindowSize * viewScale;

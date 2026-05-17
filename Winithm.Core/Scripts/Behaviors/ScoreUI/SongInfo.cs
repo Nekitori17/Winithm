@@ -1,5 +1,5 @@
 using Godot;
-using Winithm.Core.Constants;
+using Winithm.Core;
 
 namespace Winithm.Core.Behaviors.ScoreUI
 {
@@ -14,7 +14,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
       public Texture SongIcon;
     }
 
-    [Export] public Vector2 ScreenSize = Visual.DESIGN_RESOLUTION;
+    [Export] public Vector2 ScreenSize = Constants.Visual.DESIGN_RESOLUTION;
     [Export] public Color TextColor = Colors.White;
     [Export] public Color TextOutLineColor = Colors.Black;
     [Export] public string SongName = "Song Name";

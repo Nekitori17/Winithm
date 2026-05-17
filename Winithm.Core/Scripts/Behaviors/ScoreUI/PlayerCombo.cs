@@ -1,5 +1,5 @@
 using Godot;
-using Winithm.Core.Constants;
+using Winithm.Core;
 
 namespace Winithm.Core.Behaviors.ScoreUI
 {
@@ -18,7 +18,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
       public Color TextColor, TextOutLineColor;
     }
 
-    [Export] public Vector2 ScreenSize = Visual.DESIGN_RESOLUTION;
+    [Export] public Vector2 ScreenSize = Constants.Visual.DESIGN_RESOLUTION;
     [Export] public Color TextColor = Colors.White;
     [Export] public Color TextOutLineColor = Colors.Black;
 
@@ -128,7 +128,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
       _comboColorTimer = COMBO_COLOR_DURATION;
     }
 
-    public void SetGrade(Status status)
+    public void SetStatus(Status status)
     {
       if (_statusLabel != null)
       {

@@ -1,7 +1,7 @@
 using Godot;
 using Winithm.Core.Behaviors.ScoreUI;
 using Winithm.Core.Managers;
-using Winithm.Core.Constants;
+using Winithm.Core;
 using Winithm.Core.Data;
 using Winithm.Core.Common;
 
@@ -22,7 +22,7 @@ namespace Winithm.Core.Controllers
       public Color TextColor, TextOutLineColor;
     }
 
-    [Export] public Vector2 ScreenSize = Visual.DESIGN_RESOLUTION;
+    [Export] public Vector2 ScreenSize = Constants.Visual.DESIGN_RESOLUTION;
     [Export] public float SongProgressPercent = 0f;
     [Export] public Color TextColor = Colors.White;
     [Export] public Color TextOutLineColor = Colors.Black;
@@ -124,7 +124,7 @@ namespace Winithm.Core.Controllers
     }
 
     public void SetCombo(int combo, bool instant = false) => _playerCombo?.SetCombo(combo, instant);
-    public void SetGrade(PlayerCombo.Status status) => _playerCombo?.SetGrade(status);
+    public void SetStatus(PlayerCombo.Status status) => _playerCombo?.SetStatus(status);
     public void DrainPauseBar() => _playerCombo?.DrainPauseBar();
     public void FillPauseBar() => _playerCombo?.FillPauseBar();
 
@@ -158,8 +158,8 @@ namespace Winithm.Core.Controllers
       ).X;
 
       float viewScale = Mathf.Abs(Mathf.Min(
-        ScreenSize.x / Visual.DESIGN_RESOLUTION.x,
-        ScreenSize.y / Visual.DESIGN_RESOLUTION.y
+        ScreenSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
+        ScreenSize.y / Constants.Visual.DESIGN_RESOLUTION.y
       ));
 
       // Calculate the pivot point based on the child's anchor position
@@ -178,8 +178,8 @@ namespace Winithm.Core.Controllers
     private void UpdateLayout()
     {
       float viewScale = Mathf.Abs(Mathf.Min(
-        ScreenSize.x / Visual.DESIGN_RESOLUTION.x,
-        ScreenSize.y / Visual.DESIGN_RESOLUTION.y
+        ScreenSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
+        ScreenSize.y / Constants.Visual.DESIGN_RESOLUTION.y
       ));
 
       // Use RectScale on each component — this uniformly scales all
