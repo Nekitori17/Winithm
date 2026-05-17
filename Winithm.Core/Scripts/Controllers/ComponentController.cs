@@ -40,7 +40,6 @@ namespace Winithm.Core.Controllers
 
     private Control _progressBar;
     private ColorRect _barBody;
-    private ColorRect _barHead;
 
     private double _lastUpdateBeat;
 
@@ -67,7 +66,6 @@ namespace Winithm.Core.Controllers
 
       _progressBar = GetNodeOrNull<Control>("ProgessBar");
       _barBody = _progressBar?.GetNodeOrNull<ColorRect>("BarBody");
-      _barHead = _progressBar?.GetNodeOrNull<ColorRect>("BarHead");
 
       UpdateLayout();
     }
@@ -218,8 +216,11 @@ namespace Winithm.Core.Controllers
         _playerCombo.UpdateVisual();
       }
 
-      if (_barBody != null) _barBody.Color = TextColor;
-      if (_barHead != null) _barHead.Color = TextOutLineColor;
+      if (_barBody != null && _barBody.Material is ShaderMaterial mat)
+      {
+        mat.SetShaderParam("color_left", TextColor);
+        mat.SetShaderParam("color_right", TextOutLineColor);
+      }
 
       _lastState.TextColor = TextColor;
       _lastState.TextOutLineColor = TextOutLineColor;
@@ -229,13 +230,12 @@ namespace Winithm.Core.Controllers
       if (_barBody != null)
       {
         _barBody.AnchorRight = SongProgressPercent;
-      }
-
-      if (_barHead != null)
-      {
-        _barHead.AnchorRight = SongProgressPercent;
-        _barHead.AnchorLeft = Mathf.Max(0f, SongProgressPercent - 0.01f);
+        if (_barBody.Material is ShaderMaterial mat)
+        {
+          mat.SetShaderParam("progress", SongProgressPercent);
+        }
       }
     }
+
   }
 }

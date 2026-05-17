@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=2]
+[gd_scene load_steps=15 format=2]
 
 [ext_resource path="res://Winithm.Core/Scripts/Controllers/ComponentController.cs" type="Script" id=1]
 [ext_resource path="res://Winithm.Core/Resources/Textures/song_placeholder_image.png" type="Texture" id=2]
@@ -8,6 +8,14 @@
 [ext_resource path="res://Winithm.Core/Scripts/Behaviors/ScoreUI/ChartInfo.cs" type="Script" id=6]
 [ext_resource path="res://Winithm.Core/Scripts/Behaviors/ScoreUI/PlayerCombo.cs" type="Script" id=7]
 [ext_resource path="res://Winithm.Core/Scripts/Behaviors/ScoreUI/PlayerScore.cs" type="Script" id=8]
+[ext_resource path="res://Winithm.Core/Resources/Shaders/ProgressBar.gdshader" type="Shader" id=9]
+
+[sub_resource type="ShaderMaterial" id=5]
+shader = ExtResource( 9 )
+shader_param/color_left = Color( 1, 1, 1, 1 )
+shader_param/color_right = Color( 0, 0, 0, 1 )
+shader_param/progress = 0.0
+shader_param/gradient_width = 0.05
 
 [sub_resource type="DynamicFont" id=1]
 size = 20
@@ -207,12 +215,7 @@ anchor_right = 1.0
 anchor_bottom = 0.015
 
 [node name="BarBody" type="ColorRect" parent="ProgessBar"]
+material = SubResource( 5 )
 anchor_top = 0.25
 anchor_right = 1.0
 anchor_bottom = 0.75
-
-[node name="BarHead" type="ColorRect" parent="ProgessBar"]
-anchor_left = 0.99
-anchor_right = 1.0
-anchor_bottom = 1.0
-color = Color( 0, 0, 0, 1 )
