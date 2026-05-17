@@ -45,6 +45,8 @@ namespace Winithm.Core.Common
       };
       WNCParser.Parse(chartFilePath, data);
 
+      data.Windows.ComputeAllAnimations();
+
       return data;
     }
 
@@ -64,6 +66,8 @@ namespace Winithm.Core.Common
         SongMetaData = songMetaData
       };
       WNCParser.Parse(chartFilePath, data);
+
+      data.Windows.ComputeAllAnimations();
 
       return data;
     }
