@@ -124,7 +124,7 @@ namespace Winithm.Core.Controllers
     }
 
     public void SetCombo(int combo, bool instant = false) => _playerCombo?.SetCombo(combo, instant);
-    public void SetGrade(Scoring.Grade grade) => _playerCombo?.SetGrade(grade);
+    public void SetGrade(PlayerCombo.Status status) => _playerCombo?.SetGrade(status);
     public void DrainPauseBar() => _playerCombo?.DrainPauseBar();
     public void FillPauseBar() => _playerCombo?.FillPauseBar();
 

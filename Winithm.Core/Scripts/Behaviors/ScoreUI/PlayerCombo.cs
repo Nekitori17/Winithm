@@ -5,6 +5,14 @@ namespace Winithm.Core.Behaviors.ScoreUI
 {
   public class PlayerCombo : Control
   {
+    public enum Status
+    {
+      AP,
+      FC,
+      CL,
+      FL
+    }
+
     public struct LastState
     {
       public Color TextColor, TextOutLineColor;
@@ -28,10 +36,6 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     private float _comboColorTimer = 0f;
     private const float COMBO_COLOR_DURATION = 0.25f;
-
-    private readonly Vector2 BASE_COMBO_POS = new Vector2(55f, 25f);
-    private readonly Vector2 BASE_STATUS_POS = new Vector2(55f, 75f);
-    private readonly Vector2 BASE_PAUSE_POS = new Vector2(25f, 25f);
 
     public override void _Ready()
     {
@@ -124,9 +128,26 @@ namespace Winithm.Core.Behaviors.ScoreUI
       _comboColorTimer = COMBO_COLOR_DURATION;
     }
 
-    public void SetGrade(Scoring.Grade grade)
+    public void SetGrade(Status status)
     {
-      if (_statusLabel != null) _statusLabel.Text = $"RANK: {Scoring.GradeNames[grade]}";
+      if (_statusLabel != null)
+      {
+        switch (status)
+        {
+          case Status.AP:
+            _statusLabel.Text = "ALL PERFECT!";
+            break;
+          case Status.FC:
+            _statusLabel.Text = "FULL COMBO!";
+            break;
+          case Status.CL:
+            _statusLabel.Text = "COMPLETED!";
+            break;
+          case Status.FL:
+            _statusLabel.Text = "FAILED!";
+            break;
+        }
+      }
     }
 
     public void DrainPauseBar() => _pauseState = PauseAnimState.Draining;

@@ -19,7 +19,6 @@ namespace Winithm.Core.Behaviors.ScoreUI
     private LastState _lastState = new LastState();
 
     private Label _difficult;
-    private readonly Vector2 BASE_DIFFICULT_POS = new Vector2(-130f, -90.5f);
 
     public override void _Ready()
     {
