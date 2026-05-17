@@ -153,6 +153,8 @@ namespace Winithm.Core.Controllers
       if (state.WindowVisual == null) return;
       if (currentBeat == state.LastBeat && !force) return;
 
+      state.ChordHighlightMap.Clear();
+
       bool isBackward = currentBeat < state.LastBeat;
 
       ProcessActiveHoldNotes(windowId, state, currentBeat);
