@@ -145,7 +145,7 @@ namespace Winithm.Core.Data
       UnresponsiveStartBeat = EndBeat.AbsoluteValue;
       UnresponsiveEndBeat = metronome.ToBeat(secsAfterCloseNoteMissed + 0.5);
       EndOutStartBeat = metronome.ToBeat(secsAfterCloseNoteMissed + 1);
-      EndOutEndBeat = metronome.ToBeat(secsAfterCloseNoteMissed + 1);
+      EndOutEndBeat = metronome.ToBeat(secsAfterCloseNoteMissed + 1.2);
     }
 
     public WindowData DeepClone(ObjectFactory objectFactory, BeatTime? offset)
