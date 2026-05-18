@@ -214,10 +214,12 @@ namespace Winithm.Core.Common
           ParserUtils.TryParseFloat(parts[1], out float x) ? x : 0f;
         if (parts.Length >= 3) current.InitY =
           ParserUtils.TryParseFloat(parts[2], out float y) ? y : 0f;
-        if (parts.Length >= 4) current.InitScale =
-          ParserUtils.TryParseFloat(parts[3], out float scale) ? scale : 1f;
-        if (parts.Length >= 5) current.InitAlpha =
-          ParserUtils.TryParseFloat(parts[4], out float alpha) ? alpha : 1f;
+        if (parts.Length >= 4) current.InitRotate =
+          ParserUtils.TryParseFloat(parts[3], out float r) ? r : 0f;
+        if (parts.Length >= 5) current.InitScale =
+          ParserUtils.TryParseFloat(parts[4], out float scale) ? scale : 1f;
+        if (parts.Length >= 6) current.InitAlpha =
+          ParserUtils.TryParseFloat(parts[5], out float alpha) ? alpha : 1f;
 
 
         components.SetComponent(type, current);

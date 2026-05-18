@@ -65,7 +65,7 @@ namespace Winithm.Core.Common
         sb.AppendLine("[COMPONENTS]");
         foreach (var comp in data.Components)
         {
-          sb.AppendLine($"* {comp.Key} {ParserUtils.FormatFloat(comp.Value.InitX)} {ParserUtils.FormatFloat(comp.Value.InitY)} {ParserUtils.FormatFloat(comp.Value.InitScale)} {ParserUtils.FormatFloat(comp.Value.InitAlpha)}");
+          sb.AppendLine($"* {comp.Key} {ParserUtils.FormatFloat(comp.Value.InitX)} {ParserUtils.FormatFloat(comp.Value.InitY)} {ParserUtils.FormatFloat(comp.Value.InitRotate)} {ParserUtils.FormatFloat(comp.Value.InitScale)} {ParserUtils.FormatFloat(comp.Value.InitAlpha)}");
 
           if (comp.Value.StoryboardEvents != null)
             foreach (var kvp in comp.Value.StoryboardEvents)

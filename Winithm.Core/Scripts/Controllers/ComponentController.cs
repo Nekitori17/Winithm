@@ -30,12 +30,16 @@ namespace Winithm.Core.Controllers
     private LastState _lastState;
 
     private Control _songInfoTransform;
+    private Control _songInfoSubTransform;
     private SongInfo _songInfo;
     private Control _chartInfoTransform;
+    private Control _chartInfoSubTransform;
     private ChartInfo _chartInfo;
     private Control _playerComboTransform;
+    private Control _playerComboSubTransform;
     private PlayerCombo _playerCombo;
     private Control _playerScoreTransform;
+    private Control _playerScoreSubTransform;
     private PlayerScore _playerScore;
 
     private Control _progressBar;
@@ -53,16 +57,20 @@ namespace Winithm.Core.Controllers
       _chartMetaData = chartMeta;
 
       _songInfoTransform = GetNodeOrNull<Control>("SongInfoTransform");
-      _songInfo = _songInfoTransform?.GetNodeOrNull<SongInfo>("SongInfo");
+      _songInfoSubTransform = _songInfoTransform.GetNodeOrNull<Control>("SubTransform");
+      _songInfo = _songInfoSubTransform?.GetNodeOrNull<SongInfo>("SongInfo");
 
       _chartInfoTransform = GetNodeOrNull<Control>("ChartInfoTransform");
-      _chartInfo = _chartInfoTransform?.GetNodeOrNull<ChartInfo>("ChartInfo");
+      _chartInfoSubTransform = _chartInfoTransform.GetNodeOrNull<Control>("SubTransform");
+      _chartInfo = _chartInfoSubTransform?.GetNodeOrNull<ChartInfo>("ChartInfo");
 
       _playerComboTransform = GetNodeOrNull<Control>("PlayerComboTransform");
-      _playerCombo = _playerComboTransform?.GetNodeOrNull<PlayerCombo>("PlayerCombo");
+      _playerComboSubTransform = _playerComboTransform.GetNodeOrNull<Control>("SubTransform");
+      _playerCombo = _playerComboSubTransform?.GetNodeOrNull<PlayerCombo>("PlayerCombo");
 
       _playerScoreTransform = GetNodeOrNull<Control>("PlayerScoreTransform");
-      _playerScore = _playerScoreTransform?.GetNodeOrNull<PlayerScore>("PlayerScore");
+      _playerScoreSubTransform = _playerScoreTransform.GetNodeOrNull<Control>("SubTransform"); ;
+      _playerScore = _playerScoreSubTransform?.GetNodeOrNull<PlayerScore>("PlayerScore");
 
       _progressBar = GetNodeOrNull<Control>("ProgessBar");
       _barBody = _progressBar?.GetNodeOrNull<ColorRect>("BarBody");
@@ -108,16 +116,24 @@ namespace Winithm.Core.Controllers
       }
 
       UpdateComponentStoryboard(
-        ComponentType.Info, _songInfoTransform, _songInfo, currentBeat, _force
+        ComponentType.Info, 
+        _songInfoTransform, _songInfoSubTransform,
+        _songInfo, currentBeat, _force
       );
       UpdateComponentStoryboard(
-        ComponentType.Difficulty, _chartInfoTransform, _chartInfo, currentBeat, _force
+        ComponentType.Difficulty,
+        _chartInfoTransform, _chartInfoSubTransform,
+        _chartInfo, currentBeat, _force
       );
       UpdateComponentStoryboard(
-        ComponentType.Combo, _playerComboTransform, _playerCombo, currentBeat, _force
+        ComponentType.Combo,
+        _playerComboTransform, _playerComboSubTransform,
+        _playerCombo, currentBeat, _force
       );
       UpdateComponentStoryboard(
-        ComponentType.Score, _playerScoreTransform, _playerScore, currentBeat, _force
+        ComponentType.Score, 
+        _playerScoreTransform, _playerScoreSubTransform,
+        _playerScore, currentBeat, _force
       );
 
       _lastUpdateBeat = currentBeat;
@@ -134,6 +150,7 @@ namespace Winithm.Core.Controllers
     private void UpdateComponentStoryboard(
       ComponentType compType,
       Control transformControl,
+      Control subTransformControl,
       Control targetControl,
       double currentBeat,
       bool force
@@ -150,7 +167,10 @@ namespace Winithm.Core.Controllers
       float y = targetCompData.StoryboardEvents.Evaluate(
         StoryboardProperty.Y, currentBeat, new AnyValue(targetCompData.InitY), force
       ).X;
-      float scale = targetCompData.StoryboardEvents.Evaluate(
+      float r = targetCompData.StoryboardEvents.Evaluate(
+        StoryboardProperty.Rotation, currentBeat, new AnyValue(targetCompData.InitRotate), force
+      ).X;
+      float s = targetCompData.StoryboardEvents.Evaluate(
         StoryboardProperty.Scale, currentBeat, new AnyValue(targetCompData.InitScale), force
       ).X;
       float a = targetCompData.StoryboardEvents.Evaluate(
@@ -162,16 +182,9 @@ namespace Winithm.Core.Controllers
         ScreenSize.y / Constants.Visual.DESIGN_RESOLUTION.y
       ));
 
-      // Calculate the pivot point based on the child's anchor position
-      // This ensures that when the full-screen parent is scaled, it scales 
-      Vector2 pivot = new Vector2(
-        targetControl.AnchorLeft * ScreenSize.x,
-        targetControl.AnchorTop * ScreenSize.y
-      );
-      transformControl.RectPivotOffset = pivot;
-
       transformControl.RectPosition = new Vector2(x * viewScale, y * viewScale);
-      transformControl.RectScale = new Vector2(scale, scale);
+      subTransformControl.RectScale = new Vector2(s, s);
+      subTransformControl.RectRotation = r;
       transformControl.Modulate = new Color(1f, 1f, 1f, a);
     }
 

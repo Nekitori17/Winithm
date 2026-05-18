@@ -10,13 +10,6 @@
 [ext_resource path="res://Winithm.Core/Scripts/Behaviors/ScoreUI/PlayerScore.cs" type="Script" id=8]
 [ext_resource path="res://Winithm.Core/Resources/Shaders/ProgressBar.gdshader" type="Shader" id=9]
 
-[sub_resource type="ShaderMaterial" id=5]
-shader = ExtResource( 9 )
-shader_param/color_left = Color( 1, 1, 1, 1 )
-shader_param/color_right = Color( 0, 0, 0, 1 )
-shader_param/progress = 0.0
-shader_param/gradient_width = 0.05
-
 [sub_resource type="DynamicFont" id=1]
 size = 20
 outline_size = 1
@@ -37,6 +30,13 @@ size = 15
 outline_size = 1
 font_data = ExtResource( 3 )
 
+[sub_resource type="ShaderMaterial" id=5]
+shader = ExtResource( 9 )
+shader_param/color_left = Color( 1, 1, 1, 1 )
+shader_param/color_right = Color( 0, 0, 0, 1 )
+shader_param/progress = 0.0
+shader_param/gradient_width = 0.05
+
 [node name="ScoreUI" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -46,12 +46,14 @@ script = ExtResource( 1 )
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="SongInfo" type="Control" parent="SongInfoTransform"]
+[node name="SubTransform" type="Control" parent="SongInfoTransform"]
 anchor_top = 1.0
 anchor_bottom = 1.0
+
+[node name="SongInfo" type="Control" parent="SongInfoTransform/SubTransform"]
 script = ExtResource( 5 )
 
-[node name="Icon" type="TextureRect" parent="SongInfoTransform/SongInfo"]
+[node name="Icon" type="TextureRect" parent="SongInfoTransform/SubTransform/SongInfo"]
 margin_left = 15.0
 margin_top = -65.0
 margin_right = 65.0
@@ -59,7 +61,7 @@ margin_bottom = -15.0
 texture = ExtResource( 2 )
 expand = true
 
-[node name="Name" type="Label" parent="SongInfoTransform/SongInfo"]
+[node name="Name" type="Label" parent="SongInfoTransform/SubTransform/SongInfo"]
 margin_left = 80.0
 margin_top = -65.0
 margin_right = 187.0
@@ -70,7 +72,7 @@ custom_fonts/font = SubResource( 1 )
 text = "Song Name"
 valign = 1
 
-[node name="BPM" type="Label" parent="SongInfoTransform/SongInfo"]
+[node name="BPM" type="Label" parent="SongInfoTransform/SubTransform/SongInfo"]
 margin_left = 80.0
 margin_top = -35.0
 margin_right = 181.0
@@ -85,14 +87,16 @@ valign = 1
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="ChartInfo" type="Control" parent="ChartInfoTransform"]
+[node name="SubTransform" type="Control" parent="ChartInfoTransform"]
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
+
+[node name="ChartInfo" type="Control" parent="ChartInfoTransform/SubTransform"]
 script = ExtResource( 6 )
 
-[node name="Difficult" type="Label" parent="ChartInfoTransform/ChartInfo"]
+[node name="Difficult" type="Label" parent="ChartInfoTransform/SubTransform/ChartInfo"]
 margin_left = -90.0
 margin_top = -57.0
 margin_right = -15.0
@@ -110,12 +114,14 @@ valign = 1
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="PlayerScore" type="Control" parent="PlayerScoreTransform"]
+[node name="SubTransform" type="Control" parent="PlayerScoreTransform"]
 anchor_left = 1.0
 anchor_right = 1.0
+
+[node name="PlayerScore" type="Control" parent="PlayerScoreTransform/SubTransform"]
 script = ExtResource( 8 )
 
-[node name="Score" type="HBoxContainer" parent="PlayerScoreTransform/PlayerScore"]
+[node name="Score" type="HBoxContainer" parent="PlayerScoreTransform/SubTransform/PlayerScore"]
 margin_left = -175.0
 margin_top = 15.0
 margin_right = -15.0
@@ -123,40 +129,40 @@ margin_bottom = 48.0
 grow_horizontal = 0
 alignment = 2
 
-[node name="0" parent="PlayerScoreTransform/PlayerScore/Score" instance=ExtResource( 4 )]
+[node name="0" parent="PlayerScoreTransform/SubTransform/PlayerScore/Score" instance=ExtResource( 4 )]
 rect_min_size = Vector2( 16, 33 )
 
-[node name="00" parent="PlayerScoreTransform/PlayerScore/Score" instance=ExtResource( 4 )]
+[node name="00" parent="PlayerScoreTransform/SubTransform/PlayerScore/Score" instance=ExtResource( 4 )]
 margin_left = 24.0
 margin_right = 40.0
 rect_min_size = Vector2( 16, 33 )
 
-[node name="000" parent="PlayerScoreTransform/PlayerScore/Score" instance=ExtResource( 4 )]
+[node name="000" parent="PlayerScoreTransform/SubTransform/PlayerScore/Score" instance=ExtResource( 4 )]
 margin_left = 48.0
 margin_right = 64.0
 rect_min_size = Vector2( 16, 33 )
 
-[node name="000_0" parent="PlayerScoreTransform/PlayerScore/Score" instance=ExtResource( 4 )]
+[node name="000_0" parent="PlayerScoreTransform/SubTransform/PlayerScore/Score" instance=ExtResource( 4 )]
 margin_left = 72.0
 margin_right = 88.0
 rect_min_size = Vector2( 16, 33 )
 
-[node name="000_00" parent="PlayerScoreTransform/PlayerScore/Score" instance=ExtResource( 4 )]
+[node name="000_00" parent="PlayerScoreTransform/SubTransform/PlayerScore/Score" instance=ExtResource( 4 )]
 margin_left = 96.0
 margin_right = 112.0
 rect_min_size = Vector2( 16, 33 )
 
-[node name="000_000" parent="PlayerScoreTransform/PlayerScore/Score" instance=ExtResource( 4 )]
+[node name="000_000" parent="PlayerScoreTransform/SubTransform/PlayerScore/Score" instance=ExtResource( 4 )]
 margin_left = 120.0
 margin_right = 136.0
 rect_min_size = Vector2( 16, 33 )
 
-[node name="000_000_0" parent="PlayerScoreTransform/PlayerScore/Score" instance=ExtResource( 4 )]
+[node name="000_000_0" parent="PlayerScoreTransform/SubTransform/PlayerScore/Score" instance=ExtResource( 4 )]
 margin_left = 144.0
 margin_right = 160.0
 rect_min_size = Vector2( 16, 33 )
 
-[node name="Accuracy" type="Label" parent="PlayerScoreTransform/PlayerScore"]
+[node name="Accuracy" type="Label" parent="PlayerScoreTransform/SubTransform/PlayerScore"]
 margin_left = -53.0
 margin_top = 50.0
 margin_right = -15.0
@@ -174,21 +180,23 @@ valign = 1
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="PlayerCombo" type="Control" parent="PlayerComboTransform"]
+[node name="SubTransform" type="Control" parent="PlayerComboTransform"]
+
+[node name="PlayerCombo" type="Control" parent="PlayerComboTransform/SubTransform"]
 script = ExtResource( 7 )
 
-[node name="Pause" type="Control" parent="PlayerComboTransform/PlayerCombo"]
+[node name="Pause" type="Control" parent="PlayerComboTransform/SubTransform/PlayerCombo"]
 margin_left = 15.0
 margin_top = 15.0
 margin_right = 25.0
 margin_bottom = 65.0
 rect_clip_content = true
 
-[node name="Progress" type="ColorRect" parent="PlayerComboTransform/PlayerCombo/Pause"]
+[node name="Progress" type="ColorRect" parent="PlayerComboTransform/SubTransform/PlayerCombo/Pause"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Combo" type="Label" parent="PlayerComboTransform/PlayerCombo"]
+[node name="Combo" type="Label" parent="PlayerComboTransform/SubTransform/PlayerCombo"]
 margin_left = 40.0
 margin_top = 15.0
 margin_right = 86.0
@@ -199,7 +207,7 @@ custom_fonts/font = SubResource( 1 )
 text = "x100"
 valign = 2
 
-[node name="Status" type="Label" parent="PlayerComboTransform/PlayerCombo"]
+[node name="Status" type="Label" parent="PlayerComboTransform/SubTransform/PlayerCombo"]
 margin_left = 40.0
 margin_top = 50.0
 margin_right = 132.0

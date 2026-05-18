@@ -15,6 +15,8 @@ namespace Winithm.Core.Data
     public float InitX { get => _initX; set { if (_initX == value) return; _initX = value; OnUpdated?.Invoke(this); } }
     private float _initY = 0f;
     public float InitY { get => _initY; set { if (_initY == value) return; _initY = value; OnUpdated?.Invoke(this); } }
+    private float _initRotate = 1f;
+    public float InitRotate { get => _initRotate; set { if (_initRotate == value) return; _initRotate = value; OnUpdated?.Invoke(this); } }
     private float _initScale = 1f;
     public float InitScale { get => _initScale; set { if (_initScale == value) return; _initScale = value; OnUpdated?.Invoke(this); } }
     private float _initAlpha = 1f;
