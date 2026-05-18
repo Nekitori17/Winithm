@@ -7,6 +7,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
   {
     public enum Status
     {
+      AT,
       AP,
       FC,
       CL,
@@ -139,6 +140,9 @@ namespace Winithm.Core.Behaviors.ScoreUI
       {
         switch (status)
         {
+          case Status.AT:
+            _statusLabel.Text = "AUTOPLAY!";
+            break;
           case Status.AP:
             _statusLabel.Text = "ALL PERFECT!";
             break;
