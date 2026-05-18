@@ -235,6 +235,7 @@ namespace Winithm.Client.Controllers.Gameplay
     /// <summary>Fired by NoteController for auto-hit (autoplay/ghost notes).</summary>
     private void HandleAutoHit(string windowId, NoteData note)
     {
+      if (note.Type != NoteType.Hold) _noteController.ConsumeNote(windowId, note);
       PlayHitSound(note.Type);
     }
 

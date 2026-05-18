@@ -56,7 +56,7 @@ namespace Winithm.Client.Behaviors.Gameplay
 
       SetAutoPlay(true);
       SetNoteSize(1.3f);
-      SetNoteSpeed(0.05f);
+      SetNoteSpeed(7.5f);
 
       InitializeControllers();
       LoadDemoLevel();
