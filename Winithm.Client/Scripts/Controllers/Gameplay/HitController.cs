@@ -203,7 +203,8 @@ namespace Winithm.Client.Controllers.Gameplay
     /// <summary>Fired by NoteController when a Drag note enters judgement zone.</summary>
     private void HandleDragReady(string windowId, NoteData note, double elapsedMs)
     {
-      if (!IsDragActive(_audioController.CurrentBeat)) return;
+      bool dragActive = _noteController.Autoplay || IsDragActive(_audioController.CurrentBeat);
+      if (!dragActive) return;
 
       var result = HitResult.DragHit(note, elapsedMs);
       if (result.IsHit)
@@ -229,7 +230,6 @@ namespace Winithm.Client.Controllers.Gameplay
       note.IsEvaluated = true;
       var result = HitResult.FromOffset(note, note.HoldStartOffsetMs);
       OnHit?.Invoke(windowId, result);
-      PlayHitSound(note.Type);
     }
 
     /// <summary>Fired by NoteController for auto-hit (autoplay/ghost notes).</summary>

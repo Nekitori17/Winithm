@@ -72,13 +72,24 @@ namespace Winithm.Client.Controllers.Gameplay
       _comboEvaluated += comboEarned;
     }
 
+    public void SetWeightGained(float weight) => _currentWeight = weight;
+
+    public void SetComboEvaluated(int combo)
+    {
+      _comboEvaluated = combo;
+      _currentCombo = combo;
+      _maxCombo = Math.Max(combo, _maxCombo);
+    }
+
     public void Reset()
     {
       _currentWeight = 0f;
       _comboEvaluated = 0;
     }
 
+    public int GetTotalCombo() => _totalWeight;
     public int GetCurrentCombo() => _currentCombo;
+    public float GetCurrentWeight() => _currentWeight;
     public int GetMaxCombo() => _maxCombo;
     public int GetRealtimeScore() => RealtimeScore;
     public int GetScorePredict() => ScorePredict;

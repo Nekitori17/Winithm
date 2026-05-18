@@ -559,7 +559,8 @@ namespace Winithm.Core.Controllers
         }
 
         // Drag notes: notify when inside judgement zone
-        if (note.Type == NoteType.Drag && note.IsHittable && elapsedMs <= dragWindowMs)
+        if (note.Type == NoteType.Drag && note.IsHittable
+            && elapsedMs >= 0 && elapsedMs <= dragWindowMs)
         {
           OnDragReady?.Invoke(windowId, note, elapsedMs);
         }

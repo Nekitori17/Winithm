@@ -16,6 +16,10 @@ namespace Winithm.Client.Behaviors.Gameplay
   /// </summary>
   public class Player : Control
   {
+    [Export] public bool Autoplay = false;
+    [Export] public float NoteSize = 1f;
+    [Export] public float NoteSpeed = 1f;
+
     // Rack to add controller
     private Node _controllerRack;
 
@@ -49,6 +53,10 @@ namespace Winithm.Client.Behaviors.Gameplay
       _componentController = GetNode<ComponentController>("ScoreUI");
 
       _debug = GetNode<Label>("Debug");
+
+      SetAutoPlay(true);
+      SetNoteSize(1.3f);
+      SetNoteSpeed(5f);
 
       InitializeControllers();
       LoadDemoLevel();
@@ -119,7 +127,11 @@ namespace Winithm.Client.Behaviors.Gameplay
       // Initialize controllers with shared dependencies
       _groupController.Initialize(_chartData.Groups);
       _themeController.Initialize(_chartData.ThemeChannels);
-      _noteController.Initialize(metronome);
+
+      _noteController.Initialize(metronome, Autoplay);
+      _noteController.PlayerNoteSize = NoteSize;
+      _noteController.PlayerNoteSpeed = NoteSpeed;
+
       _windowController.Initialize(
         _playfield, _chartData.Windows, metronome,
         _groupController, _themeController, _noteController
@@ -137,7 +149,10 @@ namespace Winithm.Client.Behaviors.Gameplay
       _componentController.SetAccuracy(1f);
       _componentController.SetScore(0);
       _componentController.SetCombo(0);
-      _componentController.SetStatus(PlayerCombo.Status.AP);
+      if (Autoplay)
+        _componentController.SetStatus(PlayerCombo.Status.AT);
+      else
+        _componentController.SetStatus(PlayerCombo.Status.AP);
 
       // Apply initial sizing
       ApplyScreenSize();
@@ -152,6 +167,10 @@ namespace Winithm.Client.Behaviors.Gameplay
 
       _audioController.Resume();
     }
+
+    public void SetAutoPlay(bool active) => Autoplay = active; 
+    public void SetNoteSize(float size) => NoteSize = size; 
+    public void SetNoteSpeed(float speed) => NoteSpeed = speed; 
 
     public override void _Process(float delta)
     {
@@ -170,22 +189,40 @@ namespace Winithm.Client.Behaviors.Gameplay
       _windowController.Update(currentBeat);
 
       _noteController.Update(currentBeat);
-
       double length = _audioController.Length;
       _componentController.SongProgressPercent = length > 0 ? (float)(_audioController.CurrentTime / length) : 0f;
 
       _componentController.ScreenSize = OS.WindowSize;
 
-      _componentController.SetCombo(_scoreController.GetCurrentCombo());
-      _componentController.SetScore(_scoreController.GetRealtimeScore());
-      _componentController.SetAccuracy(_scoreController.GetRealtimeAccuracy());
-      _componentController.SetStatus(_scoreController.GetStatus());
+      if (Autoplay)
+      {
+        int totalComboPassed = 
+        _noteController.GetTotalComboPassedInActivingWindows(currentBeat)
+        +
+        _windowController.GetTotalComboPassedInDestroyedWindows(currentBeat);
+
+        _scoreController.SetWeightGained(totalComboPassed);
+        _scoreController.SetComboEvaluated(totalComboPassed);
+
+        _componentController.SetCombo(totalComboPassed);
+        _componentController.SetScore(_scoreController.GetRealtimeScore());
+        _componentController.SetAccuracy(_scoreController.GetRealtimeAccuracy());
+        _componentController.SetStatus(PlayerCombo.Status.AT);
+      } else
+      {
+        _componentController.SetCombo(_scoreController.GetCurrentCombo());
+        _componentController.SetScore(_scoreController.GetRealtimeScore());
+        _componentController.SetAccuracy(_scoreController.GetRealtimeAccuracy());
+        _componentController.SetStatus(_scoreController.GetStatus());
+      }
 
       _componentController.Update(currentBeat);
     }
 
     public override void _UnhandledInput(InputEvent @event)
     {
+      if (Autoplay) return;
+
       if (_hitController == null || _audioController == null || !_audioController.IsPlaying) return;
 
       if (@event is InputEventKey keyEvent)
