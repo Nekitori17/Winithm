@@ -38,8 +38,8 @@ namespace Winithm.Core.Behaviors
     [Export] public float BodyHeight = 0f;
     public ResourcePack ResourcePack = ResourcePackManager.Instance.GetActiveResourcePack();
 
-    public static readonly float BODY_TO_HEAD_RATIO = 0.9f;
-    public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.015f;
+    public static readonly float BODY_TO_HEAD_WIDTH_OFFSET = 0.01f;
+    public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.0175f;
     public static readonly float NOTE_OVERLAY_RATIO = 1.2f;
 
     // Initialize node references and perform initial visual update
@@ -125,7 +125,8 @@ namespace Winithm.Core.Behaviors
     // Recalculates sizes and positions of all components based on current properties
     public void UpdateVisual()
     {
-      float headH = NoteSize * Math.Min(PlayerAreaSize.x, PlayerAreaSize.y) * NOTE_HEAD_HEIGHT_RATIO;
+      float minScale = Math.Min(PlayerAreaSize.x, PlayerAreaSize.y);
+      float headH = NoteSize * minScale * NOTE_HEAD_HEIGHT_RATIO;
       float headW = Math.Max(Width, headH * 2f);
       float headCW = headW - headH * 2f;
 
@@ -161,7 +162,8 @@ namespace Winithm.Core.Behaviors
       if (bodyDirty)
       {
         // Update body component layout (for Hold notes)
-        float bodyW = Math.Max(headW * BODY_TO_HEAD_RATIO, headH * 2f);
+        float bodyWidthOffset = minScale * BODY_TO_HEAD_WIDTH_OFFSET;
+        float bodyW = Math.Max(headW - bodyWidthOffset, headH * 2f);
         float bodyCW = bodyW - headH * 2f;
 
         _bodyContainer.Position = new Vector2(-bodyW / 2f, -BodyHeight - headH);
