@@ -599,7 +599,7 @@ namespace Winithm.Core.Controllers
         // Hold tail reached: finalize scoring
         if (currentBeat >= holdEndBeat)
         {
-          if (holdNote.IsHittable && !holdNote.IsEvaluated)
+          if (holdNote.IsHittable && !Autoplay && !holdNote.IsEvaluated)
           {
             OnActiveHoldEnded?.Invoke(windowId, holdNote);
           }

@@ -235,15 +235,6 @@ namespace Winithm.Client.Controllers.Gameplay
     /// <summary>Fired by NoteController for auto-hit (autoplay/ghost notes).</summary>
     private void HandleAutoHit(string windowId, NoteData note)
     {
-      if (note.Type == NoteType.Hold && note.IsHittable)
-      {
-        note.HoldStartOffsetMs = 0;
-      } else if (note.IsHittable)
-      {
-        note.IsEvaluated = true;
-        _noteController.ConsumeNote(windowId, note);
-        OnHit?.Invoke(windowId, HitResult.FromOffset(note, 0));
-      }
       PlayHitSound(note.Type);
     }
 
