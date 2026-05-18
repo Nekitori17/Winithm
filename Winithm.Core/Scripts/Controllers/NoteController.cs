@@ -97,7 +97,6 @@ namespace Winithm.Core.Controllers
     {
       if (!_windowStates.TryGetValue(windowId, out var state)) return;
 
-      state.AutoFireSessionToken++;
       foreach (var noteVisual in state.NoteVisualMap.Values)
         ReturnToPool(noteVisual);
 

@@ -44,10 +44,21 @@ namespace Winithm.Core.Controllers
       if (_streamStarted && _player.Playing)
       {
         // Get playback position with DSP sync
-        _currentTime = _player.GetPlaybackPosition()
+        double newTime = _player.GetPlaybackPosition()
           + AudioServer.GetTimeSinceLastMix()
           - AudioServer.GetOutputLatency()
           - _audioOffset;
+
+        // Godot's audio mix chunking can occasionally cause newTime to jitter backwards slightly.
+        // We enforce strictly monotonic time during playback to prevent gameplay logic from rewinding.
+        if (newTime > _currentTime)
+        {
+          _currentTime = newTime;
+        }
+        else
+        {
+          _currentTime += delta; // Fallback to engine delta to keep time moving smoothly
+        }
       }
       else
       {
