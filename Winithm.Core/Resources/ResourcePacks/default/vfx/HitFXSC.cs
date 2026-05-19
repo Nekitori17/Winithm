@@ -10,7 +10,7 @@ namespace Winithm.Core.ResourcePacks.Default.VFX
     [Export] public float OutlineAlpha = 1f;
     [Export] public float FillScale = 0f;
     [Export] public float FillAlpha = 1f;
-    [Export] public float OutlineThickness = 0.05f;
+    [Export] public float OutlineThickness = 1f;
 
     protected override void OnHitFXStarted()
     {
