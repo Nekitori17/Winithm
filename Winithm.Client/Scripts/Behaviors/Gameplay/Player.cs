@@ -55,7 +55,7 @@ namespace Winithm.Client.Behaviors.Gameplay
 
       _debug = GetNode<Label>("Debug");
 
-      SetAutoPlay(false);
+      SetAutoPlay(true);
       SetNoteSize(1.3f);
       SetNoteSpeed(7.5f);
 
@@ -139,6 +139,7 @@ namespace Winithm.Client.Behaviors.Gameplay
       _noteController.PlayerNoteSize = NoteSize;
       _noteController.PlayerNoteSpeed = NoteSpeed;
       _hitFXController.Initialize(_noteController);
+      _hitFXController.Prewarm(ResourcePackManager.Instance.GetActiveResourcePack());
 
       _windowController.Initialize(
         _playfield, _chartData.Windows, metronome,

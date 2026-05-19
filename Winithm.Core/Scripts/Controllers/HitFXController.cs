@@ -43,16 +43,22 @@ namespace Winithm.Core.Controllers
       fx.Position = info.Position;
       fx.Rotation = info.Rotation;
       fx.ZIndex = 0;
-      fx.SetProgramText(info.ResourcePack.HitFXProgramText);
       fx.Play(
         resultType,
-        ResolveHitFXColor(info.ResourcePack, resultType),
+        note.Type,
         info.NoteWidth,
         info.PlayerAreaSize,
-        fx.DefaultDuration,
         info.ResourcePack.Config.HitFXAdditiveBlending,
         ReleaseHitFX
       );
+    }
+
+    public void Prewarm(ResourcePack resourcePack)
+    {
+      if (resourcePack.HitFXScene != null)
+      {
+        GetPool(resourcePack.HitFXScene); // Will instantiate 16 nodes instantly
+      }
     }
 
     public override void _ExitTree()
@@ -117,23 +123,6 @@ namespace Winithm.Core.Controllers
       if (_pools.TryGetValue(scene, out var pool))
       {
         pool.Release(fx);
-      }
-    }
-
-    private static Color ResolveHitFXColor(ResourcePack resourcePack, HitResultType resultType)
-    {
-      switch (resultType)
-      {
-        case HitResultType.Perfect:
-          return resourcePack.Config.HitFXColorPerfect;
-        case HitResultType.Good:
-          return resourcePack.Config.HitFXColorGood;
-        case HitResultType.Bad:
-          return resourcePack.Config.HitFXColorBad;
-        case HitResultType.Miss:
-          return resourcePack.Config.HitFXColorMiss;
-        default:
-          return resourcePack.Config.HitFXColorPerfect;
       }
     }
   }

@@ -120,7 +120,7 @@ namespace Winithm.Core.Controllers
 
     public bool TryGetHitFXSpawnInfo(string windowId, NoteData note, out HitFXSpawnInfo info)
     {
-      info = default(HitFXSpawnInfo);
+      info = default;
 
       if (!_windowStates.TryGetValue(windowId, out var state)) return false;
       if (state.WindowVisual == null || state.WindowVisual.HitFXLayer == null) return false;
@@ -131,7 +131,7 @@ namespace Winithm.Core.Controllers
         * Mathf.Min(noteVisual.PlayerAreaSize.x, noteVisual.PlayerAreaSize.y)
         * Note.NOTE_HEAD_HEIGHT_RATIO;
 
-      Vector2 globalCenter = noteVisual.GetGlobalTransform() * new Vector2(0f, -headHeight * 0.5f);
+      Vector2 globalCenter = noteVisual.GetGlobalTransform() * Vector2.Zero;
       Vector2 layerPosition = state.WindowVisual.HitFXLayer.GetGlobalTransform().AffineInverse() * globalCenter;
 
       ResourcePack resourcePack = note.ResourcePack.HasValue
