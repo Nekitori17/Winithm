@@ -28,6 +28,7 @@ namespace Winithm.Client.Behaviors.Gameplay
     private ComponentController _componentController;
     private NoteController _noteController;
     private WindowController _windowController;
+    private HitFXController _hitFXController;
     private GroupController _groupController;
     private ThemeChannelController _themeController;
 
@@ -54,7 +55,7 @@ namespace Winithm.Client.Behaviors.Gameplay
 
       _debug = GetNode<Label>("Debug");
 
-      SetAutoPlay(true);
+      SetAutoPlay(false);
       SetNoteSize(1.3f);
       SetNoteSpeed(7.5f);
 
@@ -80,6 +81,10 @@ namespace Winithm.Client.Behaviors.Gameplay
       _noteController = new NoteController() { Name = "NoteController" };
       _controllerRack.AddChild(_noteController);
 
+      // Hit FX controller (visual-only effects)
+      _hitFXController = new HitFXController() { Name = "HitFXController" };
+      _controllerRack.AddChild(_hitFXController);
+
       // Window controller (window rendering + lifecycle)
       _windowController = new WindowController() { Name = "WindowController" };
       _controllerRack.AddChild(_windowController);
@@ -94,6 +99,8 @@ namespace Winithm.Client.Behaviors.Gameplay
       // Wire score events
       _hitController.OnHit += (windowId, result) => _scoreController.RegisterHit(result);
       _hitController.OnMiss += (windowId, result) => _scoreController.RegisterHit(result);
+      _hitController.OnHitFXRequested += (windowId, note, resultType) =>
+        _hitFXController.RequestHitFX(windowId, note, resultType);
     }
 
     private async void LoadDemoLevel() => LoadLevel(
@@ -131,6 +138,7 @@ namespace Winithm.Client.Behaviors.Gameplay
       _noteController.Initialize(metronome, Autoplay);
       _noteController.PlayerNoteSize = NoteSize;
       _noteController.PlayerNoteSpeed = NoteSpeed;
+      _hitFXController.Initialize(_noteController);
 
       _windowController.Initialize(
         _playfield, _chartData.Windows, metronome,

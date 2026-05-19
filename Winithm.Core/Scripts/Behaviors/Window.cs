@@ -43,11 +43,12 @@ namespace Winithm.Core.Behaviors
     // public Vector2 WindowBodySize => _windowBody?.RectSize ?? Vector2.Zero;
 
     // --- Runtime layers (Z-ordered inside WindowBody) ---
-    // NoteLayer → UnfocusOverlay → FocusNoteLayer → UnresponsiveOverlay
+    // NoteLayer → UnfocusOverlay → FocusNoteLayer → UnresponsiveOverlay → HitFXLayer
     public Control NoteLayer;
     public Control UnfocusOverlay;
     public Control FocusNoteLayer;
     public Control UnresponsiveOverlay;
+    public Control HitFXLayer;
 
     // --- Resources ---
     private static readonly Texture _iconTex = GD.Load<Texture>("res://icon.png");
@@ -75,6 +76,7 @@ namespace Winithm.Core.Behaviors
       UnfocusOverlay = GetNode<Control>("WindowBody/UnfocusOverlay");
       FocusNoteLayer = GetNode<Control>("WindowBody/FocusNoteLayer");
       UnresponsiveOverlay = GetNode<Control>("WindowBody/UnresponsiveOverlay");
+      HitFXLayer = GetNode<Control>("WindowBody/HitFXLayer");
 
       _titleBar.Connect("draw", this, nameof(OnTitleBarDraw));
       _windowBody.Connect("draw", this, nameof(OnWindowBodyDraw));

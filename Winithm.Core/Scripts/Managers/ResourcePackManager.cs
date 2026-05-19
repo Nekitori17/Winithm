@@ -18,6 +18,13 @@ namespace Winithm.Core.Managers
   {
     public bool Particle;
     public Color HighlightColor;
+    public Color HitFXColorPerfect;
+    public Color HitFXColorGood;
+    public Color HitFXColorBad;
+    public Color HitFXColorMiss;
+    public HitResultType HitFXAutoResult;
+    public int HitFXHoldTickMs;
+    public bool HitFXAdditiveBlending;
   }
 
   public struct ResourcePack
@@ -25,6 +32,8 @@ namespace Winithm.Core.Managers
     public Dictionary<NoteType, Dictionary<NotePart, Texture>> TEX;
     public Dictionary<NoteType, AudioStream> SFX;
     public SpriteFrames VFX;
+    public PackedScene HitFXScene;
+    public string HitFXProgramText;
     public ResourcePackConfig Config;
   }
 
@@ -68,16 +77,26 @@ namespace Winithm.Core.Managers
           TEX = new Dictionary<NoteType, Dictionary<NotePart, Texture>>(),
           SFX = new Dictionary<NoteType, AudioStream>(),
           VFX = new SpriteFrames(),
+          HitFXScene = null,
+          HitFXProgramText = null,
           Config = new ResourcePackConfig
           {
             Particle = true,
             HighlightColor = Colors.Yellow,
+            HitFXColorPerfect = Colors.Yellow,
+            HitFXColorGood = Colors.Cyan,
+            HitFXColorBad = new Color(1f, 0f, 0.45f, 1f),
+            HitFXColorMiss = new Color(0.5f, 0.5f, 0.5f, 1f),
+            HitFXAutoResult = HitResultType.Perfect,
+            HitFXHoldTickMs = 150,
+            HitFXAdditiveBlending = true,
           }
         };
 
         LoadConfig(resourcePackPath.PlusFile("config.ini"), ref resourcePack);
         LoadTexture(resourcePackPath.PlusFile("tex"), ref resourcePack);
         LoadSoundEffect(resourcePackPath.PlusFile("sfx"), ref resourcePack);
+        LoadHitFX(resourcePackPath.PlusFile("vfx"), ref resourcePack);
 
         _resourcePacks[resourcePackName] = resourcePack;
       }
@@ -114,6 +133,32 @@ namespace Winithm.Core.Managers
               break;
             case "highlightColor":
               resourcePack.Config.HighlightColor = StringToColor(val);
+              break;
+            case "hitfxColorPerfect":
+              resourcePack.Config.HitFXColorPerfect = StringToColor(val);
+              break;
+            case "hitfxColorGood":
+              resourcePack.Config.HitFXColorGood = StringToColor(val);
+              break;
+            case "hitfxColorBad":
+              resourcePack.Config.HitFXColorBad = StringToColor(val);
+              break;
+            case "hitfxColorMiss":
+              resourcePack.Config.HitFXColorMiss = StringToColor(val);
+              break;
+            case "hitfxAutoResult":
+              resourcePack.Config.HitFXAutoResult =
+                Enum.TryParse<HitResultType>(val, true, out var autoResult)
+                  ? autoResult
+                  : HitResultType.Perfect;
+              break;
+            case "hitfxHoldTickMs":
+              resourcePack.Config.HitFXHoldTickMs =
+                int.TryParse(val, out var tickMs) ? tickMs : 150;
+              break;
+            case "hitfxAdditiveBlending":
+            case "hitfxAddictiveBlending":
+              resourcePack.Config.HitFXAdditiveBlending = bool.Parse(val);
               break;
           }
         }
@@ -199,6 +244,28 @@ namespace Winithm.Core.Managers
       if (!resourcePack.SFX.ContainsKey(NoteType.Hold)) resourcePack.SFX[NoteType.Hold] = resourcePack.SFX[NoteType.Tap];
       
       dir.ListDirEnd();
+    }
+
+    private static void LoadHitFX(string path, ref ResourcePack resourcePack)
+    {
+      string scenePath = path.PlusFile("hitfx.tscn");
+      if (ResourceLoader.Exists(scenePath))
+      {
+        resourcePack.HitFXScene = GD.Load<PackedScene>(scenePath);
+      }
+
+      string programPath = path.PlusFile("hitfx.wfx");
+      File file = new File();
+      if (file.Open(programPath, File.ModeFlags.Read) != Error.Ok) return;
+
+      try
+      {
+        resourcePack.HitFXProgramText = file.GetAsText();
+      }
+      finally
+      {
+        file.Close();
+      }
     }
 
     public void SetActiveResourcePack(string resourcePackName)

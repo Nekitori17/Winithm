@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 using Winithm.Core.Controllers;
 using Winithm.Core.Data;
 using Winithm.Core.Managers;
@@ -25,6 +26,7 @@ namespace Winithm.Client.Controllers.Gameplay
   {
     public event Action<string, HitResult> OnHit;
     public event Action<string, HitResult> OnMiss;
+    public event Action<string, NoteData, HitResultType> OnHitFXRequested;
 
     private AudioController _audioController;
     private NoteController _noteController;
@@ -38,6 +40,7 @@ namespace Winithm.Client.Controllers.Gameplay
 
     // Object pool for polyphonic hit sounds
     private NodePool<AudioStreamPlayer> _audioPool;
+    private readonly Dictionary<NoteData, long> _lastHoldTickIndex = new Dictionary<NoteData, long>();
 
     public override void _Ready()
     {
@@ -209,6 +212,7 @@ namespace Winithm.Client.Controllers.Gameplay
       var result = HitResult.DragHit(note, elapsedMs);
       if (result.IsHit)
       {
+        RequestHitFX(windowId, note, result.Type);
         note.IsEvaluated = true;
         _noteController.ConsumeNote(windowId, note);
         OnHit?.Invoke(windowId, result);
@@ -221,6 +225,28 @@ namespace Winithm.Client.Controllers.Gameplay
     {
       // Hold sustain is checked on key release (CheckHoldEarlyRelease)
       // Nothing to do per-tick here; the hold continues as long as keys are held.
+      if (_audioController == null) return;
+      if (!TryGetResourcePack(note, out var resourcePack)) return;
+
+      int intervalMs = resourcePack.Config.HitFXHoldTickMs;
+      if (intervalMs <= 0) return;
+
+      double activeMs = _audioController.Metronome.ToDeltaMilliSeconds(
+        note.StartBeat.AbsoluteValue,
+        _audioController.CurrentBeat
+      );
+      if (activeMs < intervalMs) return;
+
+      long tickIndex = (long)Math.Floor(activeMs / intervalMs);
+      if (!_lastHoldTickIndex.TryGetValue(note, out long lastTickIndex))
+      {
+        _lastHoldTickIndex[note] = 0;
+        return;
+      }
+      if (tickIndex <= lastTickIndex) return;
+
+      _lastHoldTickIndex[note] = tickIndex;
+      RequestHitFX(windowId, note, resourcePack.Config.HitFXAutoResult);
     }
 
     /// <summary>Fired by NoteController when a hold note reaches its tail.</summary>
@@ -228,6 +254,7 @@ namespace Winithm.Client.Controllers.Gameplay
     {
       // Hold completed successfully
       note.IsEvaluated = true;
+      _lastHoldTickIndex.Remove(note);
       var result = HitResult.FromOffset(note, note.HoldStartOffsetMs);
       OnHit?.Invoke(windowId, result);
     }
@@ -235,6 +262,15 @@ namespace Winithm.Client.Controllers.Gameplay
     /// <summary>Fired by NoteController for auto-hit (autoplay/ghost notes).</summary>
     private void HandleAutoHit(string windowId, NoteData note)
     {
+      if (TryGetResourcePack(note, out var resourcePack))
+      {
+        RequestHitFX(windowId, note, resourcePack.Config.HitFXAutoResult);
+        if (note.Type == NoteType.Hold)
+        {
+          _lastHoldTickIndex[note] = 0;
+        }
+      }
+
       if (note.Type != NoteType.Hold) _noteController.ConsumeNote(windowId, note);
       PlayHitSound(note.Type);
     }
@@ -263,11 +299,13 @@ namespace Winithm.Client.Controllers.Gameplay
 
       if (result.IsHit)
       {
+        RequestHitFX(windowId, note, result.Type);
         if (note.Type == NoteType.Hold)
         {
           // track offset, begin hold tracking
           note.HoldStartOffsetMs = offsetMs;
           _noteController.SetHoldActive(windowId, note);
+          _lastHoldTickIndex[note] = 0;
         }
         else
         {
@@ -293,6 +331,7 @@ namespace Winithm.Client.Controllers.Gameplay
         var result = HitResult.FromOffset(tuple.Note, tuple.OffsetMs);
         if (result.IsHit)
         {
+          RequestHitFX(tuple.WindowId, tuple.Note, result.Type);
           tuple.Note.IsEvaluated = true;
           _noteController.ConsumeNote(tuple.WindowId, tuple.Note);
           OnHit?.Invoke(tuple.WindowId, result);
@@ -328,6 +367,7 @@ namespace Winithm.Client.Controllers.Gameplay
         // Early release → miss
         note.IsEvaluated = true;
         note.IsHoldActive = false;
+        _lastHoldTickIndex.Remove(note);
         var result = HitResult.Miss(note);
         OnMiss?.Invoke(windowId, result);
       }
@@ -367,6 +407,32 @@ namespace Winithm.Client.Controllers.Gameplay
         player.Stream = sfx;
         player.Play();
       }
+    }
+
+    private void RequestHitFX(string windowId, NoteData note, HitResultType resultType)
+    {
+      if (note == null || note.IsMutedGhost) return;
+      if (resultType == HitResultType.Miss) return;
+      OnHitFXRequested?.Invoke(windowId, note, resultType);
+    }
+
+    private static bool TryGetResourcePack(NoteData note, out ResourcePack resourcePack)
+    {
+      if (note != null && note.ResourcePack.HasValue)
+      {
+        resourcePack = note.ResourcePack.Value;
+        return true;
+      }
+
+      var manager = ResourcePackManager.Instance;
+      if (manager != null)
+      {
+        resourcePack = manager.GetActiveResourcePack();
+        return true;
+      }
+
+      resourcePack = default(ResourcePack);
+      return false;
     }
   }
 }

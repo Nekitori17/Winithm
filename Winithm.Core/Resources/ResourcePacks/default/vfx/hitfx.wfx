@@ -1,0 +1,13 @@
+duration 0.5
+scale_width 0.75
+tint Burst modulate
+set .OutlineScale = 0 at 0
+set .OutlineAlpha = 1 at 0
+set .FillScale = 0 at 0
+set .FillAlpha = 1 at 0
+animate .OutlineScale from 0 to 1 delay 0 duration 0.25 easing CubicOut
+animate .OutlineAlpha from 1 to 0 delay 0.25 duration 0.1 easing CubicIn
+animate .FillScale from 0 to 1 delay 0 duration 0.35 easing CubicOut
+animate .FillAlpha from 1 to 0 delay 0.35 duration 0.15 easing CubicIn
+emit Burst at 0
+finish at 0.5
