@@ -267,6 +267,7 @@ namespace Winithm.Client.Controllers.Gameplay
         if (note.Type == NoteType.Hold)
         {
           _lastHoldTickIndex[note] = 0;
+          note.HoldStartResult = HitResult.FromOffset(note, 0f);
         }
       }
 
