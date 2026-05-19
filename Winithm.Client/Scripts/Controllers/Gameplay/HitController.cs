@@ -216,7 +216,7 @@ namespace Winithm.Client.Controllers.Gameplay
         note.IsEvaluated = true;
         _noteController.ConsumeNote(windowId, note);
         OnHit?.Invoke(windowId, result);
-        PlayHitSound(note.Type);
+        PlayHitSound(note.Type, note.ResourcePack);
       }
     }
 
@@ -271,7 +271,7 @@ namespace Winithm.Client.Controllers.Gameplay
       }
 
       if (note.Type != NoteType.Hold) _noteController.ConsumeNote(windowId, note);
-      PlayHitSound(note.Type);
+      PlayHitSound(note.Type, note.ResourcePack);
     }
 
     // =============================================
@@ -314,7 +314,7 @@ namespace Winithm.Client.Controllers.Gameplay
           OnHit?.Invoke(windowId, result);
         }
 
-        PlayHitSound(note.Type);
+        PlayHitSound(note.Type, note.ResourcePack);
       }
     }
 
@@ -334,7 +334,7 @@ namespace Winithm.Client.Controllers.Gameplay
           tuple.Note.IsEvaluated = true;
           _noteController.ConsumeNote(tuple.WindowId, tuple.Note);
           OnHit?.Invoke(tuple.WindowId, result);
-          PlayHitSound(tuple.Note.Type);
+          PlayHitSound(tuple.Note.Type, tuple.Note.ResourcePack);
         }
       }
     }
@@ -394,13 +394,15 @@ namespace Winithm.Client.Controllers.Gameplay
     // Audio Playback
     // =============================================
 
-    private void PlayHitSound(NoteType type)
+    private void PlayHitSound(NoteType type, ResourcePack? resourcePack = null)
     {
-      var inst = ResourcePackManager.Instance;
-      if (inst == null || _audioPool == null) return;
-      
-      var pack = inst.GetActiveResourcePack();
-      if (pack.SFX != null && pack.SFX.TryGetValue(type, out var sfx))
+      ResourcePack rp;
+      if (resourcePack.HasValue)
+        rp = resourcePack.Value;
+      else
+        rp = ResourcePackManager.Instance.GetActiveResourcePack();
+
+      if (rp.SFX != null && rp.SFX.TryGetValue(type, out var sfx))
       {
         var player = _audioPool.Get();
         player.Stream = sfx;
