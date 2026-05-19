@@ -67,7 +67,12 @@ namespace Winithm.Core.Data
     public bool IsHoldActive = false;
 
     /// <summary>Gets or sets the timing offset at the start of a hold note.</summary>
-    public double HoldStartOffsetMs = double.NaN;
+    public HitResult HoldStartResult;
+
+    public NoteData()
+    {
+      HoldStartResult = HitResult.None(this);
+    }
 
     public NoteData DeepClone(ObjectFactory objectFactory, BeatTime? offset)
     {

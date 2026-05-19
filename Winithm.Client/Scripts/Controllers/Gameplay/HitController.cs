@@ -246,7 +246,7 @@ namespace Winithm.Client.Controllers.Gameplay
       if (tickIndex <= lastTickIndex) return;
 
       _lastHoldTickIndex[note] = tickIndex;
-      RequestHitFX(windowId, note, resourcePack.Config.HitFXAutoResult);
+      RequestHitFX(windowId, note, note.HoldStartResult.Type);
     }
 
     /// <summary>Fired by NoteController when a hold note reaches its tail.</summary>
@@ -255,8 +255,7 @@ namespace Winithm.Client.Controllers.Gameplay
       // Hold completed successfully
       note.IsEvaluated = true;
       _lastHoldTickIndex.Remove(note);
-      var result = HitResult.FromOffset(note, note.HoldStartOffsetMs);
-      OnHit?.Invoke(windowId, result);
+      OnHit?.Invoke(windowId, note.HoldStartResult);
     }
 
     /// <summary>Fired by NoteController for auto-hit (autoplay/ghost notes).</summary>
@@ -303,7 +302,7 @@ namespace Winithm.Client.Controllers.Gameplay
         if (note.Type == NoteType.Hold)
         {
           // track offset, begin hold tracking
-          note.HoldStartOffsetMs = offsetMs;
+          note.HoldStartResult = result;
           _noteController.SetHoldActive(windowId, note);
           _lastHoldTickIndex[note] = 0;
         }

@@ -25,6 +25,15 @@ namespace Winithm.Core.Data
 
     public bool IsHit => Weight > 0f;
 
+    public static HitResult None(NoteData note) =>
+      new HitResult
+      {
+        Weight = Constants.HitResult.ResultWeight[HitResultType.Miss],
+        OffsetMs = double.NaN,
+        Note = note,
+        Type = HitResultType.Miss
+      };
+
     public static HitResult Miss(NoteData note) =>
       new HitResult
       {

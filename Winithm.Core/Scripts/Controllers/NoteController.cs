@@ -632,7 +632,7 @@ namespace Winithm.Core.Controllers
         double holdEndBeat = holdStartBeat + holdNote.Length;
 
         // Defensive reset: playback rewound before hold start and player hasn't engaged yet
-        if (currentBeat < holdStartBeat && double.IsNaN(holdNote.HoldStartOffsetMs))
+        if (currentBeat < holdStartBeat && double.IsNaN(holdNote.HoldStartResult.OffsetMs))
         {
           holdNote.IsHoldActive = false;
           state.PendingRemovals.Add(holdNote);
