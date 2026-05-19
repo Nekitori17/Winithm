@@ -249,5 +249,7 @@ namespace Winithm.Core.Managers
 
     // Direct memory access without dictionary lookup guarantees O(1) high performance calls
     public ResourcePack GetActiveResourcePack() => _activeResourcePack;
+
+    public IEnumerable<ResourcePack> GetAllResourcePacks() => _resourcePacks.Values;
   }
 }

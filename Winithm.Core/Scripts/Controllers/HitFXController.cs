@@ -57,7 +57,27 @@ namespace Winithm.Core.Controllers
     {
       if (resourcePack.HitFXScene != null)
       {
-        GetPool(resourcePack.HitFXScene); // Will instantiate 16 nodes instantly
+        var pool = GetPool(resourcePack.HitFXScene); // Will instantiate 16 nodes instantly
+
+        // Force shader compilation to prevent first-hit stutter
+        HitFX dummy = pool.Get();
+        _sceneByInstance[dummy] = resourcePack.HitFXScene;
+        
+        dummy.Position = PlayerAreaSize;
+        dummy.Modulate = new Color(1f, 1f, 1f, 0.01f); // Nearly invisible to avoid flash
+
+        dummy.Play(
+          HitResultType.Perfect,
+          NoteType.Tap,
+          1f, // Dummy note width
+          PlayerAreaSize,
+          resourcePack.Config.HitFXAdditiveBlending,
+          fx => 
+          {
+            fx.Modulate = Colors.White; // Reset modulate for actual gameplay
+            ReleaseHitFX(fx);
+          }
+        );
       }
     }
 
