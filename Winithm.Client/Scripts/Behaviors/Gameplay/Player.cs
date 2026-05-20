@@ -199,7 +199,9 @@ namespace Winithm.Client.Behaviors.Gameplay
 
       double currentBeat = _audioController.CurrentBeat;
 
-      _debug.Text = $"Beat: {currentBeat:F2}" + "\n" + $"FPS: {Engine.GetFramesPerSecond()}";
+      _debug.Text = 
+        $"Beat: {currentBeat:F2}" + "\n" 
+        + $"FPS: {Engine.GetFramesPerSecond()} | Train: {delta * 1000:F2}ms | Vsync: {(OS.VsyncEnabled ? "On" : "Off")}";
 
       // Update all controllers in order
       _windowController.ScreenSize = OS.GetScreenSize();
