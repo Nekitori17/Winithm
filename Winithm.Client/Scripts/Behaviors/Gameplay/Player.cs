@@ -20,6 +20,9 @@ namespace Winithm.Client.Behaviors.Gameplay
     [Export] public float NoteSize = 1f;
     [Export] public float NoteSpeed = 1f;
 
+    public readonly float PAUSE_BACK_TIME_SECS = 3f;
+    public readonly float REWIND_TIME_SECS = 0.5f;
+
     // Rack to add controller
     private Node _controllerRack;
 
@@ -44,6 +47,8 @@ namespace Winithm.Client.Behaviors.Gameplay
     private Control _objectsLayer;
     private Control _hitFXLayer;
 
+    private bool _isPaused = false;
+    private float _rewindTimeSecs = 0.5f;
 
     private Label _debug;
 
@@ -59,6 +64,8 @@ namespace Winithm.Client.Behaviors.Gameplay
       _componentController = GetNode<ComponentController>("ScoreUI");
 
       _debug = GetNode<Label>("Debug");
+
+      _rewindTimeSecs = REWIND_TIME_SECS;
 
       SetAutoPlay(true);
       SetNoteSize(1.3f);
@@ -192,10 +199,24 @@ namespace Winithm.Client.Behaviors.Gameplay
 
     public override void _Process(float delta)
     {
-      if (_audioController == null || !_audioController.IsPlaying) return;
+      if (_audioController == null) return;
+      if (!_audioController.IsPlaying && !_isPaused) return;
 
-      // Tick the master clock
-      _audioController.Tick(delta);
+      if (_isPaused)
+      {
+        if (_rewindTimeSecs <= 0) return; // Rewind done, freeze visuals
+
+        _rewindTimeSecs -= delta;
+        if (_rewindTimeSecs < 0) _rewindTimeSecs = 0;
+
+        float calcDelta = delta * (PAUSE_BACK_TIME_SECS / REWIND_TIME_SECS);
+        _audioController.AdjustTime(-calcDelta);
+      }
+      else
+      {
+        // Tick the master clock
+        _audioController.Tick(delta);
+      }
 
       double currentBeat = _audioController.CurrentBeat;
 
@@ -241,12 +262,34 @@ namespace Winithm.Client.Behaviors.Gameplay
 
     public override void _UnhandledInput(InputEvent @event)
     {
-      if (Autoplay) return;
-
-      if (_hitController == null || _audioController == null || !_audioController.IsPlaying) return;
+      if (_hitController == null || _audioController == null) return;
 
       if (@event is InputEventKey keyEvent)
       {
+        // PauseKey must be handled before Autoplay and IsPlaying guards,
+        // so pause/resume always works regardless of game state.
+        if (keyEvent.Pressed && !keyEvent.Echo && @event.IsAction("PauseKey"))
+        {
+          if (!_isPaused && _audioController.IsPlaying)
+          {
+            _isPaused = true;
+            _rewindTimeSecs = REWIND_TIME_SECS;
+            _audioController.Pause();
+            _componentController.DrainPauseBar();
+          }
+          else if (_isPaused && _rewindTimeSecs <= 0f)
+          {
+            // Only allow resume after rewind animation completes
+            _isPaused = false;
+            _audioController.Resume();
+            _componentController.FillPauseBar();
+          }
+          return;
+        }
+
+        // Block all gameplay input when autoplay, paused, or not playing
+        if (Autoplay || !_audioController.IsPlaying || _isPaused) return;
+
         if (keyEvent.Pressed && !keyEvent.Echo)
         {
           if (@event.IsAction("FocusNoteKey"))

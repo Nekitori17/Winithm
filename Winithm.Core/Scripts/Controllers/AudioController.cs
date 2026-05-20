@@ -70,6 +70,14 @@ namespace Winithm.Core.Controllers
       }
     }
 
+    /// <summary>Shifts the internal clock by deltaSecs without requiring playback.
+    /// Used for rewind animation while paused.</summary>
+    public void AdjustTime(double deltaSecs)
+    {
+      _currentTime += deltaSecs;
+      if (_currentTime < 0) _currentTime = 0;
+    }
+
     /// <summary>Resume playback from current position.</summary>
     public void Resume()
     {
