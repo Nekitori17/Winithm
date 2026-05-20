@@ -34,6 +34,15 @@ namespace Winithm.Core.Data
         Type = HitResultType.Miss
       };
 
+    public static HitResult AutoHit(NoteData note) =>
+      new HitResult
+      {
+        Weight = Constants.HitResult.ResultWeight[HitResultType.Perfect],
+        OffsetMs = 0,
+        Note = note,
+        Type = HitResultType.Perfect
+      };
+
     public static HitResult Miss(NoteData note) =>
       new HitResult
       {

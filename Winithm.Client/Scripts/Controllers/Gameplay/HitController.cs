@@ -267,7 +267,7 @@ namespace Winithm.Client.Controllers.Gameplay
         if (note.Type == NoteType.Hold)
         {
           _lastHoldTickIndex[note] = 0;
-          note.HoldStartResult = HitResult.FromOffset(note, 0f);
+          note.HoldStartResult = HitResult.AutoHit(note);
         }
       }
 
@@ -436,7 +436,7 @@ namespace Winithm.Client.Controllers.Gameplay
         return true;
       }
 
-      resourcePack = default(ResourcePack);
+      resourcePack = default;
       return false;
     }
   }

@@ -598,7 +598,7 @@ namespace Winithm.Core.Controllers
         }
 
         // Miss: exceeded timing window
-        if (elapsedMs > missWindowMs)
+        if (!Autoplay && elapsedMs > missWindowMs)
         {
           if (note.IsHittable) OnNoteMiss?.Invoke(windowId, note);
           evalCursor++;
