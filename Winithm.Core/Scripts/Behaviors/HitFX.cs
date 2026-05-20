@@ -26,7 +26,6 @@ namespace Winithm.Core.Behaviors
     private float _duration = 0.5f;
     private float _elapsed;
     private bool _playing;
-    private bool _blendModeInitialized;
     private bool _lastAdditiveBlending;
 
     public virtual void Play(
@@ -49,13 +48,10 @@ namespace Winithm.Core.Behaviors
 
       Visible = true;
       SetProcess(true);
-      if (!_blendModeInitialized || _lastAdditiveBlending != additiveBlending)
-      {
-        ApplyBlendMode(this, additiveBlending);
-        _blendModeInitialized = true;
-        _lastAdditiveBlending = additiveBlending;
-      }
+      _lastAdditiveBlending = additiveBlending;
+
       StartCommonChildNodes(this);
+      ApplyBlendMode(this, _lastAdditiveBlending);
       OnHitFXStarted();
     }
 
@@ -64,7 +60,7 @@ namespace Winithm.Core.Behaviors
       if (!_playing) return;
 
       _elapsed += delta;
-      
+
       OnHitFXProcess(delta);
 
       if (_elapsed >= _duration)
@@ -139,20 +135,25 @@ namespace Winithm.Core.Behaviors
     {
       if (node is CanvasItem canvasItem)
       {
-        CanvasItemMaterial material = canvasItem.Material as CanvasItemMaterial;
-        if (material == null)
+        if (!canvasItem.UseParentMaterial)
         {
-          material = new CanvasItemMaterial();
-          canvasItem.Material = material;
+          if (canvasItem.Material == null)
+          {
+            var material = new CanvasItemMaterial
+            {
+              BlendMode = additiveBlending
+                ? CanvasItemMaterial.BlendModeEnum.Add
+                : CanvasItemMaterial.BlendModeEnum.Mix
+            };
+            canvasItem.Material = material;
+          }
+          else if (canvasItem.Material is CanvasItemMaterial canvasMaterial)
+          {
+            canvasMaterial.BlendMode = additiveBlending
+              ? CanvasItemMaterial.BlendModeEnum.Add
+              : CanvasItemMaterial.BlendModeEnum.Mix;
+          }
         }
-        else
-        {
-          canvasItem.Material = material;
-        }
-
-        material.BlendMode = additiveBlending
-          ? CanvasItemMaterial.BlendModeEnum.Add
-          : CanvasItemMaterial.BlendModeEnum.Mix;
       }
 
       for (int i = 0; i < node.GetChildCount(); i++)
