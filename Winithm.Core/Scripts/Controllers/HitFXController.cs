@@ -18,15 +18,6 @@ namespace Winithm.Core.Controllers
     private readonly Dictionary<HitFX, PackedScene> _sceneByInstance =
       new Dictionary<HitFX, PackedScene>();
 
-    public struct HitFXSpawnInfo
-    {
-      public Vector2 Position;
-      public float Rotation;
-      public float NoteWidth;
-      public Vector2 PlayerAreaSize;
-      public ResourcePack ResourcePack;
-    }
-
     public void Initialize(Control hitFXLayer, NoteController noteController)
     {
       _hitFXLayer = hitFXLayer;
@@ -36,9 +27,13 @@ namespace Winithm.Core.Controllers
     public void RequestHitFX(string windowId, NoteData note, HitResultType resultType)
     {
       if (_noteController == null || note == null || _hitFXLayer == null) return;
-      if (!_noteController.TryGetHitFXSpawnInfo(windowId, note, out var info)) return;
+      if (!_noteController.TryGetNoteGlobalTransformInfo(windowId, note, out var info)) return;
 
-      PackedScene scene = info.ResourcePack.HitFXScene;
+      ResourcePack resourcePack = note.ResourcePack.HasValue
+        ? note.ResourcePack.Value
+        : ResourcePackManager.Instance.GetActiveResourcePack();
+
+      PackedScene scene = resourcePack.HitFXScene;
       if (scene == null) return;
 
       var pool = GetPool(scene);
@@ -64,7 +59,7 @@ namespace Winithm.Core.Controllers
         note.Type,
         info.NoteWidth,
         info.PlayerAreaSize,
-        info.ResourcePack.Config.HitFXAdditiveBlending,
+        resourcePack.Config.HitFXAdditiveBlending,
         ReleaseHitFX
       );
     }

@@ -103,12 +103,20 @@ namespace Winithm.Core.Controllers
       _windowStates.Remove(windowId);
     }
 
+    public struct GlobalNoteTransformInfo
+    {
+      public Vector2 Position;
+      public float Rotation;
+      public float NoteWidth;
+      public Vector2 PlayerAreaSize;
+    }
+
     /// <summary>
     /// Returns a read-only dictionary of registered window states.
     /// </summary>
     public IReadOnlyDictionary<string, WindowNoteState> GetRegisteredWindowStates() => _windowStates;
 
-    public bool TryGetHitFXSpawnInfo(string windowId, NoteData note, out HitFXController.HitFXSpawnInfo info)
+    public bool TryGetNoteGlobalTransformInfo(string windowId, NoteData note, out GlobalNoteTransformInfo info)
     {
       info = default;
 
@@ -122,17 +130,12 @@ namespace Winithm.Core.Controllers
 
       Vector2 globalCenter = noteVisual.GetGlobalTransform() * new Vector2(0, -headHeight * 0.5f);
 
-      ResourcePack resourcePack = note.ResourcePack.HasValue
-        ? note.ResourcePack.Value
-        : ResourcePackManager.Instance.GetActiveResourcePack();
-
-      info = new HitFXController.HitFXSpawnInfo
+      info = new GlobalNoteTransformInfo
       {
         Position = globalCenter,
         Rotation = noteVisual.GlobalRotation,
         NoteWidth = noteVisual.Width,
         PlayerAreaSize = noteVisual.PlayerAreaSize,
-        ResourcePack = resourcePack,
       };
 
       return true;
