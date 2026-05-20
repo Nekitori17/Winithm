@@ -131,7 +131,7 @@ namespace Winithm.Core.Controllers
         * Mathf.Min(noteVisual.PlayerAreaSize.x, noteVisual.PlayerAreaSize.y)
         * Note.NOTE_HEAD_HEIGHT_RATIO;
 
-      Vector2 globalCenter = noteVisual.GetGlobalTransform() * Vector2.Zero;
+      Vector2 globalCenter = noteVisual.GetGlobalTransform() * new Vector2(0, -headHeight * 0.5f);
       Vector2 layerPosition = state.WindowVisual.HitFXLayer.GetGlobalTransform().AffineInverse() * globalCenter;
 
       ResourcePack resourcePack = note.ResourcePack.HasValue
