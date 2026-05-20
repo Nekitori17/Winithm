@@ -51,6 +51,9 @@ namespace Winithm.Core.Data
     public bool IsMutedGhost => FakeType == 1;
     public bool IsLoudGhost => FakeType == 2;
 
+    /// <summary>If note's lifecycle is bounded by the parent window.</summary>
+    public bool IsLifecycleBounded = false;
+
     /// <summary>Gets or sets whether the note has been evaluated.</summary>
     public bool IsEvaluated = false;
 

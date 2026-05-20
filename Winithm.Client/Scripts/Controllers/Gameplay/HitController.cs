@@ -368,8 +368,11 @@ namespace Winithm.Client.Controllers.Gameplay
         note.IsEvaluated = true;
         note.IsHoldActive = false;
         _lastHoldTickIndex.Remove(note);
-        var result = HitResult.Miss(note);
-        OnMiss?.Invoke(windowId, result);
+        if (note.IsLifecycleBounded)
+        {
+          var result = HitResult.Miss(note);
+          OnMiss?.Invoke(windowId, result);
+        }
       }
     }
 

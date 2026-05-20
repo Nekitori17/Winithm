@@ -228,16 +228,18 @@ namespace Winithm.Core.Managers
         {
           var note = list[i];
 
-          var noteEndBeat = note.StartBeat.AbsoluteValue + note.Length;
+          var noteEndBeat = note.Type == NoteType.Hold 
+            ? note.StartBeat.AbsoluteValue + note.Length 
+            : note.StartBeat.AbsoluteValue;
 
           if (
             note.StartBeat >= ExpectedStartFocusBeat 
-            && note.StartBeat <= ExpectedEndCloseBeat 
             && noteEndBeat <= ExpectedEndCloseBeat.AbsoluteValue
             && note.IsHittable
           )
           {
             TotalHittableNoteCount++;
+            note.IsLifecycleBounded = true;
 
             if (note.Type == NoteType.Hold)
             {
@@ -249,6 +251,10 @@ namespace Winithm.Core.Managers
               comboEvents.Add((note.StartBeat.AbsoluteValue, 1));
               TotalComboCount++;
             }
+          }
+          else
+          {
+            note.IsLifecycleBounded = false;
           }
 
           runningMax = Math.Max(runningMax, noteEndBeat);
