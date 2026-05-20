@@ -557,22 +557,31 @@ namespace Winithm.Core.Controllers
       {
         NoteData note = noteList[evalCursor];
 
-        if (note.IsEvaluated) { evalCursor++; continue; }
-        if (note.IsHoldActive) { evalCursor++; continue; }
+        bool isAutoHittable = (Autoplay && !note.IsMutedGhost) || note.IsLoudGhost;
+
+        if (isAutoHittable)
+        {
+          // Skip if already fired in this session
+          if (note.AutoFiredSessionToken == state.AutoFireSessionToken) { evalCursor++; continue; }
+        }
+        else
+        {
+          // Player evaluation uses traditional state
+          if (note.IsEvaluated) { evalCursor++; continue; }
+          if (note.IsHoldActive) { evalCursor++; continue; }
+        }
+
         if (note.StartBeat.AbsoluteValue > currentBeat) break;
 
         double elapsedMs = _metronome.ToDeltaMilliSeconds(
           note.StartBeat.AbsoluteValue, currentBeat
         );
 
-        bool shouldAutoHit =
-          ((Autoplay && !note.IsMutedGhost) || note.IsLoudGhost)
-          && elapsedMs >= 0f
-          && note.AutoFiredSessionToken != state.AutoFireSessionToken;
-
-        if (shouldAutoHit)
+        if (isAutoHittable && elapsedMs >= 0f)
         {
           note.AutoFiredSessionToken = state.AutoFireSessionToken;
+          note.IsEvaluated = false; // Reset evaluation state so Hold notes can re-engage cleanly
+          
           if (note.Type == NoteType.Hold)
           {
             note.IsHoldActive = true;
@@ -621,8 +630,8 @@ namespace Winithm.Core.Controllers
         double holdStartBeat = holdNote.StartBeat.AbsoluteValue;
         double holdEndBeat = holdStartBeat + holdNote.Length;
 
-        // Defensive reset: playback rewound before hold start and player hasn't engaged yet
-        if (currentBeat < holdStartBeat && double.IsNaN(holdNote.HoldStartResult.OffsetMs))
+        // Defensive reset: playback rewound before hold start
+        if (currentBeat < holdStartBeat && (double.IsNaN(holdNote.HoldStartResult.OffsetMs) || Autoplay))
         {
           holdNote.IsHoldActive = false;
           state.PendingRemovals.Add(holdNote);
