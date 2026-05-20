@@ -580,7 +580,6 @@ namespace Winithm.Core.Controllers
         if (isAutoHittable && elapsedMs >= 0f)
         {
           note.AutoFiredSessionToken = state.AutoFireSessionToken;
-          note.IsEvaluated = false; // Reset evaluation state so Hold notes can re-engage cleanly
           
           if (note.Type == NoteType.Hold)
           {
