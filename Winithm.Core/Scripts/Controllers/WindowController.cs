@@ -16,7 +16,7 @@ namespace Winithm.Core.Controllers
     protected NoteController _noteController;
     protected WindowManager _windowManager;
 
-    private Control _playfield;
+    private Control _objectsLayer;
     private PackedScene _windowScene;
 
     [Export] public Vector2 ScreenSize = new Vector2(1280, 720);
@@ -43,7 +43,7 @@ namespace Winithm.Core.Controllers
     private NodePool<Window> _windowPool;
 
     public void Initialize(
-      Control playfield,
+      Control objectsLayer,
       WindowManager windowManager,
       Metronome metronome,
       GroupController groupController,
@@ -61,7 +61,7 @@ namespace Winithm.Core.Controllers
       _frameSessionToken = 0;
       _lastUpdateBeat = -1f;
 
-      _playfield = playfield;
+      _objectsLayer = objectsLayer;
 
       _metronome = metronome;
       _groupController = groupController;
@@ -135,10 +135,10 @@ namespace Winithm.Core.Controllers
           _windowStates[windowData.ID] = state;
           _noteController.RegisterWindow(windowData.ID, windowData, windowVisual);
 
-          if (windowVisual.GetParent() != _playfield)
+          if (windowVisual.GetParent() != _objectsLayer)
           {
             windowVisual.GetParent()?.RemoveChild(windowVisual);
-            _playfield.AddChild(windowVisual);
+            _objectsLayer.AddChild(windowVisual);
           }
 
           windowVisual.ZIndex = LayerUtils.ComposeLayerIndex(windowData.Layer, windowData.SubLayer);

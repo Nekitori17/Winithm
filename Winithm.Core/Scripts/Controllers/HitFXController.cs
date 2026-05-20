@@ -8,6 +8,8 @@ namespace Winithm.Core.Controllers
 {
   public class HitFXController : Node
   {
+    private Control _hitFXLayer;
+
     [Export] public Vector2 PlayerAreaSize = new Vector2(1280, 720);
 
     private NoteController _noteController;
@@ -16,14 +18,24 @@ namespace Winithm.Core.Controllers
     private readonly Dictionary<HitFX, PackedScene> _sceneByInstance =
       new Dictionary<HitFX, PackedScene>();
 
-    public void Initialize(NoteController noteController)
+    public struct HitFXSpawnInfo
     {
+      public Vector2 Position;
+      public float Rotation;
+      public float NoteWidth;
+      public Vector2 PlayerAreaSize;
+      public ResourcePack ResourcePack;
+    }
+
+    public void Initialize(Control hitFXLayer, NoteController noteController)
+    {
+      _hitFXLayer = hitFXLayer;
       _noteController = noteController;
     }
 
     public void RequestHitFX(string windowId, NoteData note, HitResultType resultType)
     {
-      if (_noteController == null || note == null) return;
+      if (_noteController == null || note == null || _hitFXLayer == null) return;
       if (!_noteController.TryGetHitFXSpawnInfo(windowId, note, out var info)) return;
 
       PackedScene scene = info.ResourcePack.HitFXScene;
@@ -33,16 +45,20 @@ namespace Winithm.Core.Controllers
       HitFX fx = pool.Get();
       _sceneByInstance[fx] = scene;
 
-      if (fx.GetParent() != info.ParentLayer)
+      // Parent to the global HitFXLayer instead of window's local ParentLayer
+      if (fx.GetParent() != _hitFXLayer)
       {
         fx.GetParent()?.RemoveChild(fx);
-        info.ParentLayer.AddChild(fx);
+        _hitFXLayer.AddChild(fx);
       }
 
-      info.ParentLayer.MoveChild(fx, info.ParentLayer.GetChildCount() - 1);
-      fx.Position = info.Position;
+      _hitFXLayer.MoveChild(fx, _hitFXLayer.GetChildCount() - 1);
+
+      // Convert global coordinate to global _hitFXLayer local space
+      fx.Position = _hitFXLayer.GetGlobalTransform().AffineInverse() * info.Position;
       fx.Rotation = info.Rotation;
       fx.ZIndex = 0;
+
       fx.Play(
         resultType,
         note.Type,
@@ -62,7 +78,7 @@ namespace Winithm.Core.Controllers
         // Force shader compilation to prevent first-hit stutter
         HitFX dummy = pool.Get();
         _sceneByInstance[dummy] = resourcePack.HitFXScene;
-        
+
         dummy.Position = PlayerAreaSize;
         dummy.Modulate = new Color(1f, 1f, 1f, 0.01f); // Nearly invisible to avoid flash
 
@@ -72,7 +88,7 @@ namespace Winithm.Core.Controllers
           1f, // Dummy note width
           PlayerAreaSize,
           resourcePack.Config.HitFXAdditiveBlending,
-          fx => 
+          fx =>
           {
             fx.Modulate = Colors.White; // Reset modulate for actual gameplay
             ReleaseHitFX(fx);

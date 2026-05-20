@@ -42,16 +42,6 @@ namespace Winithm.Core.Controllers
     private Dictionary<string, WindowNoteState> _windowStates = new Dictionary<string, WindowNoteState>();
     private List<(string WindowId, NoteData Note)> _activeHoldsCache = new List<(string, NoteData)>();
 
-    public struct HitFXSpawnInfo
-    {
-      public Control ParentLayer;
-      public Vector2 Position;
-      public float Rotation;
-      public float NoteWidth;
-      public Vector2 PlayerAreaSize;
-      public ResourcePack ResourcePack;
-    }
-
     public class WindowNoteState
     {
       public WindowData WindowData;
@@ -118,12 +108,11 @@ namespace Winithm.Core.Controllers
     /// </summary>
     public IReadOnlyDictionary<string, WindowNoteState> GetRegisteredWindowStates() => _windowStates;
 
-    public bool TryGetHitFXSpawnInfo(string windowId, NoteData note, out HitFXSpawnInfo info)
+    public bool TryGetHitFXSpawnInfo(string windowId, NoteData note, out HitFXController.HitFXSpawnInfo info)
     {
       info = default;
 
       if (!_windowStates.TryGetValue(windowId, out var state)) return false;
-      if (state.WindowVisual == null || state.WindowVisual.HitFXLayer == null) return false;
       if (!state.NoteVisualMap.TryGetValue(note, out var noteVisual)) return false;
       if (noteVisual == null || !IsInstanceValid(noteVisual)) return false;
 
@@ -132,16 +121,14 @@ namespace Winithm.Core.Controllers
         * Note.NOTE_HEAD_HEIGHT_RATIO;
 
       Vector2 globalCenter = noteVisual.GetGlobalTransform() * new Vector2(0, -headHeight * 0.5f);
-      Vector2 layerPosition = state.WindowVisual.HitFXLayer.GetGlobalTransform().AffineInverse() * globalCenter;
 
       ResourcePack resourcePack = note.ResourcePack.HasValue
         ? note.ResourcePack.Value
         : ResourcePackManager.Instance.GetActiveResourcePack();
 
-      info = new HitFXSpawnInfo
+      info = new HitFXController.HitFXSpawnInfo
       {
-        ParentLayer = state.WindowVisual.HitFXLayer,
-        Position = layerPosition,
+        Position = globalCenter,
         Rotation = noteVisual.GlobalRotation,
         NoteWidth = noteVisual.Width,
         PlayerAreaSize = noteVisual.PlayerAreaSize,

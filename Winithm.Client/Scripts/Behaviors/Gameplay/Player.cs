@@ -41,6 +41,8 @@ namespace Winithm.Client.Behaviors.Gameplay
 
     // Playfield node from scene tree
     private Control _playfield;
+    private Control _objectsLayer;
+    private Control _hitFXLayer;
 
 
     private Label _debug;
@@ -50,6 +52,9 @@ namespace Winithm.Client.Behaviors.Gameplay
     public override void _Ready()
     {
       _playfield = GetNode<Control>("Playfield");
+      _objectsLayer = GetNode<Control>("Playfield/ObjectsLayer");
+      _hitFXLayer = GetNode<Control>("Playfield/HitFXLayer");
+
       _controllerRack = GetNode<Node>("ControllerRack");
       _componentController = GetNode<ComponentController>("ScoreUI");
 
@@ -138,11 +143,15 @@ namespace Winithm.Client.Behaviors.Gameplay
       _noteController.Initialize(metronome, Autoplay);
       _noteController.PlayerNoteSize = NoteSize;
       _noteController.PlayerNoteSpeed = NoteSpeed;
-      _hitFXController.Initialize(_noteController);
-      _hitFXController.Prewarm(ResourcePackManager.Instance.GetActiveResourcePack());
+      _hitFXController.Initialize(_hitFXLayer, _noteController);
+      
+      foreach (var pack in ResourcePackManager.Instance.GetAllResourcePacks())
+      {
+        _hitFXController.Prewarm(pack);
+      }
 
       _windowController.Initialize(
-        _playfield, _chartData.Windows, metronome,
+        _objectsLayer, _chartData.Windows, metronome,
         _groupController, _themeController, _noteController
       );
       _componentController.Initialize(
