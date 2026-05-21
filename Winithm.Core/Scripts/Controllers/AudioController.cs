@@ -1,34 +1,42 @@
 using Godot;
+using System;
 using Winithm.Core.Managers;
 
 namespace Winithm.Core.Controllers
 {
-  /// <summary>Master clock for chart and audio. Tick() must be called manually each frame.</summary>
+  /// <summary>
+  /// Master clock for chart and audio synchronization.
+  /// Tick() must be called once per frame by the owner.
+  /// </summary>
   public class AudioController : Node
   {
     public Metronome Metronome { get; private set; }
 
     private readonly AudioStreamPlayer _player = new AudioStreamPlayer();
 
-    // Master clock in seconds.
-    private double _currentTime = 0d;
+    // Master clock in seconds. May be negative during pre-roll.
+    private double _clock = 0d;
 
-    // DSP anchor for drift correction while stream is playing.
-    private double _dspTimeAtPlay = 0f;
-    private double _seekPositionAtPlay = 0f;
+    // Positive: audio plays ahead of chart. Negative: chart leads audio.
+    private double _audioOffset = 0d;
 
-    // Positive: music leads chart. Negative: chart leads music.
-    private double _audioOffset = 0f;
+    // DSP time captured at the moment the stream started, for latency correction.
+    private double _dspTimeAtStreamStart = 0d;
 
     private bool _isPlaying = false;
     private bool _streamStarted = false;
 
+    // ── Public state ────────────────────────────────────────────────────────────
+
     public bool IsPlaying => _isPlaying;
 
-    public double CurrentTime => _currentTime;
-    public double CurrentBeat => Metronome.ToBeat(_currentTime);
-    public double CurrentTimeMs => _currentTime * 1000d;
+    public double CurrentTime => _clock;
+    public double CurrentTimeMs => _clock * 1000d;
+    public double CurrentBeat => Metronome.ToBeat(_clock);
+
     public double Length => _player.Stream != null ? (double)_player.Stream.GetLength() : 0d;
+
+    // ── Initialisation ──────────────────────────────────────────────────────────
 
     public void Initialize(Metronome metronome)
     {
@@ -36,60 +44,64 @@ namespace Winithm.Core.Controllers
       AddChild(_player);
     }
 
-    /// <summary>Updates clock; uses DSP for drift correction or delta for pre-delay.</summary>
+    // ── Clock update ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Advances the master clock by one frame.
+    /// While the audio stream is running, the clock is anchored to the DSP
+    /// position to prevent drift. During pre-roll (clock &lt; 0) or after the
+    /// stream has not yet started, engine delta is used instead.
+    /// </summary>
     public void Tick(double delta)
     {
       if (!_isPlaying) return;
 
       if (_streamStarted && _player.Playing)
       {
-        // Get playback position with DSP sync
-        double newTime = _player.GetPlaybackPosition()
+        // DSP-corrected position: subtract output latency so the clock reflects
+        // what the listener actually hears right now.
+        double dspPosition = _player.GetPlaybackPosition()
           + AudioServer.GetTimeSinceLastMix()
-          - AudioServer.GetOutputLatency()
-          - _audioOffset;
+          - AudioServer.GetOutputLatency();
 
-        // Godot's audio mix chunking can occasionally cause newTime to jitter backwards slightly.
-        // We enforce strictly monotonic time during playback to prevent gameplay logic from rewinding.
-        if (newTime > _currentTime)
-        {
-          _currentTime = newTime;
-        }
+        // Convert stream position back to chart time.
+        double dspClock = dspPosition - _audioOffset;
+
+        // Godot's mix-chunk scheduler can emit the same position for multiple
+        // frames or rarely step backwards. Enforce monotonic advancement:
+        // accept the DSP value only when it is strictly ahead of where we are.
+        if (dspClock > _clock)
+          _clock = dspClock;
         else
-        {
-          _currentTime += delta; // Fallback to engine delta to keep time moving smoothly
-        }
+          _clock += delta; // Keep time moving smoothly between DSP updates.
       }
       else
       {
-        _currentTime += delta;
+        _clock += delta;
 
-        // Start stream when clock reaches start point.
-        if (!_streamStarted && _currentTime >= -_audioOffset)
+        // Start the stream once the clock reaches the audio start point.
+        if (!_streamStarted && _clock >= -_audioOffset)
           _StartStream();
       }
+
+      _ClampClock();
     }
 
-    /// <summary>Shifts the internal clock by deltaSecs without requiring playback.
-    /// Used for rewind animation while paused.</summary>
-    public void AdjustTime(double deltaSecs)
-    {
-      _currentTime += deltaSecs;
-      if (_currentTime < 0) _currentTime = 0;
-    }
+    // ── Playback control ────────────────────────────────────────────────────────
 
-    /// <summary>Resume playback from current position.</summary>
+    /// <summary>Resume playback from the current clock position.</summary>
     public void Resume()
     {
       if (_isPlaying) return;
       _isPlaying = true;
 
-      if (_currentTime + _audioOffset >= 0)
+      // Start the stream immediately if the clock is already past the pre-roll;
+      // otherwise Tick() will trigger it once the clock advances enough.
+      if (_clock + _audioOffset >= 0d)
         _StartStream();
-      // Tick() will start stream once clock advances enough.
     }
 
-    /// <summary>Pause playback.</summary>
+    /// <summary>Pause playback and stop the audio stream.</summary>
     public void Pause()
     {
       if (!_isPlaying) return;
@@ -98,29 +110,70 @@ namespace Winithm.Core.Controllers
       _player.Stop();
     }
 
+    // ── Seeking ─────────────────────────────────────────────────────────────────
+
     public void SeekSeconds(double seconds)
     {
-      _currentTime = seconds;
+      _clock = seconds;
+      _ClampClock();
       _RestartStream();
     }
 
     public void SeekMilliseconds(double ms) => SeekSeconds(ms / 1000d);
-
     public void SeekBeat(double beat) => SeekSeconds(Metronome.ToSeconds(beat));
+
+    // ── Clock nudge (used by rewind animation while paused) ─────────────────────
+
+    /// <summary>
+    /// Shifts the clock by <paramref name="deltaSecs"/> without resuming playback.
+    /// Clamps the result to the valid playable range.
+    /// </summary>
+    public void AdjustTime(double deltaSecs)
+    {
+      _clock += deltaSecs;
+      _ClampClock();
+    }
+
+    // ── Audio offset ────────────────────────────────────────────────────────────
 
     public void SetAudioOffsetSeconds(double offset) => _audioOffset = offset;
     public double GetAudioOffsetSeconds() => _audioOffset;
 
+    // ── Stream access ───────────────────────────────────────────────────────────
+
     public AudioStream GetStream() => _player.Stream;
     public void SetStream(AudioStream stream) => _player.Stream = stream;
 
-    // Starts stream at position relative to clock (pos = clock + offset).
+    // ── Private helpers ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Clamps the clock so it never goes below 0 or beyond the playable end of
+    /// the track. The upper bound accounts for audio offset direction:
+    ///   • positive offset → audio leads, effective end is Length - offset
+    ///   • negative offset → audio lags, effective end is Length - offset (still correct)
+    /// When there is no stream loaded the upper bound is unconstrained.
+    /// </summary>
+    private void _ClampClock()
+    {
+      if (_clock < 0d) _clock = 0d;
+
+      double streamLength = Length;
+      if (streamLength <= 0d) return;
+
+      // Clamp to whichever ends later: the chart or the audio stream.
+      double maxTime = Math.Max(streamLength, streamLength - _audioOffset);
+      if (_clock > maxTime) _clock = maxTime;
+    }
+
+    /// <summary>Starts the audio stream at the position that matches the current clock.</summary>
     private void _StartStream()
     {
-      double streamPosition = _currentTime + _audioOffset;
+      double streamPosition = _clock + _audioOffset;
+
+      if (streamPosition > Length) return;
+
       _player.Play((float)streamPosition);
-      _dspTimeAtPlay = AudioServer.GetTimeSinceLastMix();
-      _seekPositionAtPlay = streamPosition;
+      _dspTimeAtStreamStart = AudioServer.GetTimeSinceLastMix();
       _streamStarted = true;
     }
 
@@ -129,8 +182,8 @@ namespace Winithm.Core.Controllers
       _streamStarted = false;
       _player.Stop();
 
-      // Only restart if playing — Seek does not imply Resume.
-      if (_isPlaying && _currentTime + _audioOffset >= 0)
+      // Seek does not imply resume — only restart the stream if already playing.
+      if (_isPlaying && _clock + _audioOffset >= 0d)
         _StartStream();
     }
   }
