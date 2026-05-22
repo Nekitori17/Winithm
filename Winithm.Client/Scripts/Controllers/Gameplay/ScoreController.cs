@@ -51,7 +51,7 @@ namespace Winithm.Client.Controllers.Gameplay
       : 0;
 
     public void SetTotalCombos(int count) => _totalWeight = count;
-    
+
 
     public void RegisterHit(HitResult result)
     {
@@ -98,7 +98,11 @@ namespace Winithm.Client.Controllers.Gameplay
 
     public PlayerCombo.Status GetStatus()
     {
-      if (ScorePredict < Constants.Scoring.GradeMinimumScore[Constants.Scoring.Grade.AP] && !_missed)
+      // No notes evaluated yet — still perfectly on track for AP.
+      if (_comboEvaluated == 0) return PlayerCombo.Status.AP;
+
+      // No misses but predicted score can't reach AP → FC.
+      if (!_missed && ScorePredict < Constants.Scoring.GradeMinimumScore[Constants.Scoring.Grade.AP])
         return PlayerCombo.Status.FC;
 
       var grade = Constants.Scoring.GetGrade(ScorePredict);
