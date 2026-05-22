@@ -51,7 +51,7 @@ namespace Winithm.Client.Behaviors.Gameplay
     // ── Client controllers ───────────────────────────────────────────────────────
 
     private HitController _hitController;
-    private ScoreController _scoreController;
+    private ScoreTracker _scoreTracker;
 
     // ── Data ─────────────────────────────────────────────────────────────────────
 
@@ -101,9 +101,9 @@ namespace Winithm.Client.Behaviors.Gameplay
       _componentController = GetNode<ComponentController>("ScoreUI");
       _debug = GetNode<Label>("Debug");
 
-      SetAutoPlay(false);
-      SetNoteSize(1.3f);
-      SetNoteSpeed(7.5f);
+      SetAutoPlay(true);
+      SetNoteSize(1.5f);
+      SetNoteSpeed(10f);
 
       InitializeControllers();
       LoadDemoLevel();
@@ -316,20 +316,20 @@ namespace Winithm.Client.Behaviors.Gameplay
           _noteController.GetTotalComboPassedInActivingWindows(currentBeat)
           + _windowController.GetTotalComboPassedInDestroyedWindows(currentBeat);
 
-        _scoreController.SetWeightGained(passed);
-        _scoreController.SetComboEvaluated(passed);
+        _scoreTracker.SetWeightGained(passed);
+        _scoreTracker.SetComboEvaluated(passed);
 
         _componentController.SetCombo(passed);
-        _componentController.SetScore(_scoreController.GetRealtimeScore());
-        _componentController.SetAccuracy(_scoreController.GetRealtimeAccuracy());
+        _componentController.SetScore(_scoreTracker.GetRealtimeScore());
+        _componentController.SetAccuracy(_scoreTracker.GetRealtimeAccuracy());
         _componentController.SetStatus(PlayerCombo.Status.AT);
       }
       else
       {
-        _componentController.SetCombo(_scoreController.GetCurrentCombo());
-        _componentController.SetScore(_scoreController.GetRealtimeScore());
-        _componentController.SetAccuracy(_scoreController.GetRealtimeAccuracy());
-        _componentController.SetStatus(_scoreController.GetStatus());
+        _componentController.SetCombo(_scoreTracker.GetCurrentCombo());
+        _componentController.SetScore(_scoreTracker.GetRealtimeScore());
+        _componentController.SetAccuracy(_scoreTracker.GetRealtimeAccuracy());
+        _componentController.SetStatus(_scoreTracker.GetStatus());
       }
     }
 
@@ -358,11 +358,11 @@ namespace Winithm.Client.Behaviors.Gameplay
       _hitController = new HitController() { Name = "HitController" };
       _controllerRack.AddChild(_hitController);
 
-      _scoreController = new ScoreController();
+      _scoreTracker = new ScoreTracker();
 
       // Wire scoring and hit-FX events.
-      _hitController.OnHit += (_, result) => _scoreController.RegisterHit(result);
-      _hitController.OnMiss += (_, result) => _scoreController.RegisterHit(result);
+      _hitController.OnHit += (_, result) => _scoreTracker.RegisterHit(result);
+      _hitController.OnMiss += (_, result) => _scoreTracker.RegisterHit(result);
       _hitController.OnHitFXRequested += (windowId, note, resultType) =>
         _hitFXController.RequestHitFX(windowId, note, resultType);
     }
@@ -408,7 +408,7 @@ namespace Winithm.Client.Behaviors.Gameplay
 
       _hitController.Initialize(_audioController, _noteController, _windowController);
 
-      _scoreController.SetTotalCombos(_chartData.Windows.TotalComboCount);
+      _scoreTracker.SetTotalCombos(_chartData.Windows.TotalComboCount);
 
       _componentController.SetAccuracy(1f);
       _componentController.SetScore(0);
