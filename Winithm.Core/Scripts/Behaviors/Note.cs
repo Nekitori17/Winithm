@@ -38,7 +38,7 @@ namespace Winithm.Core.Behaviors
     [Export] public float BodyHeight = 0f;
     public ResourcePack ResourcePack = ResourcePackManager.Instance.GetActiveResourcePack();
 
-    public static readonly float BODY_TO_HEAD_WIDTH_OFFSET = 0.01f;
+    public static readonly float BODY_TO_HEAD_WIDTH_OFFSET = 0.0175f;
     public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.0175f;
     public static readonly float NOTE_OVERLAY_RATIO = 1.2f;
 
