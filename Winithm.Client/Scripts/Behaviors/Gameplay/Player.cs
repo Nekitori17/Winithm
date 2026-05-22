@@ -11,22 +11,35 @@ using Winithm.Core.Behaviors.ScoreUI;
 namespace Winithm.Client.Behaviors.Gameplay
 {
   /// <summary>
-  /// Main gameplay orchestrator. Creates and wires all Core controllers,
+  /// Main gameplay orchestrator. Creates and wires all core controllers,
   /// drives the game loop, and routes input to HitController.
   /// </summary>
   public class Player : Control
   {
+    // ── Exports ─────────────────────────────────────────────────────────────────
+
     [Export] public bool Autoplay = false;
     [Export] public float NoteSize = 1f;
     [Export] public float NoteSpeed = 1f;
 
-    public readonly float PAUSE_BACK_TIME_SECS = 3f;
-    public readonly float REWIND_TIME_SECS = 0.5f;
+    // ── Pause / rewind constants ─────────────────────────────────────────────────
 
-    // Rack to add controller
+    /// <summary>How far back (in chart seconds) a pause rewinds the clock.</summary>
+    public readonly float PAUSE_REWIND_SECS = 3f;
+
+    /// <summary>Wall-clock duration (seconds) of the rewind animation.</summary>
+    public readonly float REWIND_DURATION_SECS = 0.5f;
+
+    // ── Scene nodes ──────────────────────────────────────────────────────────────
+
     private Node _controllerRack;
+    private Control _playfield;
+    private Control _objectsLayer;
+    private Control _hitFXLayer;
+    private Label _debug;
 
-    // Core controllers
+    // ── Core controllers ─────────────────────────────────────────────────────────
+
     private AudioController _audioController;
     private ComponentController _componentController;
     private NoteController _noteController;
@@ -35,39 +48,60 @@ namespace Winithm.Client.Behaviors.Gameplay
     private GroupController _groupController;
     private ThemeChannelController _themeController;
 
-    // Client controllers
+    // ── Client controllers ───────────────────────────────────────────────────────
+
     private HitController _hitController;
     private ScoreController _scoreController;
 
-    // Data
+    // ── Data ─────────────────────────────────────────────────────────────────────
+
     private ChartData _chartData;
 
-    // Playfield node from scene tree
-    private Control _playfield;
-    private Control _objectsLayer;
-    private Control _hitFXLayer;
+    // ── Pause / rewind state machine ─────────────────────────────────────────────
 
-    private bool _isPaused = false;
-    private float _rewindTimeSecs = 0.5f;
+    // Phases:
+    //   Idle      – normal playback
+    //   Rewinding – clock is being pushed backward in real time
+    //   Recovering – clock is advancing back toward the saved position (after unpause)
 
-    private Label _debug;
+    private enum PausePhase { Idle, Rewinding, Recovering }
+
+    private PausePhase _pausePhase = PausePhase.Idle;
+
+    // Chart-time position at the moment Pause was pressed.
+    private double _timeAtPause = 0d;
+
+    // Target chart-time for the rewind end (may be 0 if pause was very early).
+    private double _rewindTarget = 0d;
+
+    // Actual rewind distance: timeAtPause - rewindTarget (≤ PAUSE_REWIND_SECS).
+    private double _rewindDistance = 0d;
+
+    // Wall-clock seconds remaining in the current rewind animation.
+    private float _rewindTimeLeft = 0f;
+
+    // Rate at which the clock moves during the rewind animation (chart-secs / wall-sec).
+    private double _rewindRate = 0d;
+
+    // Cooldown to prevent instant re-pause right after an unpause.
+    private float _pauseCooldown = 0f;
+
+    // ── Misc ─────────────────────────────────────────────────────────────────────
 
     public static readonly string LEVEL_DIR = "res://Winithm.Assets/Levels";
+
+    // ── Godot lifecycle ──────────────────────────────────────────────────────────
 
     public override void _Ready()
     {
       _playfield = GetNode<Control>("Playfield");
       _objectsLayer = GetNode<Control>("Playfield/ObjectsLayer");
       _hitFXLayer = GetNode<Control>("Playfield/HitFXLayer");
-
       _controllerRack = GetNode<Node>("ControllerRack");
       _componentController = GetNode<ComponentController>("ScoreUI");
-
       _debug = GetNode<Label>("Debug");
 
-      _rewindTimeSecs = REWIND_TIME_SECS;
-
-      SetAutoPlay(true);
+      SetAutoPlay(false);
       SetNoteSize(1.3f);
       SetNoteSpeed(7.5f);
 
@@ -75,57 +109,270 @@ namespace Winithm.Client.Behaviors.Gameplay
       LoadDemoLevel();
     }
 
+    public override void _Process(float delta)
+    {
+      if (_audioController == null) return;
+
+      // Decrement pause cooldown.
+      if (_pauseCooldown > 0f)
+        _pauseCooldown -= delta;
+
+      _TickClock(delta);
+
+      // ── Per-frame gameplay updates ────────────────────────────────────────────
+
+      double currentBeat = _audioController.CurrentBeat;
+
+      _debug.Text =
+        $"Beat: {currentBeat:F2}\n"
+        + $"FPS: {Engine.GetFramesPerSecond()} | Frame: {delta * 1000:F2}ms | Vsync: {(OS.VsyncEnabled ? "On" : "Off")}";
+
+      _windowController.ScreenSize = OS.GetScreenSize();
+      _windowController.PlayerAreaSize = _playfield.RectSize;
+      _windowController.Update(currentBeat);
+
+      _noteController.Update(currentBeat);
+
+      double length = _audioController.Length;
+      _componentController.SongProgressPercent =
+        length > 0 ? (float)(_audioController.CurrentTime / length) : 0f;
+
+      _componentController.ScreenSize = OS.WindowSize;
+
+      _UpdateScore(currentBeat);
+      _componentController.Update(currentBeat);
+    }
+
+    public override void _UnhandledInput(InputEvent @event)
+    {
+      if (_hitController == null || _audioController == null) return;
+      if (!(@event is InputEventKey keyEvent)) return;
+      if (keyEvent.Echo) return;
+
+      if (@event.IsAction("PauseKey"))
+      {
+        _HandlePauseInput();
+        return;
+      }
+
+      // Block gameplay input while autoplay, paused/rewinding/recovering, or audio stopped.
+      if (Autoplay || _pausePhase != PausePhase.Idle || !_audioController.IsPlaying) return;
+
+      if (@event.IsAction("FocusNoteKey"))
+        _hitController.OnFocusKeyPressed();
+      else if (@event.IsAction("CloseNoteKey"))
+        _hitController.OnCloseKeyPressed();
+      else if (!keyEvent.Pressed)
+        _OnGameplayKeyReleased(@event);
+      else
+        _hitController.OnTapKeyPressed();
+    }
+
+    // ── Key release routing ──────────────────────────────────────────────────────
+
+    // Called from _UnhandledInput for key-up events on gameplay keys.
+    private void _OnGameplayKeyReleased(InputEvent @event)
+    {
+      if (@event.IsAction("FocusNoteKey") || @event.IsAction("CloseNoteKey")) return;
+      _hitController.OnKeyReleased();
+    }
+
+    // ── Clock tick logic ─────────────────────────────────────────────────────────
+
+    private void _TickClock(float delta)
+    {
+      switch (_pausePhase)
+      {
+        case PausePhase.Rewinding:
+          _TickRewind(delta);
+          break;
+
+        case PausePhase.Recovering:
+          _TickRecover(delta);
+          break;
+
+        default:
+          _audioController.Tick(delta);
+          break;
+      }
+    }
+
+    /// <summary>
+    /// Pushes the paused clock backward at <see cref="_rewindRate"/> until the
+    /// animation timer expires or the rewind target is reached.
+    /// </summary>
+    private void _TickRewind(float delta)
+    {
+      _rewindTimeLeft -= delta;
+
+      double step = _rewindRate * delta; // chart-seconds to move back this frame
+
+      // Check whether the next step would overshoot the target.
+      double distanceLeft = _audioController.CurrentTime - _rewindTarget;
+      if (step >= distanceLeft || _rewindTimeLeft <= 0f)
+      {
+        // Snap to target and freeze — wait for the player to unpause.
+        _audioController.AdjustTime(-distanceLeft);
+        _rewindTimeLeft = 0f;
+      }
+      else
+      {
+        _audioController.AdjustTime(-step);
+      }
+    }
+
+    /// <summary>
+    /// Lets the audio clock run forward normally until it reaches
+    /// <see cref="_timeAtPause"/>, at which point recovery ends.
+    /// </summary>
+    private void _TickRecover(float delta)
+    {
+      _audioController.Tick(delta);
+
+      if (_audioController.CurrentTime >= _timeAtPause)
+      {
+        // Snap exactly to pause point and finish recovery.
+        _audioController.SeekSeconds(_timeAtPause);
+        _pausePhase = PausePhase.Idle;
+      }
+    }
+
+    // ── Pause input handler ──────────────────────────────────────────────────────
+
+    private void _HandlePauseInput()
+    {
+      switch (_pausePhase)
+      {
+        case PausePhase.Idle:
+          _BeginPause();
+          break;
+
+        case PausePhase.Rewinding:
+          // Block unpause while the rewind animation is still playing.
+          break;
+
+        case PausePhase.Recovering:
+          // Block re-pause during recovery to avoid abuse.
+          break;
+      }
+
+      // Unpause: rewind must have fully settled (timeLeft == 0) and cooldown expired.
+      // This is evaluated only after the switch so the Rewinding case above takes priority.
+      if (_pausePhase == PausePhase.Rewinding && _rewindTimeLeft <= 0f)
+      {
+        if (_pauseCooldown <= 0f)
+          _BeginRecover();
+      }
+    }
+
+    // ── Pause / recover transitions ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Captures the current position, computes the rewind target and animation
+    /// rate, then begins the rewind phase.
+    /// </summary>
+    private void _BeginPause()
+    {
+      _timeAtPause = _audioController.CurrentTime;
+      _audioController.Pause();
+
+      // How far back we want to go (clamped so we never go below 0).
+      _rewindTarget = Math.Max(0d, _timeAtPause - PAUSE_REWIND_SECS);
+      _rewindDistance = _timeAtPause - _rewindTarget; // actual distance ≤ PAUSE_REWIND_SECS
+
+      // Scale animation duration proportionally when we can't go back the full amount.
+      // Full distance → REWIND_DURATION_SECS; shorter → proportionally less time.
+      float animDuration = (float)(_rewindDistance / PAUSE_REWIND_SECS) * REWIND_DURATION_SECS;
+      _rewindTimeLeft = animDuration;
+
+      // Speed of the rewind animation in chart-seconds per wall-second.
+      _rewindRate = _rewindDistance > 0d ? _rewindDistance / animDuration : 0d;
+
+      _pausePhase = PausePhase.Rewinding;
+      _componentController.DrainPauseBar();
+    }
+
+    /// <summary>
+    /// Starts recovery: resumes audio from the rewind position so the clock
+    /// advances naturally back to <see cref="_timeAtPause"/>.
+    /// </summary>
+    private void _BeginRecover()
+    {
+      _pausePhase = PausePhase.Recovering;
+      _audioController.Resume();
+      _componentController.FillPauseBar();
+
+      // Apply cooldown equal to recovery duration (= rewind distance at 1× speed).
+      _pauseCooldown = (float)_rewindDistance;
+    }
+
+    // ── Score update ─────────────────────────────────────────────────────────────
+
+    private void _UpdateScore(double currentBeat)
+    {
+      if (Autoplay)
+      {
+        int passed =
+          _noteController.GetTotalComboPassedInActivingWindows(currentBeat)
+          + _windowController.GetTotalComboPassedInDestroyedWindows(currentBeat);
+
+        _scoreController.SetWeightGained(passed);
+        _scoreController.SetComboEvaluated(passed);
+
+        _componentController.SetCombo(passed);
+        _componentController.SetScore(_scoreController.GetRealtimeScore());
+        _componentController.SetAccuracy(_scoreController.GetRealtimeAccuracy());
+        _componentController.SetStatus(PlayerCombo.Status.AT);
+      }
+      else
+      {
+        _componentController.SetCombo(_scoreController.GetCurrentCombo());
+        _componentController.SetScore(_scoreController.GetRealtimeScore());
+        _componentController.SetAccuracy(_scoreController.GetRealtimeAccuracy());
+        _componentController.SetStatus(_scoreController.GetStatus());
+      }
+    }
+
+    // ── Controller initialisation ────────────────────────────────────────────────
+
     private void InitializeControllers()
     {
-      // Audio controller (master clock)
       _audioController = new AudioController() { Name = "AudioController" };
       _controllerRack.AddChild(_audioController);
 
-      // Group controller
       _groupController = new GroupController() { Name = "GroupController" };
       _controllerRack.AddChild(_groupController);
 
-      // Theme channel controller
       _themeController = new ThemeChannelController() { Name = "ThemeChannelController" };
       _controllerRack.AddChild(_themeController);
 
-      // Note controller (rendering + lifecycle)
       _noteController = new NoteController() { Name = "NoteController" };
       _controllerRack.AddChild(_noteController);
 
-      // Hit FX controller (visual-only effects)
       _hitFXController = new HitFXController() { Name = "HitFXController" };
       _controllerRack.AddChild(_hitFXController);
 
-      // Window controller (window rendering + lifecycle)
       _windowController = new WindowController() { Name = "WindowController" };
       _controllerRack.AddChild(_windowController);
 
-      // Hit controller (input evaluation)
       _hitController = new HitController() { Name = "HitController" };
       _controllerRack.AddChild(_hitController);
 
-      // Score controller (plain class, no Node)
       _scoreController = new ScoreController();
 
-      // Wire score events
-      _hitController.OnHit += (windowId, result) => _scoreController.RegisterHit(result);
-      _hitController.OnMiss += (windowId, result) => _scoreController.RegisterHit(result);
+      // Wire scoring and hit-FX events.
+      _hitController.OnHit += (_, result) => _scoreController.RegisterHit(result);
+      _hitController.OnMiss += (_, result) => _scoreController.RegisterHit(result);
       _hitController.OnHitFXRequested += (windowId, note, resultType) =>
         _hitFXController.RequestHitFX(windowId, note, resultType);
     }
 
-    private async void LoadDemoLevel() => LoadLevel(
-      "frizka.allMyFellas",
-      "info"
-    );
+    // ── Level loading ─────────────────────────────────────────────────────────────
 
-    public async void LoadLevel(
-      string songID,
-      string chartID
-    )
+    private async void LoadDemoLevel() => LoadLevel("frizka.allMyFellas", "info");
+
+    public async void LoadLevel(string songID, string chartID)
     {
-
       _chartData = WinithmIO.LoadLevel(LEVEL_DIR, songID, chartID);
       if (_chartData == null)
       {
@@ -133,29 +380,22 @@ namespace Winithm.Client.Behaviors.Gameplay
         return;
       }
 
-      // Initialize audio
       var metronome = _chartData.SongMetaData.Audio.Metronome;
       _audioController.Initialize(metronome);
 
-      // Use the stream already loaded by WNMParser
       if (_chartData.SongMetaData.Audio.SongStream != null)
-      {
         _audioController.SetStream(_chartData.SongMetaData.Audio.SongStream);
-      }
 
-      // Initialize controllers with shared dependencies
       _groupController.Initialize(_chartData.Groups);
       _themeController.Initialize(_chartData.ThemeChannels);
 
       _noteController.Initialize(metronome, Autoplay);
       _noteController.PlayerNoteSize = NoteSize;
       _noteController.PlayerNoteSpeed = NoteSpeed;
+
       _hitFXController.Initialize(_hitFXLayer, _noteController);
-      
       foreach (var pack in ResourcePackManager.Instance.GetAllResourcePacks())
-      {
         _hitFXController.Prewarm(pack);
-      }
 
       _windowController.Initialize(
         _objectsLayer, _chartData.Windows, metronome,
@@ -168,158 +408,34 @@ namespace Winithm.Client.Behaviors.Gameplay
 
       _hitController.Initialize(_audioController, _noteController, _windowController);
 
-      // Set total hittable notes for scoring
       _scoreController.SetTotalCombos(_chartData.Windows.TotalComboCount);
-      
+
       _componentController.SetAccuracy(1f);
       _componentController.SetScore(0);
       _componentController.SetCombo(0);
-      if (Autoplay)
-        _componentController.SetStatus(PlayerCombo.Status.AT);
-      else
-        _componentController.SetStatus(PlayerCombo.Status.AP);
+      _componentController.SetStatus(Autoplay ? PlayerCombo.Status.AT : PlayerCombo.Status.AP);
 
-      // Apply initial sizing
       ApplyScreenSize();
 
-      // Connect parent resize
       var parent = GetParent<Control>();
       if (parent != null)
         parent.Connect("item_rect_changed", this, nameof(OnParentResized));
 
-      // Delay to ensure Godot splash screen and rendering initialize cleanly.
+      // Wait for Godot splash and renderer to settle before starting playback.
       await ToSignal(GetTree().CreateTimer(2.0f), "timeout");
 
       _audioController.Resume();
     }
 
-    public void SetAutoPlay(bool active) => Autoplay = active; 
-    public void SetNoteSize(float size) => NoteSize = size; 
-    public void SetNoteSpeed(float speed) => NoteSpeed = speed; 
+    // ── Setters ──────────────────────────────────────────────────────────────────
 
-    public override void _Process(float delta)
-    {
-      if (_audioController == null) return;
-      if (!_audioController.IsPlaying && !_isPaused) return;
+    public void SetAutoPlay(bool active) => Autoplay = active;
+    public void SetNoteSize(float size) => NoteSize = size;
+    public void SetNoteSpeed(float speed) => NoteSpeed = speed;
 
-      if (_isPaused)
-      {
-        if (_rewindTimeSecs <= 0) return; // Rewind done, freeze visuals
+    // ── Screen resize ────────────────────────────────────────────────────────────
 
-        _rewindTimeSecs -= delta;
-        if (_rewindTimeSecs < 0) _rewindTimeSecs = 0;
-
-        float calcDelta = delta * (PAUSE_BACK_TIME_SECS / REWIND_TIME_SECS);
-        _audioController.AdjustTime(-calcDelta);
-      }
-      else
-      {
-        // Tick the master clock
-        _audioController.Tick(delta);
-      }
-
-      double currentBeat = _audioController.CurrentBeat;
-
-      _debug.Text = 
-        $"Beat: {currentBeat:F2}" + "\n" 
-        + $"FPS: {Engine.GetFramesPerSecond()} | Train: {delta * 1000:F2}ms | Vsync: {(OS.VsyncEnabled ? "On" : "Off")}";
-
-      // Update all controllers in order
-      _windowController.ScreenSize = OS.GetScreenSize();
-      _windowController.PlayerAreaSize = _playfield.RectSize;
-      _windowController.Update(currentBeat);
-
-      _noteController.Update(currentBeat);
-      double length = _audioController.Length;
-      _componentController.SongProgressPercent = length > 0 ? (float)(_audioController.CurrentTime / length) : 0f;
-
-      _componentController.ScreenSize = OS.WindowSize;
-
-      if (Autoplay)
-      {
-        int totalComboPassed = 
-        _noteController.GetTotalComboPassedInActivingWindows(currentBeat)
-        +
-        _windowController.GetTotalComboPassedInDestroyedWindows(currentBeat);
-
-        _scoreController.SetWeightGained(totalComboPassed);
-        _scoreController.SetComboEvaluated(totalComboPassed);
-
-        _componentController.SetCombo(totalComboPassed);
-        _componentController.SetScore(_scoreController.GetRealtimeScore());
-        _componentController.SetAccuracy(_scoreController.GetRealtimeAccuracy());
-        _componentController.SetStatus(PlayerCombo.Status.AT);
-      } else
-      {
-        _componentController.SetCombo(_scoreController.GetCurrentCombo());
-        _componentController.SetScore(_scoreController.GetRealtimeScore());
-        _componentController.SetAccuracy(_scoreController.GetRealtimeAccuracy());
-        _componentController.SetStatus(_scoreController.GetStatus());
-      }
-
-      _componentController.Update(currentBeat);
-    }
-
-    public override void _UnhandledInput(InputEvent @event)
-    {
-      if (_hitController == null || _audioController == null) return;
-
-      if (@event is InputEventKey keyEvent)
-      {
-        // PauseKey must be handled before Autoplay and IsPlaying guards,
-        // so pause/resume always works regardless of game state.
-        if (keyEvent.Pressed && !keyEvent.Echo && @event.IsAction("PauseKey"))
-        {
-          if (!_isPaused && _audioController.IsPlaying)
-          {
-            _isPaused = true;
-            _rewindTimeSecs = REWIND_TIME_SECS;
-            _audioController.Pause();
-            _componentController.DrainPauseBar();
-          }
-          else if (_isPaused && _rewindTimeSecs <= 0f)
-          {
-            // Only allow resume after rewind animation completes
-            _isPaused = false;
-            _audioController.Resume();
-            _componentController.FillPauseBar();
-          }
-          return;
-        }
-
-        // Block all gameplay input when autoplay, paused, or not playing
-        if (Autoplay || !_audioController.IsPlaying || _isPaused) return;
-
-        if (keyEvent.Pressed && !keyEvent.Echo)
-        {
-          if (@event.IsAction("FocusNoteKey"))
-          {
-            _hitController.OnFocusKeyPressed();
-          }
-          else if (@event.IsAction("CloseNoteKey"))
-          {
-            _hitController.OnCloseKeyPressed();
-          }
-          else
-          {
-            _hitController.OnTapKeyPressed();
-          }
-        }
-        else if (!keyEvent.Pressed)
-        {
-          // Only track releases for gameplay keys (not Focus/Close keys)
-          if (!@event.IsAction("FocusNoteKey") && !@event.IsAction("CloseNoteKey"))
-          {
-            _hitController.OnKeyReleased();
-          }
-        }
-      }
-    }
-
-    private void OnParentResized()
-    {
-      ApplyScreenSize();
-    }
+    private void OnParentResized() => ApplyScreenSize();
 
     private void ApplyScreenSize()
     {
@@ -328,10 +444,7 @@ namespace Winithm.Client.Behaviors.Gameplay
       _windowController.ScreenSize = OS.WindowSize;
 
       var parent = GetParent<Control>();
-      if (parent != null)
-        _windowController.PlayerAreaSize = parent.RectSize;
-      else
-        _windowController.PlayerAreaSize = RectSize;
+      _windowController.PlayerAreaSize = parent != null ? parent.RectSize : RectSize;
     }
   }
 }
