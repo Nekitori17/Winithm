@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/minimize.svg-b1592414911c067e98ce43d778139f0c.stex"
+path="res://.import/minimize.svg-e28f4bde70d7439d80be6e3b6d3c2020.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Winithm.Core/Resources/Icons/WIndow/minimize.svg"
-dest_files=[ "res://.import/minimize.svg-b1592414911c067e98ce43d778139f0c.stex" ]
+source_file="res://Winithm.Core/Resources/Icons/Window/minimize.svg"
+dest_files=[ "res://.import/minimize.svg-e28f4bde70d7439d80be6e3b6d3c2020.stex" ]
 
 [params]
 

@@ -51,9 +51,9 @@ namespace Winithm.Core.Behaviors
 
     // --- Resources ---
     private static readonly Texture _iconTex = GD.Load<Texture>("res://icon.png");
-    private static readonly Texture _closeTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/close.svg");
-    private static readonly Texture _maxTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/maximize.svg");
-    private static readonly Texture _minTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/WIndow/minimize.svg");
+    private static readonly Texture _closeTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/Window/close.svg");
+    private static readonly Texture _maxTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/Window/maximize.svg");
+    private static readonly Texture _minTex = GD.Load<Texture>("res://Winithm.Core/Resources/Icons/Window/minimize.svg");
     private static readonly DynamicFont _font = new DynamicFont
     {
       FontData = GD.Load<DynamicFontData>("res://Winithm.Core/Resources/Fonts/Quicksand.ttf"),
