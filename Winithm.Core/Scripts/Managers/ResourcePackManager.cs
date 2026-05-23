@@ -8,9 +8,7 @@ namespace Winithm.Core.Managers
 {
   public enum NotePart
   {
-    Left,
-    Center,
-    Right,
+    Base,
     Overlay
   }
 
@@ -18,6 +16,9 @@ namespace Winithm.Core.Managers
   {
     public bool Particle;
     public Color HighlightColor;
+    public int NinePatchHeadMarginH;
+    public int NinePatchBodyMarginH;
+    public int NinePatchBodyMarginV;
     public HitResultType HitFXAutoResult;
     public int HitFXHoldTickMs;
     public bool HitFXAdditiveBlending;
@@ -121,6 +122,15 @@ namespace Winithm.Core.Managers
             case "particle":
               resourcePack.Config.Particle = bool.Parse(val);
               break;
+            case "ninePatchHeadMarginH":
+              resourcePack.Config.NinePatchHeadMarginH = int.Parse(val);
+              break;
+            case "ninePatchBodyMarginH":
+              resourcePack.Config.NinePatchBodyMarginH = int.Parse(val);
+              break;
+            case "ninePatchBodyMarginV":
+              resourcePack.Config.NinePatchBodyMarginV = int.Parse(val);
+              break;
             case "highlightColor":
               resourcePack.Config.HighlightColor = StringToColor(val);
               break;
@@ -135,7 +145,6 @@ namespace Winithm.Core.Managers
                 int.TryParse(val, out var tickMs) ? tickMs : 150;
               break;
             case "hitfxAdditiveBlending":
-            case "hitfxAddictiveBlending":
               resourcePack.Config.HitFXAdditiveBlending = bool.Parse(val);
               break;
           }
@@ -184,7 +193,7 @@ namespace Winithm.Core.Managers
         string tpStr = fileNameWOExt.Substring(underscoreIdx + 1);
 
         NoteType noteType = Enum.TryParse<NoteType>(ntStr, true, out var nt) ? nt : NoteType.Tap;
-        NotePart texturePart = Enum.TryParse<NotePart>(tpStr, true, out var tp) ? tp : NotePart.Center;
+        NotePart texturePart = Enum.TryParse<NotePart>(tpStr, true, out var tp) ? tp : NotePart.Base;
 
         // Initialize dictionary lazy to prevent KeyNotFoundException
         if (!resourcePack.TEX.ContainsKey(noteType))

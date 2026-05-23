@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/drag_right.png-4cd272f5401d558d3b6eab4de38e2638.stex"
+path="res://.import/drag_base.png-8bb337e3ee85ac0b21b1ab29e9c77ced.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Winithm.Core/Resources/ResourcePacks/default/tex/drag_right.png"
-dest_files=[ "res://.import/drag_right.png-4cd272f5401d558d3b6eab4de38e2638.stex" ]
+source_file="res://Winithm.Core/Resources/ResourcePacks/default/tex/drag_base.png"
+dest_files=[ "res://.import/drag_base.png-8bb337e3ee85ac0b21b1ab29e9c77ced.stex" ]
 
 [params]
 

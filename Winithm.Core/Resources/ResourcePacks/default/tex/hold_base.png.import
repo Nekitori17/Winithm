@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/focus_right.png-5860421b2cef23752825f5668142660a.stex"
+path="res://.import/hold_base.png-04a2a968fa93c70e3936e3a9ebe4647a.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Winithm.Core/Resources/ResourcePacks/default/tex/focus_right.png"
-dest_files=[ "res://.import/focus_right.png-5860421b2cef23752825f5668142660a.stex" ]
+source_file="res://Winithm.Core/Resources/ResourcePacks/default/tex/hold_base.png"
+dest_files=[ "res://.import/hold_base.png-04a2a968fa93c70e3936e3a9ebe4647a.stex" ]
 
 [params]
 

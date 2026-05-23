@@ -20,14 +20,10 @@ namespace Winithm.Core.Behaviors
     // --- Child references (assigned in _Ready) ---
     // References to scene nodes assigned during initialization
     private Node2D _headContainer;
-    private Sprite _headLeft;
-    private Sprite _headCenter;
-    private Sprite _headRight;
-    private Sprite _headOverlay;
+    private NinePatchRect _headBase;
+    private TextureRect _headOverlay;
     private Node2D _bodyContainer;
-    private Sprite _bodyLeft;
-    private Sprite _bodyCenter;
-    private Sprite _bodyRight;
+    private NinePatchRect _bodyBase;
 
     // --- Properties set by NoteManager ---
     // Configurable properties typically managed by NoteManager
@@ -46,15 +42,11 @@ namespace Winithm.Core.Behaviors
     public override void _Ready()
     {
       _headContainer = GetNode<Node2D>("Head");
-      _headLeft = GetNode<Sprite>("Head/Left");
-      _headCenter = GetNode<Sprite>("Head/Center");
-      _headRight = GetNode<Sprite>("Head/Right");
-      _headOverlay = GetNode<Sprite>("Head/CenterOverlay");
+      _headBase = GetNode<NinePatchRect>("Head/Base");
+      _headOverlay = GetNode<TextureRect>("Head/Overlay");
 
       _bodyContainer = GetNode<Node2D>("Body");
-      _bodyLeft = GetNode<Sprite>("Body/Left");
-      _bodyCenter = GetNode<Sprite>("Body/Center");
-      _bodyRight = GetNode<Sprite>("Body/Right");
+      _bodyBase = GetNode<NinePatchRect>("Body/Base");
 
       UpdateVisual();
     }
@@ -63,6 +55,18 @@ namespace Winithm.Core.Behaviors
     public void OnSpawn(){ }
 
     public void OnDespawn() { }
+
+    private Texture GetTextureSafe(NoteType type, NotePart part)
+    {
+      if (ResourcePack.TEX != null && ResourcePack.TEX.TryGetValue(type, out var parts))
+      {
+        if (parts.TryGetValue(part, out var tex))
+        {
+          return tex;
+        }
+      }
+      return null;
+    }
 
     public void SetNoteType(NoteType type, ResourcePack resourcePack)
     {
@@ -74,43 +78,29 @@ namespace Winithm.Core.Behaviors
 
       _bodyContainer.Visible = Type == NoteType.Hold;
 
-      switch (Type)
-      {
-        case NoteType.Tap:
-          _headLeft.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Left];
-          _headCenter.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Center];
-          _headRight.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Right];
-          _headOverlay.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Overlay];
-          break;
-        case NoteType.Hold:
-          _headLeft.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Left];
-          _headCenter.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Center];
-          _headRight.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Right];
-          _headOverlay.Texture = ResourcePack.TEX[NoteType.Tap][NotePart.Overlay];
+      _headBase.PatchMarginLeft = ResourcePack.Config.NinePatchHeadMarginH;
+      _headBase.PatchMarginRight = ResourcePack.Config.NinePatchHeadMarginH;
+      _headBase.PatchMarginTop = 0;
+      _headBase.PatchMarginBottom = 0;
 
-          _bodyLeft.Texture = ResourcePack.TEX[NoteType.Hold][NotePart.Left];
-          _bodyCenter.Texture = ResourcePack.TEX[NoteType.Hold][NotePart.Center];
-          _bodyRight.Texture = ResourcePack.TEX[NoteType.Hold][NotePart.Right];
-          break;
-        case NoteType.Drag:
-          _headLeft.Texture = ResourcePack.TEX[NoteType.Drag][NotePart.Left];
-          _headCenter.Texture = ResourcePack.TEX[NoteType.Drag][NotePart.Center];
-          _headRight.Texture = ResourcePack.TEX[NoteType.Drag][NotePart.Right];
-          _headOverlay.Texture = ResourcePack.TEX[NoteType.Drag][NotePart.Overlay];
-          break;
-        case NoteType.Focus:
-          _headLeft.Texture = ResourcePack.TEX[NoteType.Focus][NotePart.Left];
-          _headCenter.Texture = ResourcePack.TEX[NoteType.Focus][NotePart.Center];
-          _headRight.Texture = ResourcePack.TEX[NoteType.Focus][NotePart.Right];
-          _headOverlay.Texture = ResourcePack.TEX[NoteType.Focus][NotePart.Overlay];
-          break;
-        case NoteType.Close:
-          _headLeft.Texture = ResourcePack.TEX[NoteType.Close][NotePart.Left];
-          _headCenter.Texture = ResourcePack.TEX[NoteType.Close][NotePart.Center];
-          _headRight.Texture = ResourcePack.TEX[NoteType.Close][NotePart.Right];
-          _headOverlay.Texture = ResourcePack.TEX[NoteType.Close][NotePart.Overlay];
-          break;
+      _bodyBase.PatchMarginLeft = ResourcePack.Config.NinePatchBodyMarginH;
+      _bodyBase.PatchMarginRight = ResourcePack.Config.NinePatchBodyMarginH;
+      _bodyBase.PatchMarginTop = ResourcePack.Config.NinePatchBodyMarginV;
+      _bodyBase.PatchMarginBottom = ResourcePack.Config.NinePatchBodyMarginV;
+
+      NoteType headType = Type == NoteType.Hold ? NoteType.Tap : Type;
+      
+      _headBase.Texture = GetTextureSafe(headType, NotePart.Base);
+      _headOverlay.Texture = GetTextureSafe(headType, NotePart.Overlay);
+      
+      if (Type == NoteType.Hold)
+      {
+        _bodyBase.Texture = GetTextureSafe(NoteType.Hold, NotePart.Base);
       }
+      
+      // Force update visual since texture changed
+      _lastState = new NoteState();
+      UpdateVisual();
     }
 
     public void SetNoteHighlighting(bool active)
@@ -128,7 +118,12 @@ namespace Winithm.Core.Behaviors
       float minScale = Math.Min(PlayerAreaSize.x, PlayerAreaSize.y);
       float headH = NoteSize * minScale * NOTE_HEAD_HEIGHT_RATIO;
       float headW = Math.Max(Width, headH * 2f);
-      float headCW = headW - headH * 2f;
+
+      float headScale = 1f;
+      if (_headBase.Texture != null && _headBase.Texture.GetSize().y > 0)
+      {
+         headScale = headH / _headBase.Texture.GetSize().y;
+      }
 
       bool headDirty =
         PlayerAreaSize != _lastState.PlayerAreaSize ||
@@ -145,18 +140,23 @@ namespace Winithm.Core.Behaviors
         // Update head component layout
         _headContainer.Position = new Vector2(-headW / 2f, -headH);
 
-        _headLeft.Scale = PixelScale(_headLeft, headH, headH);
-        _headLeft.Position = new Vector2(0f, 0f);
+        if (_headBase.Texture != null)
+        {
+          _headBase.RectScale = new Vector2(headScale, headScale);
+          _headBase.RectSize = new Vector2(headW / headScale, _headBase.Texture.GetSize().y);
+          _headBase.RectPosition = Vector2.Zero;
+        }
 
-        _headCenter.Scale = PixelScale(_headCenter, headCW, headH);
-        _headCenter.Position = new Vector2(headH, 0f);
-
-        _headRight.Scale = PixelScale(_headRight, headH, headH);
-        _headRight.Position = new Vector2(headW - headH, 0f);
-
-        float overlaySize = headH * NOTE_OVERLAY_RATIO;
-        _headOverlay.Scale = PixelScale(_headOverlay, overlaySize, overlaySize);
-        _headOverlay.Position = new Vector2(headW / 2f - overlaySize / 2f, headH / 2f - overlaySize / 2f);
+        if (_headOverlay.Texture != null)
+        {
+          float overlaySize = headH * NOTE_OVERLAY_RATIO;
+          float texW = _headOverlay.Texture.GetSize().x;
+          float texH = _headOverlay.Texture.GetSize().y;
+          
+          _headOverlay.RectScale = new Vector2(texW > 0 ? overlaySize / texW : 1f, texH > 0 ? overlaySize / texH : 1f);
+          _headOverlay.RectSize = new Vector2(texW, texH);
+          _headOverlay.RectPosition = new Vector2(headW / 2f - overlaySize / 2f, headH / 2f - overlaySize / 2f);
+        }
       }
 
       if (bodyDirty)
@@ -164,18 +164,15 @@ namespace Winithm.Core.Behaviors
         // Update body component layout (for Hold notes)
         float bodyWidthOffset = minScale * BODY_TO_HEAD_WIDTH_OFFSET;
         float bodyW = Math.Max(headW - bodyWidthOffset, headH * 2f);
-        float bodyCW = bodyW - headH * 2f;
 
         _bodyContainer.Position = new Vector2(-bodyW / 2f, -BodyHeight - headH);
 
-        _bodyLeft.Scale = PixelScale(_bodyLeft, headH, BodyHeight);
-        _bodyLeft.Position = new Vector2(0f, 0f);
-
-        _bodyCenter.Scale = PixelScale(_bodyCenter, bodyCW, BodyHeight);
-        _bodyCenter.Position = new Vector2(headH, 0f);
-
-        _bodyRight.Scale = PixelScale(_bodyRight, headH, BodyHeight);
-        _bodyRight.Position = new Vector2(bodyW - headH, 0f);
+        if (_bodyBase.Texture != null)
+        {
+          _bodyBase.RectScale = new Vector2(headScale, headScale);
+          _bodyBase.RectSize = new Vector2(headScale > 0 ? bodyW / headScale : bodyW, headScale > 0 ? BodyHeight / headScale : BodyHeight);
+          _bodyBase.RectPosition = Vector2.Zero;
+        }
       }
 
       // Save current state for next dirty check
@@ -183,18 +180,6 @@ namespace Winithm.Core.Behaviors
       _lastState.Width = Width;
       _lastState.NoteSize = NoteSize;
       _lastState.BodyHeight = BodyHeight;
-    }
-
-    // Converts desired pixel dimensions to a scale vector relative to the sprite's texture size
-    private static Vector2 PixelScale(Sprite sprite, float pixelW, float pixelH)
-    {
-      Texture tex = sprite.Texture;
-      if (tex == null) return Vector2.One;
-      Vector2 size = tex.GetSize();
-      return new Vector2(
-        size.x > 0 ? pixelW / size.x : 1f,
-        size.y > 0 ? pixelH / size.y : 1f
-      );
     }
   }
 }
