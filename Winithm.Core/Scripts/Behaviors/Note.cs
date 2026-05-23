@@ -21,9 +21,11 @@ namespace Winithm.Core.Behaviors
     // References to scene nodes assigned during initialization
     private Node2D _headContainer;
     private NinePatchRect _headBase;
+    private NinePatchRect _headGlow;
     private TextureRect _headOverlay;
     private Node2D _bodyContainer;
     private NinePatchRect _bodyBase;
+    private NinePatchRect _bodyGlow;
 
     // --- Properties set by NoteManager ---
     // Configurable properties typically managed by NoteManager
@@ -38,15 +40,20 @@ namespace Winithm.Core.Behaviors
     public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.0175f;
     public static readonly float NOTE_OVERLAY_RATIO = 1.2f;
 
+    public static readonly float BASE_HIGHLIGHTING_SPREAD = 30f;
+    public static readonly float BASE_HIGHLIGHTING_SIZE = 10f;
+
     // Initialize node references and perform initial visual update
     public override void _Ready()
     {
       _headContainer = GetNode<Node2D>("Head");
       _headBase = GetNode<NinePatchRect>("Head/Base");
+      _headGlow = GetNode<NinePatchRect>("Head/Base/GlowBase");
       _headOverlay = GetNode<TextureRect>("Head/Overlay");
 
       _bodyContainer = GetNode<Node2D>("Body");
       _bodyBase = GetNode<NinePatchRect>("Body/Base");
+      _bodyGlow = GetNode<NinePatchRect>("Body/Base/GlowBase");
 
       UpdateVisual();
     }
@@ -83,19 +90,49 @@ namespace Winithm.Core.Behaviors
       _headBase.PatchMarginTop = 0;
       _headBase.PatchMarginBottom = 0;
 
+      if (_headGlow != null)
+      {
+        _headGlow.PatchMarginLeft = ResourcePack.Config.NinePatchHeadMarginH;
+        _headGlow.PatchMarginRight = ResourcePack.Config.NinePatchHeadMarginH;
+        _headGlow.PatchMarginTop = 0;
+        _headGlow.PatchMarginBottom = 0;
+
+        float headSpread = BASE_HIGHLIGHTING_SPREAD * ResourcePack.Config.HighlightSpread;
+        _headGlow.MarginLeft = -headSpread;
+        _headGlow.MarginTop = -headSpread;
+        _headGlow.MarginRight = headSpread;
+        _headGlow.MarginBottom = headSpread;
+      }
+
       _bodyBase.PatchMarginLeft = ResourcePack.Config.NinePatchBodyMarginH;
       _bodyBase.PatchMarginRight = ResourcePack.Config.NinePatchBodyMarginH;
       _bodyBase.PatchMarginTop = ResourcePack.Config.NinePatchBodyMarginV;
       _bodyBase.PatchMarginBottom = ResourcePack.Config.NinePatchBodyMarginV;
 
+      if (_bodyGlow != null)
+      {
+        _bodyGlow.PatchMarginLeft = ResourcePack.Config.NinePatchBodyMarginH;
+        _bodyGlow.PatchMarginRight = ResourcePack.Config.NinePatchBodyMarginH;
+        _bodyGlow.PatchMarginTop = ResourcePack.Config.NinePatchBodyMarginV;
+        _bodyGlow.PatchMarginBottom = ResourcePack.Config.NinePatchBodyMarginV;
+
+        float bodySpread = BASE_HIGHLIGHTING_SPREAD * ResourcePack.Config.HighlightSpread;
+        _bodyGlow.MarginLeft = -bodySpread;
+        _bodyGlow.MarginTop = -bodySpread;
+        _bodyGlow.MarginRight = bodySpread;
+        _bodyGlow.MarginBottom = bodySpread;
+      }
+
       NoteType headType = Type == NoteType.Hold ? NoteType.Tap : Type;
       
       _headBase.Texture = GetTextureSafe(headType, NotePart.Base);
+      if (_headGlow != null) _headGlow.Texture = _headBase.Texture;
       _headOverlay.Texture = GetTextureSafe(headType, NotePart.Overlay);
       
       if (Type == NoteType.Hold)
       {
         _bodyBase.Texture = GetTextureSafe(NoteType.Hold, NotePart.Base);
+        if (_bodyGlow != null) _bodyGlow.Texture = _bodyBase.Texture;
       }
       
       // Force update visual since texture changed
@@ -105,10 +142,13 @@ namespace Winithm.Core.Behaviors
 
     public void SetNoteHighlighting(bool active)
     {
-      if (Material is ShaderMaterial shaderMaterial)
+      if (_headGlow != null && _headGlow.Material is ShaderMaterial shaderMaterial)
       {
         shaderMaterial.SetShaderParam("is_highlighted", active);
         shaderMaterial.SetShaderParam("glow_color", ResourcePack.Config.HighlightColor);
+        shaderMaterial.SetShaderParam(
+          "glow_size", BASE_HIGHLIGHTING_SIZE * ResourcePack.Config.HighlightSize
+        );
       }
     }
 

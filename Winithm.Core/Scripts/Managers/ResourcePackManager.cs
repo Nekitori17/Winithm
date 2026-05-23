@@ -16,6 +16,8 @@ namespace Winithm.Core.Managers
   {
     public bool Particle;
     public Color HighlightColor;
+    public float HighlightSpread;
+    public float HighlightSize;
     public int NinePatchHeadMarginH;
     public int NinePatchBodyMarginH;
     public int NinePatchBodyMarginV;
@@ -133,6 +135,12 @@ namespace Winithm.Core.Managers
               break;
             case "highlightColor":
               resourcePack.Config.HighlightColor = StringToColor(val);
+              break;
+            case "highlightSpread":
+              resourcePack.Config.HighlightSpread = float.Parse(val);
+              break;
+            case "highlightSize":
+              resourcePack.Config.HighlightSize = float.Parse(val);
               break;
             case "hitfxAutoResult":
               resourcePack.Config.HitFXAutoResult =
