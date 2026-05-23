@@ -40,7 +40,7 @@ namespace Winithm.Core.Behaviors
     public static readonly float NOTE_HEAD_HEIGHT_RATIO = 0.0175f;
     public static readonly float NOTE_OVERLAY_RATIO = 1.2f;
 
-    public static readonly float BASE_HIGHLIGHTING_SPREAD = 30f;
+    public static readonly float BASE_HIGHLIGHTING_SPREAD = 50f;
     public static readonly float BASE_HIGHLIGHTING_SIZE = 10f;
 
     // Initialize node references and perform initial visual update
