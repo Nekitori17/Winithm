@@ -125,21 +125,107 @@ namespace Winithm.Core.Controllers
       info = default;
 
       if (!WindowStates.TryGetValue(windowId, out var state)) return false;
-      if (!state.NoteVisualMap.TryGetValue(note, out var noteVisual)) return false;
-      if (noteVisual == null || !IsInstanceValid(noteVisual)) return false;
 
-      float headHeight = noteVisual.NoteSize
-        * Mathf.Min(noteVisual.PlayerAreaSize.x, noteVisual.PlayerAreaSize.y)
+      if (state.NoteVisualMap.TryGetValue(note, out var noteVisual) && noteVisual != null && IsInstanceValid(noteVisual))
+      {
+        float headHeight = noteVisual.NoteSize
+          * Mathf.Min(noteVisual.PlayerAreaSize.x, noteVisual.PlayerAreaSize.y)
+          * Note.NOTE_HEAD_HEIGHT_RATIO;
+
+        Vector2 globalCenter = noteVisual.GetGlobalTransform() * new Vector2(0, -headHeight * 0.5f);
+
+        info = new GlobalNoteTransformInfo
+        {
+          Position = globalCenter,
+          Rotation = noteVisual.GlobalRotation,
+          NoteWidth = noteVisual.Width,
+          PlayerAreaSize = noteVisual.PlayerAreaSize,
+        };
+
+        return true;
+      }
+
+      NoteSide? noteSide = null;
+      foreach (var kvp in state.WindowData.Notes)
+      {
+        if (kvp.Value.Contains(note))
+        {
+          noteSide = kvp.Key;
+          break;
+        }
+      }
+
+      if (noteSide == null) return false;
+
+      Vector2 playerAreaSize = state.WindowVisual.PlayerAreaSize;
+      Vector2 windowSize = state.WindowVisual.WindowSize;
+      float viewportScale = Math.Min(
+        playerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
+        playerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
+      );
+      Vector2 scaledWindowSize = windowSize * viewportScale;
+
+      float noteWidth = IsVerticalSide(noteSide.Value)
+        ? scaledWindowSize.x * note.Width
+        : scaledWindowSize.y * note.Width;
+
+      float lateralPosition = note.X * (1f - note.Width) + note.Width / 2f;
+      float headOffsetPx = 0f;
+
+      Vector2 localPosition = Vector2.Zero;
+      float rotationDegrees = 0f;
+
+      switch (noteSide.Value)
+      {
+        case NoteSide.Bottom:
+          localPosition = new Vector2(
+            scaledWindowSize.x * lateralPosition,
+            scaledWindowSize.y - headOffsetPx
+          );
+          rotationDegrees = 0f;
+          break;
+        case NoteSide.Top:
+          localPosition = new Vector2(
+            scaledWindowSize.x * lateralPosition,
+            headOffsetPx
+          );
+          rotationDegrees = 180f;
+          break;
+        case NoteSide.Right:
+          localPosition = new Vector2(
+            scaledWindowSize.x - headOffsetPx,
+            scaledWindowSize.y * lateralPosition
+          );
+          rotationDegrees = -90f;
+          break;
+        case NoteSide.Left:
+          localPosition = new Vector2(
+            headOffsetPx,
+            scaledWindowSize.y * lateralPosition
+          );
+          rotationDegrees = 90f;
+          break;
+      }
+
+      float fallbackHeadHeight = PlayerNoteSize
+        * Mathf.Min(playerAreaSize.x, playerAreaSize.y)
         * Note.NOTE_HEAD_HEIGHT_RATIO;
 
-      Vector2 globalCenter = noteVisual.GetGlobalTransform() * new Vector2(0, -headHeight * 0.5f);
+      Transform2D noteTransform = new Transform2D((float)Mathf.Deg2Rad(rotationDegrees), localPosition);
+      
+      CanvasItem parentLayer = (note.Type == NoteType.Focus)
+        ? state.WindowVisual.FocusNoteLayer
+        : state.WindowVisual.NoteLayer;
+        
+      Transform2D parentTransform = parentLayer.GetGlobalTransform();
+      Vector2 globalPos = parentTransform * noteTransform * new Vector2(0, -fallbackHeadHeight * 0.5f);
 
       info = new GlobalNoteTransformInfo
       {
-        Position = globalCenter,
-        Rotation = noteVisual.GlobalRotation,
-        NoteWidth = noteVisual.Width,
-        PlayerAreaSize = noteVisual.PlayerAreaSize,
+        Position = globalPos,
+        Rotation = parentTransform.Rotation + (float)Mathf.Deg2Rad(rotationDegrees),
+        NoteWidth = noteWidth,
+        PlayerAreaSize = playerAreaSize,
       };
 
       return true;
