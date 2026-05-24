@@ -136,7 +136,7 @@ namespace Winithm.Client.Behaviors.Gameplay
       _noteController.Update(currentBeat);
       _noteController.SetNoteHighlightSimulation(NoteHighLightSimulation);
 
-      double length = _audioController.Length;
+      double length = _audioController.LevelLength;
       _componentController.SongProgressPercent =
         length > 0 ? (float)(_audioController.CurrentTime / length) : 0f;
 

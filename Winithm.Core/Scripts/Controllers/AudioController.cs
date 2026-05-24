@@ -17,6 +17,9 @@ namespace Winithm.Core.Controllers
     // Chart time in seconds. Can be negative during pre-roll.
     private double _clock = 0d;
 
+    private double _minClock = 0d;
+    private double _maxClock = 0d;
+
     // Positive: audio leads chart. Negative: chart leads audio.
     private double _audioOffset = 0d;
 
@@ -27,11 +30,12 @@ namespace Winithm.Core.Controllers
 
     public bool IsPlaying => _isPlaying;
 
-    public double CurrentTime => _clock;
-    public double CurrentTimeMs => _clock * 1000d;
+    public double CurrentTime => _clock - _minClock;
+    public double CurrentTimeMs => CurrentTime * 1000d;
     public double CurrentBeat => Metronome.ToBeat(_clock);
 
     public double Length => _player.Stream != null ? (double)_player.Stream.GetLength() : 0d;
+    public double LevelLength => Length + Math.Abs(_audioOffset);
 
     // ── Initialisation ──────────────────────────────────────────────────────────
 
@@ -168,14 +172,15 @@ namespace Winithm.Core.Controllers
     /// </summary>
     private void _ClampClock()
     {
-      double minClock = -Math.Max(0d, _audioOffset); // pre-roll floor
-      if (_clock < minClock) _clock = minClock;
+      _minClock = -Math.Max(0d, _audioOffset); // pre-roll floor
+
+      if (_clock < _minClock) _clock = _minClock;
 
       double streamLength = Length;
       if (streamLength <= 0d) return;
 
-      double maxClock = Math.Max(streamLength, streamLength - _audioOffset);
-      if (_clock > maxClock) _clock = maxClock;
+      _maxClock = Math.Max(streamLength, streamLength - _audioOffset);
+      if (_clock > _maxClock) _clock = _maxClock;
     }
 
     /// <summary>
