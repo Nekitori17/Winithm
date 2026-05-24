@@ -4,16 +4,29 @@ uniform vec4 color_right : hint_color;
 uniform float progress = 0.0;
 uniform float gradient_width = 0.05;
 
+uniform float speed = 20.0;
+uniform float stripe_width = 12.0;
+uniform float slant = -0.26795;
+uniform vec2 rect_size = vec2(100.0, 15.0);
+
 void fragment() {
     float safe_progress = max(progress, 0.0001);
-    float gradient_uv_width = gradient_width / safe_progress;
-    float start_uv = 1.0 - gradient_uv_width;
     
-    if (UV.x <= start_uv) {
-        COLOR = color_left;
+    vec2 local_pos = UV * rect_size;
+    float x_shifted = local_pos.x - local_pos.y * slant;
+    x_shifted -= TIME * speed;
+    float mod_val = mod(x_shifted, stripe_width * 2.0);
+    
+    vec4 stripe_c;
+    if (mod_val < stripe_width) {
+        stripe_c = color_left;
     } else {
-        float t = (UV.x - start_uv) / gradient_uv_width;
-        t = clamp(t, 0.0, 1.0);
-        COLOR = mix(color_left, color_right, t);
+        stripe_c = color_right;
+    }
+    
+    if (UV.x > progress) {
+        COLOR = vec4(0.0);
+    } else {
+        COLOR = stripe_c;
     }
 }

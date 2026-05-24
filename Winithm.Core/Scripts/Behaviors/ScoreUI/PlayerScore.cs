@@ -8,35 +8,46 @@ namespace Winithm.Core.Behaviors.ScoreUI
   {
     public struct LastState
     {
-      public Color TextColor, TextOutLineColor;
+      public Color TextColor, TextOutLineColor, CompBackgroundColor;
     }
 
     [Export] public Vector2 ScreenSize = Constants.Visual.DESIGN_RESOLUTION;
     [Export] public Color TextColor = Colors.White;
     [Export] public Color TextOutLineColor = Colors.Black;
+    [Export] public Color CompBackgroundColor = Colors.Gray;
 
     private LastState _lastState = new LastState();
 
     private HBoxContainer _scoreContainer;
     private Label _accuracyLabel;
+    private ColorRect _background;
 
     public override void _Ready()
     {
       _scoreContainer = GetNodeOrNull<HBoxContainer>("Score");
       _accuracyLabel = GetNodeOrNull<Label>("Accuracy");
+      _background = GetNodeOrNull<ColorRect>("Background");
+      if (_background != null && _background.Material != null)
+      {
+        _background.Material = (Material)_background.Material.Duplicate();
+      }
       UpdateVisual();
     }
 
     public override void _Process(float delta)
     {
-      // No longer need to manage a queue, DigitRoller handles seamless updates natively
+      if (_background != null && _background.Material is ShaderMaterial mat)
+      {
+        mat.SetShaderParam("rect_size", _background.RectSize);
+      }
     }
 
     public void UpdateVisual()
     {
       bool isColorDirty =
         TextColor != _lastState.TextColor
-        || TextOutLineColor != _lastState.TextOutLineColor;
+        || TextOutLineColor != _lastState.TextOutLineColor
+        || CompBackgroundColor != _lastState.CompBackgroundColor;
 
       if (isColorDirty) UpdateColor();
     }
@@ -59,9 +70,16 @@ namespace Winithm.Core.Behaviors.ScoreUI
           }
         }
       }
+      
+      if (_background != null && _background.Material is ShaderMaterial mat)
+      {
+        mat.SetShaderParam("bg_color", CompBackgroundColor);
+        mat.SetShaderParam("stripe_color", new Color(0f, 0f, 0f, 0f));
+      }
 
       _lastState.TextColor = TextColor;
       _lastState.TextOutLineColor = TextOutLineColor;
+      _lastState.CompBackgroundColor = CompBackgroundColor;
     }
 
     public void SetAccuracy(float accuracy)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=2]
+[gd_scene load_steps=17 format=2]
 
 [ext_resource path="res://Winithm.Core/Scripts/Controllers/ComponentController.cs" type="Script" id=1]
 [ext_resource path="res://Winithm.Core/Resources/Textures/song_placeholder_image.png" type="Texture" id=2]
@@ -9,6 +9,16 @@
 [ext_resource path="res://Winithm.Core/Scripts/Behaviors/ScoreUI/PlayerCombo.cs" type="Script" id=7]
 [ext_resource path="res://Winithm.Core/Scripts/Behaviors/ScoreUI/PlayerScore.cs" type="Script" id=8]
 [ext_resource path="res://Winithm.Core/Resources/Shaders/ProgressBar.gdshader" type="Shader" id=9]
+[ext_resource path="res://Winithm.Core/Resources/Shaders/SlantedStripes.gdshader" type="Shader" id=10]
+
+[sub_resource type="ShaderMaterial" id=6]
+shader = ExtResource( 10 )
+shader_param/bg_color = Color( 0.5, 0.5, 0.5, 1 )
+shader_param/stripe_color = Color( 0, 0, 0, 0 )
+shader_param/speed = 20.0
+shader_param/stripe_width = 12.0
+shader_param/slant = -0.26795
+shader_param/rect_size = Vector2( 100, 50 )
 
 [sub_resource type="DynamicFont" id=1]
 size = 20
@@ -36,6 +46,10 @@ shader_param/color_left = Color( 1, 1, 1, 1 )
 shader_param/color_right = Color( 0, 0, 0, 1 )
 shader_param/progress = 0.0
 shader_param/gradient_width = 0.05
+shader_param/speed = 20.0
+shader_param/stripe_width = 12.0
+shader_param/slant = -0.26795
+shader_param/rect_size = Vector2( 100, 15 )
 
 [node name="ScoreUI" type="Control"]
 anchor_right = 1.0
@@ -53,19 +67,27 @@ anchor_bottom = 1.0
 [node name="SongInfo" type="Control" parent="SongInfoTransform/SubTransform"]
 script = ExtResource( 5 )
 
+[node name="Background" type="ColorRect" parent="SongInfoTransform/SubTransform/SongInfo"]
+modulate = Color( 1, 1, 1, 0.65098 )
+material = SubResource( 6 )
+margin_left = 75.0
+margin_top = -75.0
+margin_right = 197.0
+margin_bottom = -25.0
+
 [node name="Icon" type="TextureRect" parent="SongInfoTransform/SubTransform/SongInfo"]
-margin_left = 15.0
-margin_top = -65.0
-margin_right = 65.0
-margin_bottom = -15.0
+margin_left = 25.0
+margin_top = -75.0
+margin_right = 75.0
+margin_bottom = -25.0
 texture = ExtResource( 2 )
 expand = true
 
 [node name="Name" type="Label" parent="SongInfoTransform/SubTransform/SongInfo"]
-margin_left = 80.0
-margin_top = -65.0
-margin_right = 187.0
-margin_bottom = -39.0
+margin_left = 85.0
+margin_top = -75.0
+margin_right = 192.0
+margin_bottom = -49.0
 custom_colors/font_color = Color( 1, 1, 1, 1 )
 custom_colors/font_outline_modulate = Color( 0, 0, 0, 1 )
 custom_fonts/font = SubResource( 1 )
@@ -73,10 +95,10 @@ text = "Song Name"
 valign = 1
 
 [node name="BPM" type="Label" parent="SongInfoTransform/SubTransform/SongInfo"]
-margin_left = 80.0
-margin_top = -35.0
-margin_right = 181.0
-margin_bottom = -22.0
+margin_left = 85.0
+margin_top = -45.0
+margin_right = 186.0
+margin_bottom = -25.0
 custom_colors/font_color = Color( 1, 1, 1, 1 )
 custom_colors/font_outline_modulate = Color( 0, 0, 0, 1 )
 custom_fonts/font = SubResource( 2 )
@@ -96,11 +118,19 @@ anchor_bottom = 1.0
 [node name="ChartInfo" type="Control" parent="ChartInfoTransform/SubTransform"]
 script = ExtResource( 6 )
 
+[node name="Background" type="ColorRect" parent="ChartInfoTransform/SubTransform/ChartInfo"]
+modulate = Color( 1, 1, 1, 0.65098 )
+material = SubResource( 6 )
+margin_left = -105.0
+margin_top = -72.0
+margin_right = -20.0
+margin_bottom = -29.0
+
 [node name="Difficult" type="Label" parent="ChartInfoTransform/SubTransform/ChartInfo"]
-margin_left = -90.0
-margin_top = -57.0
-margin_right = -15.0
-margin_bottom = -24.0
+margin_left = -100.0
+margin_top = -67.0
+margin_right = -25.0
+margin_bottom = -34.0
 grow_horizontal = 0
 grow_vertical = 0
 custom_colors/font_color = Color( 1, 1, 1, 1 )
@@ -121,11 +151,19 @@ anchor_right = 1.0
 [node name="PlayerScore" type="Control" parent="PlayerScoreTransform/SubTransform"]
 script = ExtResource( 8 )
 
+[node name="Background" type="ColorRect" parent="PlayerScoreTransform/SubTransform/PlayerScore"]
+modulate = Color( 1, 1, 1, 0.65098 )
+material = SubResource( 6 )
+margin_left = -190.0
+margin_top = 20.0
+margin_right = -20.0
+margin_bottom = 83.0
+
 [node name="Score" type="HBoxContainer" parent="PlayerScoreTransform/SubTransform/PlayerScore"]
-margin_left = -175.0
-margin_top = 15.0
-margin_right = -15.0
-margin_bottom = 48.0
+margin_left = -185.0
+margin_top = 25.0
+margin_right = -25.0
+margin_bottom = 58.0
 grow_horizontal = 0
 alignment = 2
 
@@ -163,10 +201,10 @@ margin_right = 160.0
 rect_min_size = Vector2( 16, 33 )
 
 [node name="Accuracy" type="Label" parent="PlayerScoreTransform/SubTransform/PlayerScore"]
-margin_left = -53.0
-margin_top = 50.0
-margin_right = -15.0
-margin_bottom = 70.0
+margin_left = -63.0
+margin_top = 58.0
+margin_right = -25.0
+margin_bottom = 78.0
 grow_horizontal = 0
 grow_vertical = 0
 custom_colors/font_color = Color( 1, 1, 1, 0.85 )
@@ -185,11 +223,19 @@ anchor_bottom = 1.0
 [node name="PlayerCombo" type="Control" parent="PlayerComboTransform/SubTransform"]
 script = ExtResource( 7 )
 
+[node name="Background" type="ColorRect" parent="PlayerComboTransform/SubTransform/PlayerCombo"]
+modulate = Color( 1, 1, 1, 0.65098 )
+material = SubResource( 6 )
+margin_left = 35.0
+margin_top = 25.0
+margin_right = 141.0
+margin_bottom = 75.0
+
 [node name="Pause" type="Control" parent="PlayerComboTransform/SubTransform/PlayerCombo"]
-margin_left = 15.0
-margin_top = 15.0
-margin_right = 25.0
-margin_bottom = 65.0
+margin_left = 25.0
+margin_top = 25.0
+margin_right = 35.0
+margin_bottom = 75.0
 rect_clip_content = true
 
 [node name="Progress" type="ColorRect" parent="PlayerComboTransform/SubTransform/PlayerCombo/Pause"]
@@ -198,9 +244,9 @@ anchor_bottom = 1.0
 
 [node name="Combo" type="Label" parent="PlayerComboTransform/SubTransform/PlayerCombo"]
 margin_left = 40.0
-margin_top = 15.0
+margin_top = 25.0
 margin_right = 86.0
-margin_bottom = 41.0
+margin_bottom = 51.0
 custom_colors/font_color = Color( 1, 1, 1, 1 )
 custom_colors/font_outline_modulate = Color( 0, 0, 0, 1 )
 custom_fonts/font = SubResource( 1 )
@@ -209,13 +255,13 @@ valign = 2
 
 [node name="Status" type="Label" parent="PlayerComboTransform/SubTransform/PlayerCombo"]
 margin_left = 40.0
-margin_top = 50.0
+margin_top = 55.0
 margin_right = 132.0
-margin_bottom = 70.0
+margin_bottom = 75.0
 custom_colors/font_color = Color( 1, 1, 1, 1 )
 custom_colors/font_outline_modulate = Color( 0, 0, 0, 1 )
 custom_fonts/font = SubResource( 4 )
-text = "All Perfect"
+text = "All Perfect!"
 uppercase = true
 
 [node name="ProgessBar" type="Control" parent="."]

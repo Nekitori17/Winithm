@@ -19,13 +19,14 @@ namespace Winithm.Core.Controllers
     {
       public Vector2 ScreenSize;
       public float SongProgressPercent;
-      public Color TextColor, TextOutLineColor;
+      public Color TextColor, TextOutLineColor, CompBackgroundColor;
     }
 
     [Export] public Vector2 ScreenSize = Constants.Visual.DESIGN_RESOLUTION;
     [Export] public float SongProgressPercent = 0f;
     [Export] public Color TextColor = Colors.White;
     [Export] public Color TextOutLineColor = Colors.Black;
+    [Export] public Color CompBackgroundColor = Colors.Gray;
 
     private LastState _lastState;
 
@@ -214,19 +215,29 @@ namespace Winithm.Core.Controllers
       {
         _songInfo.TextColor = TextColor;
         _songInfo.TextOutLineColor = TextOutLineColor;
+        _songInfo.CompBackgroundColor = CompBackgroundColor;
         _songInfo.UpdateVisual();
       }
       if (_chartInfo != null)
       {
         _chartInfo.TextColor = TextColor;
         _chartInfo.TextOutLineColor = TextOutLineColor;
+        _chartInfo.CompBackgroundColor = CompBackgroundColor;
         _chartInfo.UpdateVisual();
       }
       if (_playerCombo != null)
       {
         _playerCombo.TextColor = TextColor;
         _playerCombo.TextOutLineColor = TextOutLineColor;
+        _playerCombo.CompBackgroundColor = CompBackgroundColor;
         _playerCombo.UpdateVisual();
+      }
+      if (_playerScore != null)
+      {
+        _playerScore.TextColor = TextColor;
+        _playerScore.TextOutLineColor = TextOutLineColor;
+        _playerScore.CompBackgroundColor = CompBackgroundColor;
+        _playerScore.UpdateVisual();
       }
 
       if (_barBody != null && _barBody.Material is ShaderMaterial mat)
@@ -246,6 +257,11 @@ namespace Winithm.Core.Controllers
         if (_barBody.Material is ShaderMaterial mat)
         {
           mat.SetShaderParam("progress", SongProgressPercent);
+          
+          // Use absolute screen coordinates for width to avoid stripes stretching
+          float barWidth = (_progressBar != null) ? _progressBar.RectSize.x * SongProgressPercent : _barBody.RectSize.x;
+          float barHeight = (_progressBar != null) ? _progressBar.RectSize.y : _barBody.RectSize.y;
+          mat.SetShaderParam("rect_size", new Vector2(barWidth, barHeight));
         }
       }
     }

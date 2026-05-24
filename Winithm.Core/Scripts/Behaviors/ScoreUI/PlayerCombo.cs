@@ -16,12 +16,13 @@ namespace Winithm.Core.Behaviors.ScoreUI
 
     public struct LastState
     {
-      public Color TextColor, TextOutLineColor;
+      public Color TextColor, TextOutLineColor, CompBackgroundColor;
     }
 
     [Export] public Vector2 ScreenSize = Constants.Visual.DESIGN_RESOLUTION;
     [Export] public Color TextColor = Colors.White;
     [Export] public Color TextOutLineColor = Colors.Black;
+    [Export] public Color CompBackgroundColor = Colors.Gray;
 
     private LastState _lastState = new LastState();
 
@@ -29,6 +30,7 @@ namespace Winithm.Core.Behaviors.ScoreUI
     private Label _statusLabel;
     private Control _pauseControl;
     private ColorRect _progressRect;
+    private ColorRect _background;
 
     public enum PauseAnimState { Idle, Draining, Filling }
     private PauseAnimState _pauseState = PauseAnimState.Idle;
@@ -45,6 +47,11 @@ namespace Winithm.Core.Behaviors.ScoreUI
       _statusLabel = GetNodeOrNull<Label>("Status");
       _pauseControl = GetNodeOrNull<Control>("Pause");
       _progressRect = _pauseControl?.GetNodeOrNull<ColorRect>("Progress");
+      _background = GetNodeOrNull<ColorRect>("Background");
+      if (_background != null && _background.Material != null)
+      {
+        _background.Material = (Material)_background.Material.Duplicate();
+      }
       UpdateVisual();
     }
 
@@ -90,13 +97,19 @@ namespace Winithm.Core.Behaviors.ScoreUI
         _progressRect.MarginTop = yOffset;
         _progressRect.MarginBottom = yOffset;
       }
+      
+      if (_background != null && _background.Material is ShaderMaterial mat)
+      {
+        mat.SetShaderParam("rect_size", _background.RectSize);
+      }
     }
 
     public void UpdateVisual()
     {
       bool isColorDirty =
         TextColor != _lastState.TextColor
-        || TextOutLineColor != _lastState.TextOutLineColor;
+        || TextOutLineColor != _lastState.TextOutLineColor
+        || CompBackgroundColor != _lastState.CompBackgroundColor;
 
       if (isColorDirty) UpdateColor();
     }
@@ -118,9 +131,16 @@ namespace Winithm.Core.Behaviors.ScoreUI
       {
         _progressRect.Color = TextColor;
       }
+      
+      if (_background != null && _background.Material is ShaderMaterial mat)
+      {
+        mat.SetShaderParam("bg_color", CompBackgroundColor);
+        mat.SetShaderParam("stripe_color", new Color(0f, 0f, 0f, 0f));
+      }
 
       _lastState.TextColor = TextColor;
       _lastState.TextOutLineColor = TextOutLineColor;
+      _lastState.CompBackgroundColor = CompBackgroundColor;
     }
 
     public void SetCombo(int combo, bool instant)
