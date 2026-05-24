@@ -41,7 +41,7 @@ namespace Winithm.Core.Controllers
     private NodePool<Note> _notePool;
     private double _lastBeat = double.MinValue;
 
-    public Dictionary<string, WindowNoteState> WindowStates { get; private set; } = 
+    public Dictionary<string, WindowNoteState> WindowStates { get; private set; } =
       new Dictionary<string, WindowNoteState>();
 
     public class WindowNoteState
@@ -159,10 +159,7 @@ namespace Winithm.Core.Controllers
 
       Vector2 playerAreaSize = state.WindowVisual.PlayerAreaSize;
       Vector2 windowSize = state.WindowVisual.WindowSize;
-      float viewportScale = Math.Min(
-        playerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
-        playerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
-      );
+      float viewportScale = ComputeViewportScale(playerAreaSize);
       Vector2 scaledWindowSize = windowSize * viewportScale;
 
       float noteWidth = IsVerticalSide(noteSide.Value)
@@ -172,51 +169,17 @@ namespace Winithm.Core.Controllers
       float lateralPosition = note.X * (1f - note.Width) + note.Width / 2f;
       float headOffsetPx = 0f;
 
-      Vector2 localPosition = Vector2.Zero;
-      float rotationDegrees = 0f;
-
-      switch (noteSide.Value)
-      {
-        case NoteSide.Bottom:
-          localPosition = new Vector2(
-            scaledWindowSize.x * lateralPosition,
-            scaledWindowSize.y - headOffsetPx
-          );
-          rotationDegrees = 0f;
-          break;
-        case NoteSide.Top:
-          localPosition = new Vector2(
-            scaledWindowSize.x * lateralPosition,
-            headOffsetPx
-          );
-          rotationDegrees = 180f;
-          break;
-        case NoteSide.Right:
-          localPosition = new Vector2(
-            scaledWindowSize.x - headOffsetPx,
-            scaledWindowSize.y * lateralPosition
-          );
-          rotationDegrees = -90f;
-          break;
-        case NoteSide.Left:
-          localPosition = new Vector2(
-            headOffsetPx,
-            scaledWindowSize.y * lateralPosition
-          );
-          rotationDegrees = 90f;
-          break;
-      }
+      var (localPosition, rotationDegrees) = ComputeNoteLocalPositionAndRotation(
+        noteSide.Value, scaledWindowSize, lateralPosition, headOffsetPx
+      );
 
       float fallbackHeadHeight = PlayerNoteSize
         * Mathf.Min(playerAreaSize.x, playerAreaSize.y)
         * Note.NOTE_HEAD_HEIGHT_RATIO;
 
       Transform2D noteTransform = new Transform2D((float)Mathf.Deg2Rad(rotationDegrees), localPosition);
-      
-      CanvasItem parentLayer = (note.Type == NoteType.Focus)
-        ? state.WindowVisual.FocusNoteLayer
-        : state.WindowVisual.NoteLayer;
-        
+
+      CanvasItem parentLayer = GetNoteParentLayer(state, note);
       Transform2D parentTransform = parentLayer.GetGlobalTransform();
       Vector2 globalPos = parentTransform * noteTransform * new Vector2(0, -fallbackHeadHeight * 0.5f);
 
@@ -299,10 +262,7 @@ namespace Winithm.Core.Controllers
 
       float offScreenMarginPx = noteHeadHeight * OFF_SCREEN_MARGIN_FACTOR;
 
-      float viewportScale = Math.Min(
-        playerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
-        playerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
-      );
+      float viewportScale = ComputeViewportScale(playerAreaSize);
 
       foreach (var sideEntry in state.WindowData.Notes)
       {
@@ -377,6 +337,46 @@ namespace Winithm.Core.Controllers
       return side == NoteSide.Top || side == NoteSide.Bottom;
     }
 
+    private CanvasItem GetNoteParentLayer(WindowNoteState state, NoteData note)
+    {
+      return (note.Type == NoteType.Focus)
+        ? state.WindowVisual.FocusNoteLayer
+        : state.WindowVisual.NoteLayer;
+    }
+
+    private float ComputeViewportScale(Vector2 playerAreaSize)
+    {
+      return Math.Min(
+        playerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
+        playerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
+      );
+    }
+
+    /// <summary>
+    /// Computes the local spawn position and rotation (degrees) of a note
+    /// based on which side of the window it belongs to.
+    /// </summary>
+    private (Vector2 localPosition, float rotationDegrees) ComputeNoteLocalPositionAndRotation(
+      NoteSide side,
+      Vector2 scaledWindowSize,
+      float lateralPosition,
+      float headOffsetPx)
+    {
+      switch (side)
+      {
+        case NoteSide.Bottom:
+          return (new Vector2(scaledWindowSize.x * lateralPosition, scaledWindowSize.y - headOffsetPx), 0f);
+        case NoteSide.Top:
+          return (new Vector2(scaledWindowSize.x * lateralPosition, headOffsetPx), 180f);
+        case NoteSide.Right:
+          return (new Vector2(scaledWindowSize.x - headOffsetPx, scaledWindowSize.y * lateralPosition), -90f);
+        case NoteSide.Left:
+          return (new Vector2(headOffsetPx, scaledWindowSize.y * lateralPosition), 90f);
+        default:
+          return (Vector2.Zero, 0f);
+      }
+    }
+
     // =============================================
     // Cursor Synchronization
     // =============================================
@@ -447,9 +447,7 @@ namespace Winithm.Core.Controllers
     {
       Note noteVisual = _notePool.Get();
 
-      Node parentLayer = (note.Type == NoteType.Focus)
-        ? state.WindowVisual.FocusNoteLayer
-        : state.WindowVisual.NoteLayer;
+      Node parentLayer = GetNoteParentLayer(state, note);
 
       if (noteVisual.GetParent() != parentLayer)
       {
@@ -518,10 +516,7 @@ namespace Winithm.Core.Controllers
     {
       Vector2 playerAreaSize = state.WindowVisual.PlayerAreaSize;
       Vector2 windowSize = state.WindowVisual.WindowSize;
-      float viewportScale = Math.Min(
-        playerAreaSize.x / Constants.Visual.DESIGN_RESOLUTION.x,
-        playerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
-      );
+      float viewportScale = ComputeViewportScale(playerAreaSize);
       Vector2 scaledWindowSize = windowSize * viewportScale;
 
       float headHeight =
@@ -562,37 +557,11 @@ namespace Winithm.Core.Controllers
       // Left edge = X * (1 - Width). The note is drawn centered at (Left edge + Width/2)
       float lateralPosition = note.X * (1f - note.Width) + note.Width / 2f;
 
-      switch (side)
-      {
-        case NoteSide.Bottom:
-          noteVisual.Position = new Vector2(
-            scaledWindowSize.x * lateralPosition,
-            scaledWindowSize.y - headOffsetPx
-          );
-          noteVisual.RotationDegrees = 0f;
-          break;
-        case NoteSide.Top:
-          noteVisual.Position = new Vector2(
-            scaledWindowSize.x * lateralPosition,
-            headOffsetPx
-          );
-          noteVisual.RotationDegrees = 180f;
-          break;
-        case NoteSide.Right:
-          noteVisual.Position = new Vector2(
-            scaledWindowSize.x - headOffsetPx,
-            scaledWindowSize.y * lateralPosition
-          );
-          noteVisual.RotationDegrees = -90f;
-          break;
-        case NoteSide.Left:
-          noteVisual.Position = new Vector2(
-            headOffsetPx,
-            scaledWindowSize.y * lateralPosition
-          );
-          noteVisual.RotationDegrees = 90f;
-          break;
-      }
+      var (notePosition, noteRotationDegrees) = ComputeNoteLocalPositionAndRotation(
+        side, scaledWindowSize, lateralPosition, headOffsetPx
+      );
+      noteVisual.Position = notePosition;
+      noteVisual.RotationDegrees = noteRotationDegrees;
 
       noteVisual.UpdateVisual();
     }
