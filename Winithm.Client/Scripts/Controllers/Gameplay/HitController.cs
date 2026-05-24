@@ -4,8 +4,7 @@ using System.Collections.Generic;
 using Winithm.Core.Controllers;
 using Winithm.Core.Data;
 using Winithm.Core.Managers;
-
-using HitResultConstants = Winithm.Core.Constants.HitResult;
+using Constants = Winithm.Core.Constants;
 
 namespace Winithm.Client.Controllers.Gameplay
 {
@@ -41,6 +40,7 @@ namespace Winithm.Client.Controllers.Gameplay
     // Object pool for polyphonic hit sounds
     private NodePool<AudioStreamPlayer> _audioPool;
     private readonly Dictionary<NoteData, long> _lastHoldTickIndex = new Dictionary<NoteData, long>();
+    private List<(string WindowId, NoteData Note)> _activeHoldsCache = new List<(string, NoteData)>();
 
     public override void _Ready()
     {
@@ -171,7 +171,7 @@ namespace Winithm.Client.Controllers.Gameplay
         double elapsedMs = _audioController.Metronome.ToDeltaMilliSeconds(
           _lastKeyReleaseBeat, currentBeat
         );
-        return elapsedMs <= HitResultConstants.TimmingWindowMs[HitResultType.Good];
+        return elapsedMs <= Constants.HitResult.TimmingWindowMs[HitResultType.Good];
       }
 
       return false;
@@ -285,7 +285,7 @@ namespace Winithm.Client.Controllers.Gameplay
     /// </summary>
     private void ProcessSingleHit(double currentBeat)
     {
-      var best = _noteController.FindClosestNote(NoteType.Tap, (float)currentBeat);
+      var best = FindClosestNote(NoteType.Tap, (float)currentBeat);
       if (!best.HasValue) return;
 
       string windowId = best.Value.WindowId;
@@ -304,7 +304,7 @@ namespace Winithm.Client.Controllers.Gameplay
         {
           // track offset, begin hold tracking
           note.HoldStartResult = result;
-          _noteController.SetHoldActive(windowId, note);
+          SetHoldActive(windowId, note);
           _lastHoldTickIndex[note] = 0;
         }
         else
@@ -325,7 +325,7 @@ namespace Winithm.Client.Controllers.Gameplay
     /// </summary>
     private void ProcessBroadcastHit(NoteType type, float currentBeat)
     {
-      var results = _noteController.TryEvaluateAll(type, currentBeat);
+      var results = TryEvaluateAll(type, currentBeat);
       foreach (var tuple in results)
       {
         var result = HitResult.FromOffset(tuple.Note, tuple.OffsetMs);
@@ -350,9 +350,9 @@ namespace Winithm.Client.Controllers.Gameplay
       if (_noteController == null || _audioController == null) return;
 
       double currentBeat = _audioController.CurrentBeat;
-      double goodWindowMs = HitResultConstants.TimmingWindowMs[HitResultType.Good];
+      double goodWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Good];
 
-      var activeHolds = _noteController.GetActiveHolds();
+      var activeHolds = GetActiveHolds();
 
       foreach (var (windowId, note) in activeHolds)
       {
@@ -392,6 +392,173 @@ namespace Winithm.Client.Controllers.Gameplay
           _windowController.AddEndFocusable(entry, currentBeat);
         }
       }
+    }
+
+    // =============================================
+    // Hit Evaluation API
+    // =============================================
+
+    /// <summary>
+    /// Finds all hittable Focus/Close notes. If closest is Perfect, absorbs all
+    /// Perfect notes (max 1 per window). If sloppy, absorbs only the closest.
+    /// </summary>
+    public List<(string WindowId, NoteData Note, float OffsetMs)> TryEvaluateAll(NoteType type, float currentBeat)
+    {
+      double missWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
+      double perfectWindowMs = Constants.HitResult.TimmingWindowMs[HitResultType.Perfect];
+
+      var candidates = new List<(string WindowId, NoteData Note, float OffsetMs)>();
+      float closestAbsMs = float.MaxValue;
+      (string WindowId, NoteData Note, float OffsetMs)? closestCandidate = null;
+
+      // Pass 1: Gather all hittable notes and track closest
+      foreach (var entry in _noteController.WindowStates)
+      {
+        string windowId = entry.Key;
+        var state = entry.Value;
+
+        if (type != NoteType.Focus && state.WindowVisual.UnFocus) continue;
+
+        foreach (var sideEntry in state.WindowData.Notes)
+        {
+          int cursor = state.EvalCursors[sideEntry.Key];
+          var noteList = sideEntry.Value;
+
+          for (int i = cursor; i < noteList.Count; i++)
+          {
+            NoteData note = noteList[i];
+            if (note.IsEvaluated || note.Type != type || !note.IsHittable) continue;
+
+            double offsetMs = _audioController.Metronome.ToDeltaMilliSeconds(
+              note.StartBeat.AbsoluteValue, currentBeat
+            );
+
+            // Sorted by time: all subsequent notes are even further ahead
+            if (offsetMs > missWindowMs) break;
+
+            float absMs = Mathf.Abs((float)offsetMs);
+            if (absMs <= missWindowMs)
+            {
+              var candidate = (windowId, note, (float)offsetMs);
+              candidates.Add(candidate);
+
+              if (absMs < closestAbsMs)
+              {
+                closestAbsMs = absMs;
+                closestCandidate = candidate;
+              }
+            }
+          }
+        }
+      }
+
+      // Pass 2: Smart grouping based on closest hit quality
+      var results = new List<(string, NoteData, float)>();
+
+      if (closestCandidate.HasValue)
+      {
+        if (closestAbsMs <= perfectWindowMs)
+        {
+          // Perfect hit: group all Perfect notes (max 1 per window)
+          var bestPerWindow = new Dictionary<string, (string WindowId, NoteData Note, float OffsetMs)>();
+          foreach (var candidate in candidates)
+          {
+            float candidateAbsMs = Math.Abs(candidate.OffsetMs);
+            if (candidateAbsMs <= perfectWindowMs)
+            {
+              if (!bestPerWindow.ContainsKey(candidate.WindowId) ||
+                  candidateAbsMs < Math.Abs(bestPerWindow[candidate.WindowId].OffsetMs))
+              {
+                bestPerWindow[candidate.WindowId] = candidate;
+              }
+            }
+          }
+          results.AddRange(bestPerWindow.Values);
+        }
+        else
+        {
+          // Sloppy hit: only consume closest to prevent chain-downgrading
+          results.Add(closestCandidate.Value);
+        }
+      }
+
+      return results;
+    }
+
+    /// <summary>
+    /// Single-target hit: finds the closest Tap/Hold note across focused windows.
+    /// </summary>
+    public (string WindowId, NoteData Note)? FindClosestNote(NoteType type, float currentBeat)
+    {
+      string bestWindowId = null;
+      NoteData closestNote = null;
+      double closestAbsMs = Constants.HitResult.TimmingWindowMs[HitResultType.Miss];
+
+      foreach (var entry in _noteController.WindowStates)
+      {
+        string windowId = entry.Key;
+        NoteController.WindowNoteState state = entry.Value;
+
+        if (state.WindowVisual.UnFocus) continue;
+
+        foreach (var sideEntry in state.WindowData.Notes)
+        {
+          int cursor = state.EvalCursors[sideEntry.Key];
+          var noteList = sideEntry.Value;
+
+          for (int i = cursor; i < noteList.Count; i++)
+          {
+            NoteData note = noteList[i];
+            if (note.IsEvaluated || !note.IsHittable) continue;
+            if (note.IsHoldActive) continue;
+
+            bool typeMatches = note.Type == type || (type == NoteType.Tap && note.Type == NoteType.Hold);
+            if (!typeMatches) continue;
+
+            double offsetMs = _audioController.Metronome.ToDeltaMilliSeconds(
+              note.StartBeat.AbsoluteValue, currentBeat
+            );
+
+            // Sorted by time: all subsequent notes are even further ahead
+            if (offsetMs > closestAbsMs) break;
+
+            float absMs = Mathf.Abs((float)offsetMs);
+            if (absMs < closestAbsMs)
+            {
+              closestAbsMs = absMs;
+              closestNote = note;
+              bestWindowId = windowId;
+            }
+          }
+        }
+      }
+
+      return closestNote != null ? (bestWindowId, closestNote) : ((string, NoteData)?)null;
+    }
+
+    /// <summary>Marks a note as an active hold and tracks it for completion.</summary>
+    public void SetHoldActive(string windowId, NoteData note)
+    {
+      if (_noteController.WindowStates.TryGetValue(windowId, out var state))
+      {
+        note.IsHoldActive = true;
+        state.ActiveHolds.Add(note);
+      }
+    }
+
+    /// <summary>Returns all currently active hold notes across all windows.</summary>
+    public List<(string WindowId, NoteData Note)> GetActiveHolds()
+    {
+      _activeHoldsCache.Clear();
+      foreach (var entry in _noteController.WindowStates)
+      {
+        foreach (var holdNote in entry.Value.ActiveHolds)
+        {
+          if (!holdNote.IsEvaluated)
+            _activeHoldsCache.Add((entry.Key, holdNote));
+        }
+      }
+      return _activeHoldsCache;
     }
 
     // =============================================
