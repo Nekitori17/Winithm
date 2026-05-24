@@ -308,7 +308,7 @@ namespace Winithm.Core.Controllers
           // Notes beyond viewport: all subsequent are even further (sorted by StartBeat)
           if (headOffsetPx > viewportLengthPx + offScreenMarginPx) break;
 
-          float tailOffsetPx = (note.Length == 0)
+          float tailOffsetPx = (note.Length == 0 || note.Type != NoteType.Hold)
             ? headOffsetPx
             : state.WindowData.SpeedSteps.GetVisualOffset(currentBeat, noteEndBeat) * pixelsPerBeat * viewportScale;
 
