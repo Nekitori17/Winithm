@@ -107,7 +107,7 @@ namespace Winithm.Core.Controllers
       WindowStates.Remove(windowId);
     }
 
-    public struct GlobalNoteTransformInfo
+    public struct NoteGlobalTransformInfo
     {
       public Vector2 Position;
       public float Rotation;
@@ -120,7 +120,7 @@ namespace Winithm.Core.Controllers
     /// </summary>
     public IReadOnlyDictionary<string, WindowNoteState> GetRegisteredWindowStates() => WindowStates;
 
-    public bool TryGetNoteGlobalTransformInfo(string windowId, NoteData note, out GlobalNoteTransformInfo info)
+    public bool TryGetNoteGlobalTransformInfo(string windowId, NoteData note, out NoteGlobalTransformInfo info)
     {
       info = default;
 
@@ -134,7 +134,7 @@ namespace Winithm.Core.Controllers
 
         Vector2 globalCenter = noteVisual.GetGlobalTransform() * new Vector2(0, -headHeight * 0.5f);
 
-        info = new GlobalNoteTransformInfo
+        info = new NoteGlobalTransformInfo
         {
           Position = globalCenter,
           Rotation = noteVisual.GlobalRotation,
@@ -183,7 +183,7 @@ namespace Winithm.Core.Controllers
       Transform2D parentTransform = parentLayer.GetGlobalTransform();
       Vector2 globalPos = parentTransform * noteTransform * new Vector2(0, -fallbackHeadHeight * 0.5f);
 
-      info = new GlobalNoteTransformInfo
+      info = new NoteGlobalTransformInfo
       {
         Position = globalPos,
         Rotation = parentTransform.Rotation + (float)Mathf.Deg2Rad(rotationDegrees),
