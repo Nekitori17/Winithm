@@ -1,7 +1,6 @@
 using Godot;
 using Winithm.Core.Behaviors.ScoreUI;
 using Winithm.Core.Managers;
-using Winithm.Core;
 using Winithm.Core.Data;
 using Winithm.Core.Common;
 
