@@ -8,21 +8,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource( 2 )
 
-[node name="Playfield" type="Control" parent="."]
+[node name="ControllerRack" type="Node" parent="."]
+
+[node name="ObjectsLayer" type="Control" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="ObjectsLayer" type="Control" parent="Playfield"]
+[node name="HitFXLayer" type="Control" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
-
-[node name="HitFXLayer" type="Control" parent="Playfield"]
-margin_right = 40.0
-margin_bottom = 40.0
 
 [node name="ScoreUI" parent="." instance=ExtResource( 1 )]
-
-[node name="ControllerRack" type="Node" parent="."]
 
 [node name="Debug" type="Label" parent="."]
 anchor_left = 0.5

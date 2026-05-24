@@ -34,7 +34,6 @@ namespace Winithm.Client.Behaviors.Gameplay
     // ── Scene nodes ──────────────────────────────────────────────────────────────
 
     private Node _controllerRack;
-    private Control _playfield;
     private Control _objectsLayer;
     private Control _hitFXLayer;
     private Label _debug;
@@ -95,9 +94,8 @@ namespace Winithm.Client.Behaviors.Gameplay
 
     public override void _Ready()
     {
-      _playfield = GetNode<Control>("Playfield");
-      _objectsLayer = GetNode<Control>("Playfield/ObjectsLayer");
-      _hitFXLayer = GetNode<Control>("Playfield/HitFXLayer");
+      _objectsLayer = GetNode<Control>("ObjectsLayer");
+      _hitFXLayer = GetNode<Control>("HitFXLayer");
       _controllerRack = GetNode<Node>("ControllerRack");
       _componentController = GetNode<ComponentController>("ScoreUI");
       _debug = GetNode<Label>("Debug");
@@ -130,7 +128,7 @@ namespace Winithm.Client.Behaviors.Gameplay
         + $"FPS: {Engine.GetFramesPerSecond()} | Frame: {delta * 1000:F2}ms | Vsync: {(OS.VsyncEnabled ? "On" : "Off")}";
 
       _windowController.ScreenSize = OS.GetScreenSize();
-      _windowController.PlayerAreaSize = _playfield.RectSize;
+      _windowController.PlayerAreaSize = RectSize;
       _windowController.Update(currentBeat);
 
       _noteController.Update(currentBeat);
