@@ -20,7 +20,7 @@ namespace Winithm.Core.Data
 
   public class NoteData : IDeepCloneable<NoteData>
   {
-    public event Action<NoteData> OnStartBeatChanged;
+    public event Action<NoteData, double> OnStartBeatChanged;
     public event Action<NoteData> OnInvalidate;
     public event Action<NoteData> OnUpdated;
 
@@ -30,7 +30,16 @@ namespace Winithm.Core.Data
     public NoteType Type { get => _type; set { if (_type == value) return; _type = value; OnInvalidate?.Invoke(this); } }
 
     private BeatTime _startBeat = BeatTime.NaN;
-    public BeatTime StartBeat { get => _startBeat; set { if (_startBeat == value) return; _startBeat = value; OnStartBeatChanged?.Invoke(this); } }
+    public BeatTime StartBeat {
+      get => _startBeat;
+      set
+      {
+        if (_startBeat == value) return;
+        double prevStartBeat = _startBeat.AbsoluteValue;
+        _startBeat = value;
+        OnStartBeatChanged?.Invoke(this, prevStartBeat);
+      }
+    }
 
     private double _length = 0;
     public double Length { get => _length; set { if (_length == value) return; _length = value; OnInvalidate?.Invoke(this); } }

@@ -14,6 +14,7 @@ namespace Winithm.Core.Controllers
   /// </summary>
   public class NoteController : Node
   {
+    private WindowManager _windowManager;
 
     public event Action<string, NoteData> OnActiveHoldTick;
     public event Action<string, NoteData> OnActiveHoldEnded;
@@ -23,6 +24,7 @@ namespace Winithm.Core.Controllers
 
     [Export] public float PlayerNoteSize = 1f;
     [Export] public float PlayerNoteSpeed = 1f;
+    [Export] public bool NoteHighlightSimulation = false;
 
     public bool Autoplay { get; private set; } = false;
 
@@ -48,13 +50,12 @@ namespace Winithm.Core.Controllers
       public Window WindowVisual;
 
       public Dictionary<NoteData, Note> NoteVisualMap = new Dictionary<NoteData, Note>();
-      public Dictionary<double, Note> ChordHighlightMap = new Dictionary<double, Note>();
-
       public Dictionary<NoteSide, int> RenderCursors = new Dictionary<NoteSide, int>();
       public Dictionary<NoteSide, int> EvalCursors = new Dictionary<NoteSide, int>();
 
       public HashSet<NoteData> ActiveHolds = new HashSet<NoteData>();
-      public List<NoteData> PendingRemovals = new List<NoteData>();
+      public List<NoteData> PendingHoldRemovals = new List<NoteData>();
+      public List<NoteData> PendingVisualRemovals = new List<NoteData>();
 
       public ulong AutoFireSessionToken = 1;
       public ulong FrameSessionToken = 1;
@@ -66,13 +67,16 @@ namespace Winithm.Core.Controllers
     // Initialization
     // =============================================
 
-    public void Initialize(Metronome metronome, bool autoplay = false)
+    public void Initialize(Metronome metronome, WindowManager windowManager, bool autoplay = false)
     {
       Autoplay = autoplay;
       _metronome = metronome;
+      _windowManager = windowManager;
       _noteScene = GD.Load<PackedScene>("res://Winithm.Core/Resources/Sprites/Note.tscn");
       _notePool = new NodePool<Note>(this, _noteScene);
     }
+
+    public void SetNoteHighlightSimulation(bool active) => NoteHighlightSimulation = active;
 
     // =============================================
     // Window Registration
@@ -186,8 +190,6 @@ namespace Winithm.Core.Controllers
       if (state.WindowVisual == null) return;
       if (currentBeat == state.LastBeat && !force) return;
 
-      state.ChordHighlightMap.Clear();
-
       bool isBackward = currentBeat < state.LastBeat;
 
       if (isBackward)
@@ -216,8 +218,6 @@ namespace Winithm.Core.Controllers
         playerAreaSize.y / Constants.Visual.DESIGN_RESOLUTION.y
       );
 
-      state.ChordHighlightMap.Clear();
-
       foreach (var sideEntry in state.WindowData.Notes)
       {
         NoteSide side = sideEntry.Key;
@@ -225,7 +225,6 @@ namespace Winithm.Core.Controllers
 
         float viewportLengthPx = IsVerticalSide(side) ? windowSize.y * viewportScale : windowSize.x * viewportScale;
 
-        int evalCursor = state.EvalCursors[side];
         int renderCursor = state.RenderCursors[side];
 
         // Move cursor backwards if currentBeat rewound
@@ -382,6 +381,8 @@ namespace Winithm.Core.Controllers
     /// <summary>Removes a note's visual and returns it to the pool.</summary>
     public void ConsumeNote(string windowId, NoteData note)
     {
+      note.IsHoldActive = false;
+
       if (_windowStates.TryGetValue(windowId, out var state))
       {
         if (state.NoteVisualMap.TryGetValue(note, out var noteVisual))
@@ -403,14 +404,14 @@ namespace Winithm.Core.Controllers
 
     private void CollectStaleNoteVisuals(WindowNoteState state)
     {
-      state.PendingRemovals.Clear();
+      state.PendingVisualRemovals.Clear();
       foreach (var note in state.NoteVisualMap.Keys)
       {
         if (note.LastSeenFrameSessionToken != state.FrameSessionToken)
-          state.PendingRemovals.Add(note);
+          state.PendingVisualRemovals.Add(note);
       }
 
-      foreach (var note in state.PendingRemovals)
+      foreach (var note in state.PendingVisualRemovals)
       {
         ReturnToPool(state.NoteVisualMap[note]);
         state.NoteVisualMap.Remove(note);
@@ -469,7 +470,7 @@ namespace Winithm.Core.Controllers
       noteVisual.SetNoteType(note.Type, resourcePack);
 
       // Highlight notes sharing the same start beat (chords)
-      ApplyChordHighlight(state, note, noteVisual);
+      ApplyChordHighlight(note, noteVisual);
 
       // Lateral position: Note X is a proportion of the available free space (0 to 1).
       // Left edge = X * (1 - Width). The note is drawn centered at (Left edge + Width/2)
@@ -510,20 +511,17 @@ namespace Winithm.Core.Controllers
       noteVisual.UpdateVisual();
     }
 
-    private void ApplyChordHighlight(WindowNoteState state, NoteData note, Note noteVisual)
+    private void ApplyChordHighlight(NoteData note, Note noteVisual)
     {
-      noteVisual.SetNoteHighlighting(false);
-      double startBeat = note.StartBeat.AbsoluteValue;
+      if (!NoteHighlightSimulation)
+      {
+        noteVisual.SetNoteHighlighting(false);
+        return;
+      }
 
-      if (state.ChordHighlightMap.TryGetValue(startBeat, out var existingVisual))
-      {
-        noteVisual.SetNoteHighlighting(true);
-        existingVisual.SetNoteHighlighting(true);
-      }
-      else
-      {
-        state.ChordHighlightMap[startBeat] = noteVisual;
-      }
+      double startBeat = note.StartBeat.AbsoluteValue;
+      if (_windowManager.ChordNoteMap.TryGetValue(startBeat, out var count))
+        noteVisual.SetNoteHighlighting(count >= 2);
     }
 
     // =============================================
@@ -580,7 +578,7 @@ namespace Winithm.Core.Controllers
         if (isAutoHittable && elapsedMs >= 0f)
         {
           note.AutoFiredSessionToken = state.AutoFireSessionToken;
-          
+
           if (note.Type == NoteType.Hold)
           {
             note.IsHoldActive = true;
@@ -622,7 +620,7 @@ namespace Winithm.Core.Controllers
 
     private void ProcessActiveHoldNotes(string windowId, WindowNoteState state, double currentBeat)
     {
-      state.PendingRemovals.Clear();
+      state.PendingHoldRemovals.Clear();
 
       foreach (var holdNote in state.ActiveHolds)
       {
@@ -633,7 +631,7 @@ namespace Winithm.Core.Controllers
         if (currentBeat < holdStartBeat && (double.IsNaN(holdNote.HoldStartResult.OffsetMs) || Autoplay))
         {
           holdNote.IsHoldActive = false;
-          state.PendingRemovals.Add(holdNote);
+          state.PendingHoldRemovals.Add(holdNote);
           continue;
         }
 
@@ -646,7 +644,7 @@ namespace Winithm.Core.Controllers
           }
 
           holdNote.IsHoldActive = false;
-          state.PendingRemovals.Add(holdNote);
+          state.PendingHoldRemovals.Add(holdNote);
           continue;
         }
 
@@ -654,7 +652,7 @@ namespace Winithm.Core.Controllers
         if (holdNote.IsEvaluated)
         {
           holdNote.IsHoldActive = false;
-          state.PendingRemovals.Add(holdNote);
+          state.PendingHoldRemovals.Add(holdNote);
           continue;
         }
 
@@ -662,7 +660,7 @@ namespace Winithm.Core.Controllers
         OnActiveHoldTick?.Invoke(windowId, holdNote);
       }
 
-      foreach (var holdNote in state.PendingRemovals)
+      foreach (var holdNote in state.PendingHoldRemovals)
       {
         state.ActiveHolds.Remove(holdNote);
       }
@@ -818,7 +816,8 @@ namespace Winithm.Core.Controllers
           for (int i = cursor; i < noteList.Count; i++)
           {
             NoteData note = noteList[i];
-            if (note.IsEvaluated || note.IsHoldActive || !note.IsHittable) continue;
+            if (note.IsEvaluated || !note.IsHittable) continue;
+            if (note.IsHoldActive) continue;
 
             bool typeMatches = note.Type == type || (type == NoteType.Tap && note.Type == NoteType.Hold);
             if (!typeMatches) continue;

@@ -21,6 +21,7 @@ namespace Winithm.Client.Behaviors.Gameplay
     [Export] public bool Autoplay = false;
     [Export] public float NoteSize = 1f;
     [Export] public float NoteSpeed = 1f;
+    [Export] public bool NoteHighLightSimulation = false;
 
     // ── Pause / rewind constants ─────────────────────────────────────────────────
 
@@ -104,6 +105,7 @@ namespace Winithm.Client.Behaviors.Gameplay
       SetAutoPlay(true);
       SetNoteSize(1.5f);
       SetNoteSpeed(10f);
+      SetNoteHighLightSimulation(true);
 
       InitializeControllers();
       LoadDemoLevel();
@@ -132,6 +134,7 @@ namespace Winithm.Client.Behaviors.Gameplay
       _windowController.Update(currentBeat);
 
       _noteController.Update(currentBeat);
+      _noteController.SetNoteHighlightSimulation(NoteHighLightSimulation);
 
       double length = _audioController.Length;
       _componentController.SongProgressPercent =
@@ -389,7 +392,7 @@ namespace Winithm.Client.Behaviors.Gameplay
       _groupController.Initialize(_chartData.Groups);
       _themeController.Initialize(_chartData.ThemeChannels);
 
-      _noteController.Initialize(metronome, Autoplay);
+      _noteController.Initialize(metronome, _chartData.Windows, Autoplay);
       _noteController.PlayerNoteSize = NoteSize;
       _noteController.PlayerNoteSpeed = NoteSpeed;
 
@@ -432,6 +435,7 @@ namespace Winithm.Client.Behaviors.Gameplay
     public void SetAutoPlay(bool active) => Autoplay = active;
     public void SetNoteSize(float size) => NoteSize = size;
     public void SetNoteSpeed(float speed) => NoteSpeed = speed;
+    public void SetNoteHighLightSimulation(bool active) => NoteHighLightSimulation = active;
 
     // ── Screen resize ────────────────────────────────────────────────────────────
 

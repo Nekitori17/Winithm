@@ -20,9 +20,11 @@ namespace Winithm.Core.Managers
   /// <summary>
   /// Manages Note segments, boundaries, and spatial data.
   /// </summary>
-  public class NoteManager : 
+  public class NoteManager :
     IDeepCloneable<NoteManager>, IEnumerable<KeyValuePair<NoteSide, List<NoteData>>>
   {
+    public event Action<double> OnNoteAddedAtBeat;
+    public event Action<double> OnNoteRemovedAtBeat;
 
     public event Action<NoteManager> OnLifeCycleChanged;
     public event Action<NoteManager> OnUpdated;
@@ -46,7 +48,7 @@ namespace Winithm.Core.Managers
 
     public Dictionary<NoteSide, double[]> MaxEndBeats { get; private set; } = new Dictionary<NoteSide, double[]>();
     /// <summary>Sorted beats where combo increments occur (Hold → end beat, others → start beat).</summary> 
-    
+
     public int TotalNoteCount { get; private set; } = 0;
     public int TotalHittableNoteCount { get; private set; } = 0;
     public double[] ComboEventBeats { get; private set; } = Array.Empty<double>();
@@ -217,23 +219,23 @@ namespace Winithm.Core.Managers
       foreach (var sideNotes in _noteCollection)
       {
         var list = sideNotes.Value;
-        
+
         // Use existing array if size matches, otherwise allocate new
         if (!MaxEndBeats.TryGetValue(sideNotes.Key, out var maxEnds) || maxEnds.Length != list.Count)
           maxEnds = new double[list.Count];
-        
+
         double runningMax = double.MinValue;
 
         for (int i = 0; i < list.Count; i++)
         {
           var note = list[i];
 
-          var noteEndBeat = note.Type == NoteType.Hold 
-            ? note.StartBeat.AbsoluteValue + note.Length 
+          var noteEndBeat = note.Type == NoteType.Hold
+            ? note.StartBeat.AbsoluteValue + note.Length
             : note.StartBeat.AbsoluteValue;
 
           if (
-            note.StartBeat >= ExpectedStartFocusBeat 
+            note.StartBeat >= ExpectedStartFocusBeat
             && noteEndBeat <= ExpectedEndCloseBeat.AbsoluteValue
             && note.IsHittable
           )
@@ -264,7 +266,7 @@ namespace Winithm.Core.Managers
       }
 
       comboEvents.Sort((a, b) => a.beat.CompareTo(b.beat));
-      
+
       // Binary search expects exact array lengths
       if (ComboEventBeats.Length != comboEvents.Count)
         ComboEventBeats = new double[comboEvents.Count];
@@ -312,14 +314,17 @@ namespace Winithm.Core.Managers
       _noteSideMap.Remove(note);
     }
 
-    private void HandleStartBeatChanged(NoteData note)
+    private void HandleStartBeatChanged(NoteData note, double prevStartBeat)
     {
       if (!_noteSideMap.TryGetValue(note, out var side)) return;
 
       var list = _noteCollection[side];
       list.Remove(note);
+      OnNoteRemovedAtBeat?.Invoke(prevStartBeat);
+
       int index = FindAddIndex(side, note);
       list.Insert(index, note);
+      OnNoteAddedAtBeat?.Invoke(note.StartBeat.AbsoluteValue);
 
       RequestRecompute();
       NotifyChanged();
@@ -344,6 +349,8 @@ namespace Winithm.Core.Managers
       list.Insert(index, note);
 
       SubscribeChangeEvent(side, note);
+      OnNoteAddedAtBeat?.Invoke(note.StartBeat.AbsoluteValue);
+
       RequestRecompute();
       NotifyChanged();
 
@@ -370,6 +377,7 @@ namespace Winithm.Core.Managers
       if (!list.Remove(note)) return false;
 
       UnsubscribeChangeEvent(note);
+      OnNoteRemovedAtBeat?.Invoke(note.StartBeat.AbsoluteValue);
 
       if (list.Count == 0) _noteCollection.Remove(side);
       RequestRecompute();
@@ -416,7 +424,11 @@ namespace Winithm.Core.Managers
       var toRemove = list.FindAll(x => x.ID == id);
       if (toRemove.Count == 0) return false;
 
-      foreach (var note in toRemove) UnsubscribeChangeEvent(note);
+      foreach (var note in toRemove)
+      {
+        UnsubscribeChangeEvent(note);
+        OnNoteRemovedAtBeat?.Invoke(note.StartBeat.AbsoluteValue);
+      }
       list.RemoveAll(x => x.ID == id);
 
       if (list.Count == 0) _noteCollection.Remove(side);

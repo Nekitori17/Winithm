@@ -51,6 +51,11 @@ namespace Winithm.Core.Managers
     /// </summary>
     public int TotalComboCount { get; private set; } = 0;
 
+    /// <summary>
+    /// Chord note map for quick lookup of notes at specific beats.
+    /// </summary>
+    public Dictionary<double, int> ChordNoteMap { get; private set; } = new Dictionary<double, int>();
+
     private int _updateLockCount = 0;
     private bool _needsRecompute = false;
 
@@ -177,6 +182,12 @@ namespace Winithm.Core.Managers
       windowData.OnUpdated -= HandleUpdated;
       windowData.OnUpdated += HandleUpdated;
 
+      windowData.Notes.OnNoteAddedAtBeat -= HandleNoteAddedAtBeat;
+      windowData.Notes.OnNoteAddedAtBeat += HandleNoteAddedAtBeat;
+
+      windowData.Notes.OnNoteRemovedAtBeat -= HandleNoteRemovedAtBeat;
+      windowData.Notes.OnNoteRemovedAtBeat += HandleNoteRemovedAtBeat;
+
       windowData.OnLifeCycleChanged -= HandleLifeCycleChanged;
       windowData.OnLifeCycleChanged += HandleLifeCycleChanged;
 
@@ -191,6 +202,8 @@ namespace Winithm.Core.Managers
     {
       windowData.OnUpdated -= HandleUpdated;
       windowData.OnLifeCycleChanged -= HandleLifeCycleChanged;
+      windowData.Notes.OnNoteAddedAtBeat -= HandleNoteAddedAtBeat;
+      windowData.Notes.OnNoteRemovedAtBeat -= HandleNoteRemovedAtBeat;
       windowData.OnUnFocusChanged -= HandleUnFocusChanged;
       windowData.OnUnResponsiveChanged -= HandleUnResponsiveChanged;
     }
@@ -218,6 +231,10 @@ namespace Winithm.Core.Managers
       NotifyChanged();
     }
 
+    private void HandleNoteAddedAtBeat(double beat) => IncreaseChordNoteCount(beat);
+
+    private void HandleNoteRemovedAtBeat(double beat) => DecreaseChordNoteCount(beat);
+
     // ==========================================
     // Lifecycle Management
     // ==========================================
@@ -229,6 +246,8 @@ namespace Winithm.Core.Managers
     {
       var idx = FindAddIndex(windowData);
       _windowCollection.Insert(idx, windowData);
+      MapChordNoteOnWindowAdded(windowData);
+
       SubscribeChangeEvent(windowData);
 
       RequestRecompute();
@@ -256,6 +275,7 @@ namespace Winithm.Core.Managers
 
       UnsubscribeChangeEvent(windowData);
       _windowCollection.Remove(windowData);
+      MapChordNoteOnWindowRemoved(windowData);
 
       RequestRecompute();
       NotifyChanged();
@@ -310,6 +330,38 @@ namespace Winithm.Core.Managers
       var windows = new List<WindowData>(_windowCollection);
       windows.Sort((a, b) => a.Layer.CompareTo(b.Layer));
       return windows;
+    }
+
+    private void MapChordNoteOnWindowAdded(WindowData window) {
+      foreach (var notes in window.Notes.Values)
+        foreach (var note in notes)
+          IncreaseChordNoteCount(note.StartBeat.AbsoluteValue);
+    }
+
+    private void MapChordNoteOnWindowRemoved(WindowData window)
+    {
+      foreach (var notes in window.Notes.Values)
+        foreach (var note in notes)
+          DecreaseChordNoteCount(note.StartBeat.AbsoluteValue);
+    }
+
+    private void IncreaseChordNoteCount(double beat)
+    {
+      if (ChordNoteMap.TryGetValue(beat, out var count))
+        ChordNoteMap[beat] = count + 1;
+      else
+        ChordNoteMap[beat] = 1;
+    }
+
+    private void DecreaseChordNoteCount(double beat)
+    {
+      if (ChordNoteMap.TryGetValue(beat, out var count))
+      {
+        if (count - 1 == 0)
+          ChordNoteMap.Remove(beat);
+        else
+          ChordNoteMap[beat] = count - 1;
+      }
     }
 
     /// <summary>
