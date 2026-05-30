@@ -11,6 +11,7 @@
 </p>
 
 <p>
+  <img src="https://img.shields.io/badge/Status-Deprecated-red?style=flat-square" alt="Status">
   <a href="https://github.com/Nekitori17/Winithm/releases"><img src="https://img.shields.io/github/v/release/Nekitori17/Winithm?style=flat-square" alt="Release"></a>
   <a href="https://godotengine.org/"><img src="https://img.shields.io/badge/Engine-Godot%203.6%20Mono-478cbf?style=flat-square&logo=godot-engine&logoColor=white" alt="Godot Version"></a>
   <a href="#"><img src="https://img.shields.io/badge/Language-C%23-239120?style=flat-square&logo=c-sharp&logoColor=white" alt="Language"></a>
@@ -20,9 +21,16 @@
 
 </div>
 
+> [!WARNING]
+> **This repository is deprecated and no longer actively maintained.**
+>
+> Future development has moved to the **[kXYc GitHub organization](https://github.com/kXYc)**.
+
 ---
 
 ## 📥 Download
+
+This legacy repository is deprecated. Please check the **[kXYc GitHub organization](https://github.com/kXYc)** for future releases and maintained projects.
 
 _(Pre-release builds and playtests will be available here soon)_
 
@@ -32,7 +40,9 @@ _(Pre-release builds and playtests will be available here soon)_
 
 ## 🤝 Contribute
 
-Winithm is built by the community, for the community! We'd love to have your help. There are two primary ways you can get involved:
+This repository is no longer the active development home for Winithm. Please direct new contributions, issues, and project discussions to the **[kXYc GitHub organization](https://github.com/kXYc)**.
+
+Historical contribution information is kept below for reference.
 
 ### 1. Code Contribution 💻
 
@@ -48,6 +58,8 @@ A rhythm game is absolutely nothing without amazing music and beatmaps! You don'
 _(A detailed Contribution Guideline will be posted here soon)_
 
 ## 🛠️ Building from Source
+
+This section describes the legacy Godot 3.x version only.
 
 To compile and run the project locally on your machine:
 
