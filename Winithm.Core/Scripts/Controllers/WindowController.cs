@@ -344,6 +344,7 @@ namespace Winithm.Core.Controllers
       {
         windowVisual.UnresponsiveOverlayOpacity = 0f;
         windowVisual.IsNotRespondingTitle = false;
+        windowVisual.WindowBody.Modulate = Color.White;
       }
       else if (currentBeat < windowData.UnresponsiveEndBeat)
       {
@@ -354,13 +355,16 @@ namespace Winithm.Core.Controllers
           / (windowData.UnresponsiveEndBeat - windowData.UnresponsiveStartBeat);
 
         float easingVal = (float)EasingFunctions.Evaluate(EasingType.CubicOut, t);
-        float opacityVal = Mathf.Lerp(0, Window.UNRESPONSIVE_OVERLAY_TINT.a, easingVal);
-        windowVisual.UnresponsiveOverlayOpacity = opacityVal;
+        float overlayOpacityVal = Mathf.Lerp(0, Window.UNRESPONSIVE_OVERLAY_TINT.a, easingVal);
+        float windowModulateVal = Mathf.Lerp(1, Window.UNRESPONSIVE_WINDOW_MODULATE.a, easingVal);
+        windowVisual.UnresponsiveOverlayOpacity = overlayOpacityVal;
+        windowVisual.WindowBody.Modulate = new Color(1f, 1f, 1f, windowModulateVal);
       }
       else
       {
         windowVisual.IsNotRespondingTitle = true;
         windowVisual.UnresponsiveOverlayOpacity = Window.UNRESPONSIVE_OVERLAY_TINT.a;
+        windowVisual.WindowBody.Modulate = Window.UNRESPONSIVE_WINDOW_MODULATE;
       }
     }
 

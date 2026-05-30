@@ -1,3 +1,4 @@
+using System.Drawing;
 using Godot;
 using Winithm.Core;
 using Winithm.Core.Interfaces;
@@ -36,18 +37,18 @@ namespace Winithm.Core.Behaviors
     public bool IsNotRespondingTitle = false;
 
     // --- Child references ---
-    private Control _titleBar;
-    private Control _windowBody;
-    private Control _windowFrame;
+    public Control TitleBar { get; private set; }
+    public Control WindowBody { get; private set; }
+    public Control WindowFrame { get; private set; }
 
-    // public Vector2 WindowBodySize => _windowBody?.RectSize ?? Vector2.Zero;
+    // public Vector2 WindowBodySize => WindowBody?.RectSize ?? Vector2.Zero;
 
     // --- Runtime layers (Z-ordered inside WindowBody) ---
     // NoteLayer → UnfocusOverlay → FocusNoteLayer → UnresponsiveOverlay → HitFXLayer
-    public Control NoteLayer;
-    public Control UnfocusOverlay;
-    public Control FocusNoteLayer;
-    public Control UnresponsiveOverlay;
+    public Control NoteLayer { get; private set; }
+    public Control UnfocusOverlay { get; private set; }
+    public Control FocusNoteLayer { get; private set; }
+    public Control UnresponsiveOverlay { get; private set; }
 
     // --- Resources ---
     private static readonly Texture _iconTex = GD.Load<Texture>("res://icon.png");
@@ -63,21 +64,22 @@ namespace Winithm.Core.Behaviors
     public static readonly float TITLE_BAR_HEIGHT_RATIO = 0.0375f;
     public static readonly Color UNFOCUS_OVERLAY_TINT = new Color(0.25f, 0.25f, 0.25f, 0.5f);
     public static readonly Color UNRESPONSIVE_OVERLAY_TINT = new Color(1f, 1f, 1f, 0.75f);
+    public static readonly Color UNRESPONSIVE_WINDOW_MODULATE = new Color(1f, 1f, 1f, 0.75f);
     internal float TitleBarHeight { get; private set; }
 
     public override void _Ready()
     {
-      _titleBar = GetNode<Control>("TitleBar");
-      _windowBody = GetNode<Control>("WindowBody");
-      _windowFrame = GetNode<Control>("Frame");
+      TitleBar = GetNode<Control>("TitleBar");
+      WindowBody = GetNode<Control>("WindowBody");
+      WindowFrame = GetNode<Control>("Frame");
 
       NoteLayer = GetNode<Control>("WindowBody/NoteLayer");
       UnfocusOverlay = GetNode<Control>("WindowBody/UnfocusOverlay");
       FocusNoteLayer = GetNode<Control>("WindowBody/FocusNoteLayer");
       UnresponsiveOverlay = GetNode<Control>("WindowBody/UnresponsiveOverlay");
 
-      _titleBar.Connect("draw", this, nameof(OnTitleBarDraw));
-      _windowBody.Connect("draw", this, nameof(OnWindowBodyDraw));
+      TitleBar.Connect("draw", this, nameof(OnTitleBarDraw));
+      WindowBody.Connect("draw", this, nameof(OnWindowBodyDraw));
       UnfocusOverlay.Connect("draw", this, nameof(OnUnfocusOverlayDraw));
       UnresponsiveOverlay.Connect("draw", this, nameof(OnUnresponsiveOverlayDraw));
 
@@ -97,7 +99,7 @@ namespace Winithm.Core.Behaviors
       {
         UnfocusOverlay?.Update();
         UnresponsiveOverlay?.Update();
-        _titleBar?.Update();
+        TitleBar?.Update();
 
         _lastState.UnFocusOverlayOpacity = UnFocusOverlayOpacity;
         _lastState.UnresponsiveOverlayOpacity = UnresponsiveOverlayOpacity;
@@ -110,7 +112,7 @@ namespace Winithm.Core.Behaviors
     /// </summary>
     public void UpdateVisual()
     {
-      if (_titleBar == null || _windowBody == null) return;
+      if (TitleBar == null || WindowBody == null) return;
 
       bool layoutDirty =
         Pivot != _lastState.Pivot ||
@@ -147,19 +149,19 @@ namespace Winithm.Core.Behaviors
           -totalHeight * Pivot.y + (!Borderless ? TitleBarHeight : 0f)
         );
 
-        _windowBody.RectSize = scaledSize;
-        _windowBody.RectPosition = bodyOffset;
+        WindowBody.RectSize = scaledSize;
+        WindowBody.RectPosition = bodyOffset;
 
-        _titleBar.Visible = !Borderless;
-        _titleBar.RectSize = new Vector2(scaledSize.x, TitleBarHeight);
-        _titleBar.RectPosition = bodyOffset - new Vector2(0f, TitleBarHeight);
+        TitleBar.Visible = !Borderless;
+        TitleBar.RectSize = new Vector2(scaledSize.x, TitleBarHeight);
+        TitleBar.RectPosition = bodyOffset - new Vector2(0f, TitleBarHeight);
 
-        if (_windowFrame != null)
+        if (WindowFrame != null)
         {
-          _windowFrame.Visible = !Borderless;
-          _windowFrame.RectSize = new Vector2(scaledSize.x, scaledSize.y + TitleBarHeight);
-          _windowFrame.RectPosition = _titleBar.RectPosition;
-          _windowFrame.Update();
+          WindowFrame.Visible = !Borderless;
+          WindowFrame.RectSize = new Vector2(scaledSize.x, scaledSize.y + TitleBarHeight);
+          WindowFrame.RectPosition = TitleBar.RectPosition;
+          WindowFrame.Update();
         }
 
         _lastState.Pivot = Pivot;
@@ -171,7 +173,7 @@ namespace Winithm.Core.Behaviors
 
       if (titleBarDirty)
       {
-        _titleBar.Update();
+        TitleBar.Update();
 
         _lastState.TitleBarColor = TitleBarColor;
         _lastState.TitleTextColor = TitleTextColor;
@@ -181,7 +183,7 @@ namespace Winithm.Core.Behaviors
 
       if (bodyDirty)
       {
-        _windowBody.Update();
+        WindowBody.Update();
 
         // Apply NoteOpacity to layers containing notes
         Color noteModulate = new Color(1f, 1f, 1f, NoteOpacity);
@@ -199,10 +201,10 @@ namespace Winithm.Core.Behaviors
     {
       if (Borderless) return;
 
-      float w = _titleBar.RectSize.x;
-      float h = _titleBar.RectSize.y;
+      float w = TitleBar.RectSize.x;
+      float h = TitleBar.RectSize.y;
 
-      _titleBar.DrawRect(new Rect2(Vector2.Zero, _titleBar.RectSize), TitleBarColor);
+      TitleBar.DrawRect(new Rect2(Vector2.Zero, TitleBar.RectSize), TitleBarColor);
 
       float margin = h * 0.2f;
       float btnSize = h * 0.6f;
@@ -251,7 +253,7 @@ namespace Winithm.Core.Behaviors
       float currentX = margin;
       if (showIcon && _iconTex != null)
       {
-        _titleBar.DrawTextureRect(
+        TitleBar.DrawTextureRect(
           _iconTex,
           new Rect2(margin, (h - iconSize) / 2f, iconSize, iconSize),
           false
@@ -265,7 +267,7 @@ namespace Winithm.Core.Behaviors
           currentX,
           h / 2f + _font.GetAscent() / 2f - 2f * (h / 27f)
         );
-        _titleBar.DrawString(_font, textPos, displayTitle, TitleTextColor);
+        TitleBar.DrawString(_font, textPos, displayTitle, TitleTextColor);
       }
 
       float btnX = w - margin - btnSize;
@@ -273,22 +275,22 @@ namespace Winithm.Core.Behaviors
 
       if (showClose && _closeTex != null)
       {
-        _titleBar.DrawTextureRect(_closeTex, new Rect2(btnX, btnY, btnSize, btnSize), false, TitleTextColor);
+        TitleBar.DrawTextureRect(_closeTex, new Rect2(btnX, btnY, btnSize, btnSize), false, TitleTextColor);
         btnX -= btnSize + spacing;
       }
       if (showMax && _maxTex != null)
       {
-        _titleBar.DrawTextureRect(_maxTex, new Rect2(btnX, btnY, btnSize, btnSize), false, TitleTextColor);
+        TitleBar.DrawTextureRect(_maxTex, new Rect2(btnX, btnY, btnSize, btnSize), false, TitleTextColor);
         btnX -= btnSize + spacing;
       }
       if (showMin && _minTex != null)
       {
-        _titleBar.DrawTextureRect(_minTex, new Rect2(btnX, btnY, btnSize, btnSize), false, TitleTextColor);
+        TitleBar.DrawTextureRect(_minTex, new Rect2(btnX, btnY, btnSize, btnSize), false, TitleTextColor);
       }
 
       if (UnresponsiveOverlayOpacity > 0f)
       {
-        _titleBar.DrawRect(new Rect2(Vector2.Zero, _titleBar.RectSize), new Color(1f, 1f, 1f, UnresponsiveOverlayOpacity));
+        TitleBar.DrawRect(new Rect2(Vector2.Zero, TitleBar.RectSize), new Color(1f, 1f, 1f, UnresponsiveOverlayOpacity));
       }
     }
 
@@ -297,7 +299,7 @@ namespace Winithm.Core.Behaviors
       WindowColor.a *= Mathf.Lerp(1f, 0.9f, UnFocusOverlayOpacity);
 
       // Background only — notes and overlays live in Z-ordered layers above
-      _windowBody.DrawRect(new Rect2(Vector2.Zero, _windowBody.RectSize), WindowColor);
+      WindowBody.DrawRect(new Rect2(Vector2.Zero, WindowBody.RectSize), WindowColor);
     }
 
     private void OnUnfocusOverlayDraw()
