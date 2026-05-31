@@ -24,13 +24,13 @@
 > [!WARNING]
 > **This repository is deprecated and no longer actively maintained.**
 >
-> Future development has moved to the **[Rexflexio GitHub organization](https://github.com/rexflexio)**.
+> Future development has moved to the **[Rexflect GitHub organization](https://github.com/rexflect)**.
 
 ---
 
 ## 📥 Download
 
-This legacy repository is deprecated. Please check the **[Rexflexio GitHub organization](https://github.com/rexflexio)** for future releases and maintained projects.
+This legacy repository is deprecated. Please check the **[Rexflect GitHub organization](https://github.com/rexflect)** for future releases and maintained projects.
 
 _(Pre-release builds and playtests will be available here soon)_
 
@@ -40,7 +40,7 @@ _(Pre-release builds and playtests will be available here soon)_
 
 ## 🤝 Contribute
 
-This repository is no longer the active development home for Winithm. Please direct new contributions, issues, and project discussions to the **[Rexflexio GitHub organization](https://github.com/rexflexio)**.
+This repository is no longer the active development home for Winithm. Please direct new contributions, issues, and project discussions to the **[Rexflect GitHub organization](https://github.com/rexflect)**.
 
 Historical contribution information is kept below for reference.
 
